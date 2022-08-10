@@ -24,7 +24,7 @@ import ethClient "github.com/ethereum/go-ethereum/ethclient"
 
 import log "log"
 
-//import pubsub "github.com/libp2p/go-libp2p-pubsub"
+import pubsub "github.com/libp2p/go-libp2p-pubsub"
 //import pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 
 func getPort() int {
@@ -92,15 +92,13 @@ func ethTest(eth *ethClient.Client) {
 	fmt.Println("Balance:", balance) // 25893180161173005034
 }
 
-/*
-func getGossipSub(node host.Host) {
+func getGossipSub(node host.Host) *pubsub.PubSub {
 	ps, err := pubsub.NewGossipSub(context.Background(), node)
 	if err != nil {
 		panic(err)
 	}
 	return ps
 }
-*/
 
 func main() {
 	// Parse Port
