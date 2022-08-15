@@ -2,6 +2,10 @@ package main
 
 import "fmt"
 import "flag"
+import "time"
+import "strconv"
+import json "encoding/json"
+//import bufio "bufio"
 
 import _ "reflect"
 
@@ -12,9 +16,10 @@ import "syscall"
 import "github.com/libp2p/go-libp2p"
 import peer "github.com/libp2p/go-libp2p-core/peer"
 import host "github.com/libp2p/go-libp2p-core/host"
+//import protocol "github.com/libp2p/go-libp2p-core/protocol"
+//import network "github.com/libp2p/go-libp2p-core/network"
 import ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
-//import "github.com/libp2p/go-libp2p-peerstore/addr"
-import "strconv"
+
 
 import context "context"
 //import "github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -27,12 +32,7 @@ import log "log"
 import pubsub "github.com/libp2p/go-libp2p-pubsub"
 //import pubsub_pb "github.com/libp2p/go-libp2p-pubsub/pb"
 
-func getPort() int {
-	portPtr := flag.Int("port",8080,"Server listening port")
-	flag.Parse()
-	fmt.Println("Port:",*portPtr)
-	return *portPtr	
-}
+import "github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 
 func loadEthClient() *ethClient.Client {
 	eth, err := ethClient.Dial("http://0.0.0.0:8545")
@@ -92,17 +92,53 @@ func ethTest(eth *ethClient.Client) {
 	fmt.Println("Balance:", balance) // 25893180161173005034
 }
 
-func getGossipSub(node host.Host) *pubsub.PubSub {
+func getGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic,*pubsub.Subscription) {
 	ps, err := pubsub.NewGossipSub(context.Background(), node)
 	if err != nil {
 		panic(err)
 	}
-	return ps
+	
+	// mDNS discovery
+	if err := setupDiscovery(node); err != nil {
+		panic(err)
+	}
+	
+	// Join
+	topic, err := ps.Join(topicName(roomName))
+	if err != nil {
+		panic(err)
+	}
+	_ = topic
+	
+	// Subscribe
+	sub, err := topic.Subscribe()
+	if err != nil {
+		panic(err)
+	}
+	
+	fmt.Println("Room joined and subscribed:",topicName(roomName))
+	
+	return ps,topic,sub
+}
+
+func topicName(networkName string) string {
+	return "modmesh-" + networkName
 }
 
 func main() {
 	// Parse Port
-	portPtr := getPort()
+	portPtr := flag.Int("port",8081,"Server listening port")
+	// Parse Nickname
+	nickPtr := flag.String("nick","","Nickname - CLI flag, blank by default, consider addresses or protocol TLDs later.")
+	// Parse Room
+	roomPtr := flag.String("room","rinkeby","Room / Network")
+	flag.Parse()
+
+	port := *portPtr
+	nick := *nickPtr
+	room := *roomPtr
+
+	fmt.Println("Port:",port)
 
 	// Create ethclient instance pointing to local Hardhat node
 	eth := loadEthClient()
@@ -112,7 +148,12 @@ func main() {
 //	ethTest(eth)
 	
 	// Create listener
-	node := createListener(portPtr)
+	node := createListener(port)
+
+	if(len(nick) == 0) {
+		nick = fmt.Sprintf("%s-%s", os.Getenv("USER"), shortID(node.ID()))
+	}
+	fmt.Println("Nickname:",nick)
 
 	// Get P2P Address Info
 	peerInfo := getAddrInfo(node);
@@ -125,9 +166,132 @@ func main() {
 		fmt.Println("Got ping response.", "Latency:", res.RTT)
 	}
 	
-//	getGossipSub(node)
+	ps, topic, subscription := getGossipSub(node,room)
+	_ = ps
+	_ = topic
+	_ = subscription
+
+//	node.SetStreamHandler(protocol.ID(room), handleMessaging)
+
+	handleMessaging()
+
+	message := "test"
+	go writeMessages(node,topic,nick,message)
+	go readMessages(node,topic,subscription)
 
         // SIGINT | SIGTERM Signal Handling - End
         termHandler(node)
 }
 
+func handleMessaging() {
+}
+
+/*
+func handleMessaging(stream network.Stream) {
+	fmt.Println("(New Stream)")
+
+	// Create a buffer stream for non blocking read and write.
+	rw := bufio.NewReadWriter(bufio.NewReader(stream), bufio.NewWriter(stream))
+	_ = rw
+	
+//	go readMessages(rw)
+//	go writeMessages(rw)
+
+	// 'stream' will stay open until you close it (or the other side closes it).
+}
+*/
+
+// Converted to/from JSON and sent in the body of pubsub messages.
+type GossipMessage struct {
+	Message    string
+	SenderID   string
+	SenderNick string
+}
+
+const bufferSize = 4096
+
+type MsgParams struct {
+	ps *pubsub.PubSub
+	topic *pubsub.Topic
+	subscription *pubsub.Subscription
+	node host.Host
+	nick string
+	message string
+}
+
+func readMessages(node host.Host, topic *pubsub.Topic, subscription *pubsub.Subscription) {
+//rw *bufio.ReadWriter
+	messages :=  make(chan *GossipMessage, bufferSize)
+	
+	for {
+		msg, err := subscription.Next(context.Background())
+		if err != nil {
+			close(messages)
+			return
+		}
+		// only forward messages delivered by others
+		if msg.ReceivedFrom == node.ID() {
+			continue
+		}
+		fmt.Println(msg.Data)
+		cm := new(GossipMessage)
+		err = json.Unmarshal(msg.Data, cm)
+		if err != nil {
+			continue
+		}
+		// send valid messages onto the Messages channel
+		messages <- cm
+	}
+}
+
+func writeMessages(node host.Host, topic *pubsub.Topic, nick string, message string) error {
+//rw *bufio.ReadWriter
+	m := GossipMessage{
+		Message:    message,
+		SenderID:   node.ID().Pretty(),
+		SenderNick: nick,
+	}
+	msgBytes, err := json.Marshal(m)
+	if err != nil {
+		return err
+	}
+	return topic.Publish(context.Background(), msgBytes)
+}
+
+/* pubsub example helpers */
+
+// DiscoveryInterval is how often we re-publish our mDNS records.
+const DiscoveryInterval = time.Hour
+
+// DiscoveryServiceTag is used in our mDNS advertisements to discover other chat peers.
+const DiscoveryServiceTag = "modmesh"
+
+// discoveryNotifee gets notified when we find a new peer via mDNS discovery
+type discoveryNotifee struct {
+	h host.Host
+}
+
+// HandlePeerFound connects to peers discovered via mDNS. Once they're connected,
+// the PubSub system will automatically start interacting with them if they also
+// support PubSub.
+func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
+	fmt.Printf("discovered new peer %s\n", pi.ID.Pretty())
+	err := n.h.Connect(context.Background(), pi)
+	if err != nil {
+		fmt.Printf("error connecting to peer %s: %s\n", pi.ID.Pretty(), err)
+	}
+}
+
+// setupDiscovery creates an mDNS discovery service and attaches it to the libp2p Host.
+// This lets us automatically discover peers on the same LAN and connect to them.
+func setupDiscovery(h host.Host) error {
+	// setup mDNS discovery to find local peers
+	s := mdns.NewMdnsService(h, DiscoveryServiceTag, &discoveryNotifee{h: h})
+	return s.Start()
+}
+
+// shortID returns the last 8 chars of a base58-encoded peer id.
+func shortID(p peer.ID) string {
+	pretty := p.Pretty()
+	return pretty[len(pretty)-8:]
+}
