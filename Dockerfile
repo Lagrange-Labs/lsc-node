@@ -9,7 +9,7 @@ WORKDIR /build
 # We want to populate the module cache based on the go.{mod,sum} files.
 COPY src/go.mod .
 COPY src/go.sum .
-COPY src/modmesh.go .
+COPY src/*.go ./
 
 RUN go mod download
 
