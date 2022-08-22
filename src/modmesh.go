@@ -15,24 +15,12 @@ import host "github.com/libp2p/go-libp2p-core/host"
 //import network "github.com/libp2p/go-libp2p-core/network"
 import ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
 
-
-import context "context"
-//import "github.com/ethereum/go-ethereum/accounts/abi/bind"
-import common "github.com/ethereum/go-ethereum/common"
-//import "github.com/ethereum/go-ethereum/crypto"
-import ethClient "github.com/ethereum/go-ethereum/ethclient"
-
-import log "log"
+import peerstore "github.com/libp2p/go-libp2p-core/peer"
+import multiaddr "github.com/multiformats/go-multiaddr"
 
 import pubsub "github.com/libp2p/go-libp2p-pubsub"
+import context "context"
 
-func loadEthClient() *ethClient.Client {
-	eth, err := ethClient.Dial("http://0.0.0.0:8545")
-	if err != nil {
-		panic(err)
-	}
-	return eth
-}
 
 func createListener(portPtr int) host.Host {
 	node, err := libp2p.New(
@@ -65,23 +53,9 @@ func getAddrInfo(node host.Host) peer.AddrInfo {
 	}
 	addrs, err := peer.AddrInfoToP2pAddrs(&peerInfo)
 	fmt.Println("libp2p node address:", addrs[0])
+	fmt.Println(peerInfo)
 	_ = err
 	return peerInfo
-}
-
-func ethTest(eth *ethClient.Client) {
-	ctx := context.Background()
-	tx, pending, _ := eth.TransactionByHash(ctx, common.HexToHash("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))
-	if !pending {
-		fmt.Println("tx:",tx)
-	}
-
-	account := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
-	balance, err := eth.BalanceAt(ctx, account, nil)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Balance:", balance) // 25893180161173005034
 }
 
 func getGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic,*pubsub.Subscription) {
@@ -117,6 +91,30 @@ func topicName(networkName string) string {
 	return "modmesh-" + networkName
 }
 
+func connectRemote(node host.Host, peerAddr string) {
+	if (len(peerAddr) > 0) {
+		addr, err := multiaddr.NewMultiaddr(peerAddr)
+		if err != nil {
+			panic(err)
+		}
+
+		peer, err := peerstore.AddrInfoFromP2pAddr(addr)
+		if err != nil {
+			panic(err)
+		}
+		
+		if err := node.Connect(context.Background(), *peer); err != nil {
+			panic(err)
+		}
+
+		ch := ping.Ping(context.Background(), node, peer.ID)
+		for i := 0; i < 5; i++ {
+			res := <-ch
+			fmt.Println("Got ping response.", "Latency:", res.RTT)
+		}
+	}
+}
+
 func main() {
 	// Parse Port
 	portPtr := flag.Int("port",8081,"Server listening port")
@@ -124,20 +122,26 @@ func main() {
 	nickPtr := flag.String("nick","","Nickname - CLI flag, blank by default, consider addresses or protocol TLDs later.")
 	// Parse Room
 	roomPtr := flag.String("room","rinkeby","Room / Network")
+	// Parse Remote Peer
+	peerAddrPtr := flag.String("peerAddr","","Remote Peer Address")
+	// Parse Remote Peer Port
+	peerPortPtr := flag.String("peerPort","8081","Remote Peer Port")
+
 	flag.Parse()
 
 	port := *portPtr
 	nick := *nickPtr
 	room := *roomPtr
+	peerAddr := *peerAddrPtr
+	peerPort := *peerPortPtr
+	
+	_ = peerPort
 
 	fmt.Println("Port:",port)
 
-	// Create ethclient instance pointing to local Hardhat node
-	eth := loadEthClient()
-	_ = eth
+	rpcCall("0xcc13fc627effd6e35d2d2706ea3c4d7396c610ea","0x8da5cb5b")
 	
-	// Test data requests from Hardhat node
-//	ethTest(eth)
+//	os.Exit(0)
 	
 	// Create listener
 	node := createListener(port)
@@ -148,15 +152,18 @@ func main() {
 	fmt.Println("Nickname:",nick)
 
 	// Get P2P Address Info
-	peerInfo := getAddrInfo(node);
-	_ = peerInfo
+	localInfo := getAddrInfo(node);
+	_ = localInfo
 
 	// Ping test - please determine an approach to finding peers, rather than self-pinging	
-	ch := ping.Ping(context.Background(), node, peerInfo.ID)
+	ch := ping.Ping(context.Background(), node, localInfo.ID)
 	for i := 0; i < 5; i++ {
 		res := <-ch
 		fmt.Println("Got ping response.", "Latency:", res.RTT)
 	}
+	
+	// Connect to Remote Peer
+	connectRemote(node,peerAddr)
 	
 	ps, topic, subscription := getGossipSub(node,room)
 
