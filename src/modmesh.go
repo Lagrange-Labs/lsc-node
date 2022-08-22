@@ -24,7 +24,7 @@ import context "context"
 
 func createListener(portPtr int) host.Host {
 	node, err := libp2p.New(
-		libp2p.ListenAddrStrings("/ip4/127.0.0.1/tcp/"+strconv.Itoa(portPtr)),
+		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/"+strconv.Itoa(portPtr)),
 	)
 	if err != nil {
 		panic(err)
