@@ -20,7 +20,7 @@ func main() {
 	// Parse Remote Peer
 	peerAddrPtr := flag.String("peerAddr","","Remote Peer Address")
 	// Parse ETH URL
-	ethEndpointPtr := flag.String("ethEndpoint","http://lagrange-dev:8545","Ethereum Endpoint URL:Port")
+	ethEndpointPtr := flag.String("ethEndpoint","http://34.229.73.193:8545","Ethereum Endpoint URL:Port")
 
 	flag.Parse()
 
