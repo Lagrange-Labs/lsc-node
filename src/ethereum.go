@@ -11,28 +11,24 @@ import log "log"
 
 import context "context"
 
-func loadEthClient() *ethClient.Client {
-	// Create ethclient instance pointing to local Hardhat node
-	eth, err := ethClient.Dial("http://0.0.0.0:8545")
+func loadEthClient(ethEndpoint string) *ethClient.Client {
+	eth, err := ethClient.Dial(ethEndpoint)
 	if err != nil {
 		panic(err)
 	}
 	return eth
 }
 
-func loadRpcClient() *rpc.Client {
-//	rpc, err := rpc.DialHTTP("https://mainnet.infura.io")
-	rpc, err := rpc.DialHTTP("http://0.0.0.0:8545")
+func loadRpcClient(ethEndpoint string) *rpc.Client {
+	rpc, err := rpc.DialHTTP(ethEndpoint)
 	if err != nil {
 		log.Fatal(err)
 	}
+	defer rpc.Close()
 	return rpc
 }
 
-func rpcCall(To string,Data string) {
-	rpc := loadRpcClient()
-	defer rpc.Close()
-
+func rpcCall(rpc *rpc.Client,To string,Data string) {
 	type request struct {
 		To   string `json:"to"`
 		Data string `json:"data"`
