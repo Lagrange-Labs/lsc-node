@@ -1,2 +1,3 @@
-#!/bin/bash
-docker build . -t modmesh -f ./Dockerfile
+docker build \
+       --no-cache \
+       . -t modmesh -f ./Dockerfile

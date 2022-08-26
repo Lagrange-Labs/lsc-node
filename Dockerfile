@@ -1,4 +1,4 @@
-FROM golang:1.18-bullseye as builder
+FROM golang:1.18-alpine as builder
 
 RUN go install golang.org/dl/go1.18@latest \
   && go1.18 download
@@ -13,10 +13,8 @@ COPY src/*.go ./
 
 RUN go mod download
 
-COPY . .
-
 # Build the Go app
-RUN go build -o ./out/modmesh .
+RUN CGO_ENABLED=0 GOOS=linux GOARCH=amd64 go build -ldflags "-s -w -extldflags '-static'" -o ./out/modmesh .
 
 
 # This container exposes port 8080 to the outside world
