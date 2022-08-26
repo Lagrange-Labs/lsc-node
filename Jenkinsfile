@@ -9,7 +9,8 @@ pipeline {
         }
         stage('Test') {
             steps {
-                echo 'Testing..'
+                echo "Testing.."
+                sh 'cd ./src && go test . -v'
             }
         }
         stage('Deploy') {
