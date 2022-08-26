@@ -1,2 +1,2 @@
 #!/bin/bash
-docker build . -t modmesh -f Dockerfile
+docker build . -t modmesh -f ./Dockerfile
