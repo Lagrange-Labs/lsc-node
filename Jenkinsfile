@@ -11,7 +11,6 @@ for (bitbucket_repo in bitbucket_repos)
       branchSource {
         source {
           bitbucket {
-//            credentialsId("...")
             repoOwner("${bitbucket_project.toUpperCase()}")
             repository("${bitbucket_repo}")
             serverUrl("https://bitbucket.acme.com/")
