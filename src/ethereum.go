@@ -1,6 +1,7 @@
 package main
 
 import "fmt"
+import "time"
 
 //import "github.com/ethereum/go-ethereum/accounts/abi/bind"
 import common "github.com/ethereum/go-ethereum/common"
@@ -11,11 +12,18 @@ import log "log"
 
 import context "context"
 
+//import json "encoding/json"
+
+import host "github.com/libp2p/go-libp2p-core/host"
+import pubsub "github.com/libp2p/go-libp2p-pubsub"
+import "strconv"
+
 func loadEthClient(ethEndpoint string) *ethClient.Client {
 	eth, err := ethClient.Dial(ethEndpoint)
 	if err != nil {
 		panic(err)
 	}
+	fmt.Println("Endpoint:",ethEndpoint)
 	return eth
 }
 
@@ -42,7 +50,7 @@ func rpcCall(rpc *rpc.Client,To string,Data string) {
 	}
 
 	owner := common.HexToAddress(result)
-	fmt.Printf("%s\n", owner.Hex()) // 0x281017b4E914b79371d62518b17693B36c7a221e
+	fmt.Printf("RPC Result: %s\n", owner.Hex()) // 0x281017b4E914b79371d62518b17693B36c7a221e
 }
 
 func ethTest(eth *ethClient.Client) {
@@ -60,3 +68,18 @@ func ethTest(eth *ethClient.Client) {
 	fmt.Println("Balance:", balance) // 25893180161173005034
 }
 
+func listenForBlocks(eth *ethClient.Client,node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nick string, subscription *pubsub.Subscription) {
+	for {
+		block, err := eth.BlockByNumber(context.Background(),nil)
+		if(err != nil) { panic(err) }
+		/*
+
+		if(err != nil) { panic(err) }
+		*/		
+		txns := block.Transactions()
+		msg := "{'block':"+block.Number().String()+",'txnCount':"+strconv.Itoa(len(txns))+"}"
+		writeMessages(node,topic,nick,msg)
+		
+		time.Sleep(1 * time.Second)
+	}
+}

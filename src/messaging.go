@@ -2,6 +2,7 @@ package main
 
 import "fmt"
 import "os"
+import "time"
 import bufio "bufio"
 import json "encoding/json"
 
@@ -20,10 +21,10 @@ func handleMessaging(node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nic
 */
 //	messages := make(chan *GossipMessage, bufferSize)
 	reader := bufio.NewReader(os.Stdin)
-
+	_ = reader
 	for {
-		input, _ := reader.ReadString('\n')
-		go writeMessages(node,topic,nick,input)
+		//input, _ := reader.ReadString('\n')
+		//go writeMessages(node,topic,nick,input)
 		go readMessages(node,topic,ps,subscription);
 			
 /*
@@ -39,6 +40,7 @@ func handleMessaging(node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nic
 			return
 		}
 */
+		time.Sleep(1 * time.Second)
 	}
 }
 // Converted to/from JSON and sent in the body of pubsub messages.
