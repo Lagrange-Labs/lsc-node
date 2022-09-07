@@ -6,9 +6,12 @@ import "os"
 import "os/signal"
 import "syscall"
 import "context"
+//import "strconv"
 
 import host "github.com/libp2p/go-libp2p-core/host"
 import ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
+
+//import ethClient "github.com/ethereum/go-ethereum/ethclient"
 
 func main() {
 	// Parse Port
@@ -20,7 +23,7 @@ func main() {
 	// Parse Remote Peer
 	peerAddrPtr := flag.String("peerAddr","","Remote Peer Address")
 	// Parse ETH URL
-	ethEndpointPtr := flag.String("ethEndpoint","http://34.229.73.193:8545","Ethereum Endpoint URL:Port")
+	ethEndpointPtr := flag.String("ethEndpoint","https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab992c4da79","Ethereum Endpoint URL:Port")
 
 	flag.Parse()
 
@@ -32,8 +35,11 @@ func main() {
 	
 	fmt.Println("Port:",port)
 
+	/*
 	rpc := loadRpcClient(ethEndpoint)
 	rpcCall(rpc,"0xcc13fc627effd6e35d2d2706ea3c4d7396c610ea","0x8da5cb5b")
+	*/
+	eth := loadEthClient(ethEndpoint)
 	
 	// Create listener
 	node := createListener(port)
@@ -60,6 +66,7 @@ func main() {
 	ps, topic, subscription := getGossipSub(node,room)
 
 	go handleMessaging(node,topic,ps,nick,subscription)
+	go listenForBlocks(eth,node,topic,ps,nick,subscription)
 
         // SIGINT | SIGTERM Signal Handling - End
         termHandler(node)
