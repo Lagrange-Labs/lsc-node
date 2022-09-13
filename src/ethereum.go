@@ -3,9 +3,9 @@ package main
 import "fmt"
 import "time"
 
-//import "github.com/ethereum/go-ethereum/accounts/abi/bind"
+import "math/big"
+
 import common "github.com/ethereum/go-ethereum/common"
-//import "github.com/ethereum/go-ethereum/crypto"
 import ethClient "github.com/ethereum/go-ethereum/ethclient"
 import rpc "github.com/ethereum/go-ethereum/rpc"
 import log "log"
@@ -17,6 +17,12 @@ import context "context"
 import host "github.com/libp2p/go-libp2p-core/host"
 import pubsub "github.com/libp2p/go-libp2p-pubsub"
 import "strconv"
+
+import "github.com/ethereum/go-ethereum/crypto"
+import "github.com/ethereum/go-ethereum/accounts/abi/bind"
+
+import	"crypto/ecdsa"
+import	"github.com/ethereum/go-ethereum/common/hexutil"
 
 func loadEthClient(ethEndpoint string) *ethClient.Client {
 	eth, err := ethClient.Dial(ethEndpoint)
@@ -72,14 +78,162 @@ func listenForBlocks(eth *ethClient.Client,node host.Host, topic *pubsub.Topic, 
 	for {
 		block, err := eth.BlockByNumber(context.Background(),nil)
 		if(err != nil) { panic(err) }
-		/*
-
-		if(err != nil) { panic(err) }
-		*/		
 		txns := block.Transactions()
-		msg := "{'block':"+block.Number().String()+",'txnCount':"+strconv.Itoa(len(txns))+"}"
+		msg := "{'block.Number':"+block.Number().String()+",'block.Hash':"+block.Hash().String()+",'txnCount':"+strconv.Itoa(len(txns))+"}"
 		writeMessages(node,topic,nick,msg)
 		
 		time.Sleep(1 * time.Second)
 	}
+}
+
+func getNonce(client *ethClient.Client, fromAddress common.Address) uint64 {
+	nonce, err := client.PendingNonceAt(context.Background(), fromAddress)
+	if err != nil {
+		panic(err)
+	}
+	fmt.Println("Nonce:",nonce)
+	return nonce;
+}
+
+type LagrangeNodeCredentials struct {
+	privateKey string
+	publicKey interface{} // crypto.PublicKey
+	address common.Address
+	
+	privateKeyECDSA *ecdsa.PrivateKey
+	publicKeyECDSA *ecdsa.PublicKey
+}
+
+func getCredentials() *LagrangeNodeCredentials {
+	privateKeyString := getPrivateKey()
+	privateKey, err := crypto.HexToECDSA(privateKeyString)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Private key loaded.");
+
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok {
+		log.Fatal("error casting public key to ECDSA")
+	}
+	fmt.Println("Public key loaded.")
+
+	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
+	fmt.Println("Address isolated.")
+	
+	res := LagrangeNodeCredentials {
+		privateKey: privateKeyString,
+		publicKey: publicKey,
+		address: fromAddress,
+		privateKeyECDSA: privateKey,
+		publicKeyECDSA: publicKeyECDSA }
+	
+	return &res
+}
+
+func getStakingContract(client *ethClient.Client) *Nodestaking {
+	address := common.HexToAddress(NODE_STAKING_ADDRESS)
+	instance, err := NewNodestaking(address,client)
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Loaded contract address",address)
+	return instance
+}
+
+func getGasPrice(client *ethClient.Client) *big.Int {
+	gasPrice, err := client.SuggestGasPrice(context.Background())
+	if err != nil {
+		log.Fatal(err)
+	}
+	return gasPrice
+}
+
+func StakeBegin(instance *Nodestaking) *big.Int {
+	stake, err := instance.StakeAmount(&bind.CallOpts{})
+	if err != nil {
+		log.Fatal(err)
+	}
+	fmt.Println("Stake amount:",stake)
+	return stake
+}
+
+func StakeAdd(instance *Nodestaking, auth *bind.TransactOpts) {
+	res,err := instance.AddStake(auth,big.NewInt(4))
+	if(err != nil) { panic(err) }
+	_ = res
+}
+
+func StakeRemoveBegin(instance *Nodestaking, auth *bind.TransactOpts) {
+	res,err := instance.StartStakeRemoval(auth,big.NewInt(4))
+	if(err != nil) { panic(err) }
+	_ = res
+}
+
+func StakeRemoveFinish(instance *Nodestaking, auth *bind.TransactOpts) {
+	res,err := instance.FinishStakeRemoval(auth,big.NewInt(4))
+	if(err != nil) { panic(err) }
+	_ = res
+}
+
+func getAuth(privateKey *ecdsa.PrivateKey) *bind.TransactOpts {
+	auth := bind.NewKeyedTransactor(privateKey)
+	return auth
+}
+
+func mineBlocks(rpc *rpc.Client) {
+	var hex hexutil.Bytes
+	for i := 0; i < 5; i++ {
+		rpc.Call(&hex,"evm_mine")
+	}
+}
+
+func ctrIntTest(rpc *rpc.Client, client *ethClient.Client) {
+	// Connect to Staking Contract
+	instance := getStakingContract(client)
+
+	// Retrieve private key, public key, address
+	credentials := getCredentials()
+	privateKey := credentials.privateKeyECDSA
+	fromAddress := credentials.address
+
+	// Request nonce for transaction	
+	nonce := getNonce(client,fromAddress)
+
+	// Request gas price
+	gasPrice := getGasPrice(client)
+
+	// Begin Staking Transaction
+	stake := StakeBegin(instance)
+
+	auth := getAuth(privateKey)
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = stake
+	auth.GasLimit = uint64(300000) // in units
+	auth.GasPrice = gasPrice
+
+	// Add Stake
+	StakeAdd(instance,auth)
+
+	// Hardhat - Mine Blocks
+	mineBlocks(rpc)
+
+	// Update Nonce and Val
+	nonce = getNonce(client,fromAddress)
+	auth.Nonce = big.NewInt(int64(nonce))
+	auth.Value = big.NewInt(0)
+	
+	// Begin Stake Removal
+	StakeRemoveBegin(instance, auth)
+
+	// Hardhat - Mine More Blocks
+	mineBlocks(rpc)
+	
+	// Update Nonce
+	nonce = getNonce(client,fromAddress)
+	auth.Nonce = big.NewInt(int64(nonce))
+	
+	// Finalize Stake Removal
+	StakeRemoveFinish(instance,auth)
 }

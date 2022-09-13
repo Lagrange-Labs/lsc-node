@@ -28,6 +28,7 @@ type discoveryNotifee struct {
 // support PubSub.
 func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 	fmt.Printf("discovered new peer %s\n", pi.ID.Pretty())
+	fmt.Println("peer.AddrInfo:",pi);
 	err := n.h.Connect(context.Background(), pi)
 	if err != nil {
 		fmt.Printf("error connecting to peer %s: %s\n", pi.ID.Pretty(), err)
@@ -47,3 +48,12 @@ func shortID(p peer.ID) string {
 	pretty := p.Pretty()
 	return pretty[len(pretty)-8:]
 }
+
+const (
+        InfoColor    = "\033[1;34m%s\033[0m"
+        NoticeColor  = "\033[1;36m%s\033[0m"
+        WarningColor = "\033[1;33m%s\033[0m"
+        ErrorColor   = "\033[1;31m%s\033[0m"
+        DebugColor   = "\033[0;36m%s\033[0m"
+)
+
