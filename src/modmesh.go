@@ -6,12 +6,16 @@ import "os"
 import "os/signal"
 import "syscall"
 import "context"
-//import "strconv"
 
 import host "github.com/libp2p/go-libp2p-core/host"
 import ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
 
-//import ethClient "github.com/ethereum/go-ethereum/ethclient"
+const NODE_STAKING_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+
+// Placeholder - Return first Hardhat private key for now
+func getPrivateKey() string {
+	return "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+}
 
 func main() {
 	// Parse Port
@@ -22,8 +26,10 @@ func main() {
 	roomPtr := flag.String("room","rinkeby","Room / Network")
 	// Parse Remote Peer
 	peerAddrPtr := flag.String("peerAddr","","Remote Peer Address")
-	// Parse ETH URL
-	ethEndpointPtr := flag.String("ethEndpoint","https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab992c4da79","Ethereum Endpoint URL:Port")
+	// Parse ETH (Staking) URL
+	stakingEndpointPtr := flag.String("stakingEndpoint","https://34.229.73.193:8545","Staking Endpoint URL:Port")
+	// Parse ETH (Attestation) URL
+	attestEndpointPtr := flag.String("attestEndpoint","https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab992c4da79","Attestation Endpoint URL:Port")
 
 	flag.Parse()
 
@@ -31,15 +37,17 @@ func main() {
 	nick := *nickPtr
 	room := *roomPtr
 	peerAddr := *peerAddrPtr
-	ethEndpoint := *ethEndpointPtr
+	stakingEndpoint := *stakingEndpointPtr
+	attestEndpoint := *attestEndpointPtr
 	
 	fmt.Println("Port:",port)
 
-	/*
-	rpc := loadRpcClient(ethEndpoint)
-	rpcCall(rpc,"0xcc13fc627effd6e35d2d2706ea3c4d7396c610ea","0x8da5cb5b")
-	*/
-	eth := loadEthClient(ethEndpoint)
+	rpcStaking := loadRpcClient(stakingEndpoint)
+	ethStaking := loadEthClient(stakingEndpoint)
+
+	rpcAttest := loadRpcClient(attestEndpoint)
+	_ = rpcAttest
+	ethAttest := loadEthClient(attestEndpoint)
 	
 	// Create listener
 	node := createListener(port)
@@ -66,7 +74,11 @@ func main() {
 	ps, topic, subscription := getGossipSub(node,room)
 
 	go handleMessaging(node,topic,ps,nick,subscription)
-	go listenForBlocks(eth,node,topic,ps,nick,subscription)
+	go listenForBlocks(ethAttest,node,topic,ps,nick,subscription)
+	
+	// Sandbox - Contract Interaction
+	ctrIntTest(rpcStaking,ethStaking)
+//	ethTest(eth)
 
         // SIGINT | SIGTERM Signal Handling - End
         termHandler(node)
