@@ -24,6 +24,12 @@ import "github.com/ethereum/go-ethereum/accounts/abi/bind"
 import	"crypto/ecdsa"
 import	"github.com/ethereum/go-ethereum/common/hexutil"
 
+const (
+	STAKE_STATUS_CLOSED = 0
+	STAKE_STATUS_PENDING = 1
+	STAKE_STATUS_OPEN = 2
+)
+
 func loadEthClient(ethEndpoint string) *ethClient.Client {
 	eth, err := ethClient.Dial(ethEndpoint)
 	if err != nil {
@@ -189,6 +195,12 @@ func mineBlocks(rpc *rpc.Client) {
 	}
 }
 
+func VerifyStake(client *ethClient.Client, instance *Nodestaking, addr common.Address) bool {
+	activeStakes,err := instance.ActiveStakes(&bind.CallOpts{},addr,big.NewInt(4))
+	if(err != nil) { panic(err) }
+	return activeStakes == STAKE_STATUS_OPEN
+}
+
 func ctrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	// Connect to Staking Contract
 	instance := getStakingContract(client)
@@ -197,6 +209,10 @@ func ctrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	credentials := getCredentials()
 	privateKey := credentials.privateKeyECDSA
 	fromAddress := credentials.address
+
+	// Verify Stake
+	isStaked := VerifyStake(client,instance,fromAddress)
+	fmt.Println("Stake Verification:",isStaked)
 
 	// Request nonce for transaction	
 	nonce := getNonce(client,fromAddress)
@@ -213,8 +229,16 @@ func ctrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	auth.GasLimit = uint64(300000) // in units
 	auth.GasPrice = gasPrice
 
+	// Verify Stake
+	isStaked = VerifyStake(client,instance,fromAddress)
+	fmt.Println("Stake Verification:",isStaked)
+
 	// Add Stake
 	StakeAdd(instance,auth)
+	
+	// Verify Stake
+	isStaked = VerifyStake(client,instance,fromAddress)
+	fmt.Println("Stake Verification:",isStaked)
 
 	// Hardhat - Mine Blocks
 	mineBlocks(rpc)
@@ -227,6 +251,10 @@ func ctrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	// Begin Stake Removal
 	StakeRemoveBegin(instance, auth)
 
+	// Verify Stake
+	isStaked = VerifyStake(client,instance,fromAddress)
+	fmt.Println("Stake Verification:",isStaked)
+
 	// Hardhat - Mine More Blocks
 	mineBlocks(rpc)
 	
@@ -236,4 +264,8 @@ func ctrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	
 	// Finalize Stake Removal
 	StakeRemoveFinish(instance,auth)
+
+	// Verify Stake
+	isStaked = VerifyStake(client,instance,fromAddress)
+	fmt.Println("Stake Verification:",isStaked)
 }
