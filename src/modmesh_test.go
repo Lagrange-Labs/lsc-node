@@ -1,7 +1,9 @@
 package main
 
-import "fmt"
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestMain(m *testing.M) {
     testVar := 1

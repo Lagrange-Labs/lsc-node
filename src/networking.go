@@ -1,18 +1,20 @@
 package main
 
-import "fmt"
-import "strconv"
+import (
+	"fmt"
+	"strconv"
 
-import "github.com/libp2p/go-libp2p"
+	"github.com/libp2p/go-libp2p"
 
-import host "github.com/libp2p/go-libp2p-core/host"
-import peerstore "github.com/libp2p/go-libp2p-core/peer"
+	host "github.com/libp2p/go-libp2p-core/host"
+	peerstore "github.com/libp2p/go-libp2p-core/peer"
 
-import pubsub "github.com/libp2p/go-libp2p-pubsub"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
 
-import multiaddr "github.com/multiformats/go-multiaddr"
+	multiaddr "github.com/multiformats/go-multiaddr"
 
-import context "context"
+	context "context"
+)
 
 func createListener(portPtr int) host.Host {
 	node, err := libp2p.New(
@@ -62,6 +64,7 @@ func getGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic
 	}
 	
 	fmt.Println("Room joined and subscribed:",topicName(roomName))
+	fmt.Println("{address: '0x...'}")
 	
 	return ps,topic,sub
 }
@@ -89,4 +92,8 @@ func connectRemote(node host.Host, peerAddr string) {
 			fmt.Println("Connected:", *peer)
 		}
 	}
+}
+
+func handleNewPeer() {
+	
 }
