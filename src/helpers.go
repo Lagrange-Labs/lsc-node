@@ -1,15 +1,18 @@
 package main
 
-import "fmt"
-import "time"
+import (
+	"fmt"
+	"time"
+	"os"
+	"bufio"
 
-import context "context"
+	context "context"
 
-import peer "github.com/libp2p/go-libp2p-core/peer"
-import host "github.com/libp2p/go-libp2p-core/host"
+	peer "github.com/libp2p/go-libp2p-core/peer"
+	host "github.com/libp2p/go-libp2p-core/host"
 
-import "github.com/libp2p/go-libp2p/p2p/discovery/mdns"
-
+	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
+)
 /* pubsub example helpers */
 
 // DiscoveryInterval is how often we re-publish our mDNS records.
@@ -57,3 +60,26 @@ const (
         DebugColor   = "\033[0;36m%s\033[0m"
 )
 
+
+func scan(prompt string) string {
+	if(prompt != "") {
+		fmt.Println(prompt)
+	}
+	reader := bufio.NewReader(os.Stdin)
+	input, _ := reader.ReadString('\n')
+	return input
+}
+/*
+func signMessage(privateKey *ecdsa.PrivateKey, message string) (string, error) {
+	messageHash := accounts.TextHash([]byte(message))
+
+	signature, err := crypto.Sign(messageHash, privateKey)
+	if err != nil {
+		return "", err
+	}
+
+	signature[crypto.RecoveryIDOffset] += 27
+
+	return hexutil.Encode(signature), nil
+}
+*/

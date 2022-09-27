@@ -1,15 +1,17 @@
 package main
 
-import "fmt"
-import "os"
-import "time"
-import bufio "bufio"
-import json "encoding/json"
+import (
+	"fmt"
+	"os"
+	"time"
+	bufio "bufio"
+	json "encoding/json"
 
-import context "context"
+	context "context"
 
-import host "github.com/libp2p/go-libp2p-core/host"
-import pubsub "github.com/libp2p/go-libp2p-pubsub"
+	host "github.com/libp2p/go-libp2p-core/host"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+)
 
 // handleEvents runs an event loop that sends user input to the chat room
 // and displays messages received from the chat room. It also periodically
