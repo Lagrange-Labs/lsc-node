@@ -1,6 +1,10 @@
 FROM alpine
 WORKDIR /build
 COPY /src/out/modmesh .
+ARG NODE_STAKING_ADDRESS
+ARG HARDHAT_PRIVATE_KEY
+ENV NODE_STAKING_ADDRESS "$NODE_STAKING_ADDRESS"
+ENV HARDHAT_PRIVATE_KEY "$HARDHAT_PRIVATE_KEY"
 # This container exposes port 8080 to the outside world
 EXPOSE 8080
 CMD ["/build/modmesh"]

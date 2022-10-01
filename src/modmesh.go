@@ -10,11 +10,15 @@ import "context"
 import host "github.com/libp2p/go-libp2p-core/host"
 import ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
 
-const NODE_STAKING_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+// const NODE_STAKING_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+
+NODE_STAKING_ADDRESS := os.Getenv("NODE_STAKING_ADDRESS")
 
 // Placeholder - Return first Hardhat private key for now
 func getPrivateKey() string {
-	return "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	// return "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	return os.Getenv("HARDHAT_PRIVATE_KEY")
+
 }
 
 func main() {
