@@ -10,5 +10,18 @@
 ## Run:
 ```
 docker build . -f Dockerfile -t modmesh 
-docker run modmesh --env-file ./.env
+docker run --env-file ./.env modmesh
+```
+
+## References
+
+- delete before build new docker ins
+```
+# show all images
+docker images -a
+# if there is name
+docker rmi -f {name} 
+# if there is no name
+docker rmi -f {image_id}
+
 ```
