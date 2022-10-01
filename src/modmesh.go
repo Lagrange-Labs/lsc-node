@@ -76,8 +76,9 @@ func main() {
 	connectRemote(node,peerAddr)
 	
 	ps, topic, subscription := getGossipSub(node,room)
-
+	// where to encrypt and process messages
 	go handleMessaging(node,topic,ps,nick,subscription)
+	
 	go listenForBlocks(ethAttest,node,topic,ps,nick,subscription)
 	
 	// Sandbox - Contract Interaction

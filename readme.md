@@ -1,6 +1,7 @@
 # Modmesh
 
 ![Golang](https://img.shields.io/badge/Golang-1.18.6-brightgreen.svg) 
+![System](https://img.shields.io/badge/Debian-11-brightblue.svg)
 
 ## pre-preparation:
 
@@ -15,7 +16,7 @@ docker run --env-file ./.env modmesh
 
 ## References
 
-- delete before build new docker ins
+- delete before building a new docker instance
 ```
 # show all images
 docker images -a
