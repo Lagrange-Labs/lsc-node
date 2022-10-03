@@ -1,28 +1,37 @@
 package main
 
-import "fmt"
-import "time"
+import (
+	"fmt"
+	"time"
+	"os"
 
-import "math/big"
+	"math/big"
+	
+	common "github.com/ethereum/go-ethereum/common"
+	ethClient "github.com/ethereum/go-ethereum/ethclient"
+	rpc "github.com/ethereum/go-ethereum/rpc"
+	log "log"
 
-import common "github.com/ethereum/go-ethereum/common"
-import ethClient "github.com/ethereum/go-ethereum/ethclient"
-import rpc "github.com/ethereum/go-ethereum/rpc"
-import log "log"
+	context "context"
 
-import context "context"
+	//json "encoding/json"
 
-//import json "encoding/json"
+	host "github.com/libp2p/go-libp2p-core/host"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+	"strconv"
 
-import host "github.com/libp2p/go-libp2p-core/host"
-import pubsub "github.com/libp2p/go-libp2p-pubsub"
-import "strconv"
+	"github.com/ethereum/go-ethereum/crypto"
+//	sha3 "github.com/ethereum/go-ethereum/crypto/sha3"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 
-import "github.com/ethereum/go-ethereum/crypto"
-import "github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"crypto/ecdsa"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethereum "github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/core/types"
 
-import	"crypto/ecdsa"
-import	"github.com/ethereum/go-ethereum/common/hexutil"
+	accounts "github.com/ethereum/go-ethereum/accounts"
+	keystore "github.com/ethereum/go-ethereum/accounts/keystore"
+)
 
 const (
 	STAKE_STATUS_CLOSED = 0
@@ -80,11 +89,145 @@ func ethTest(eth *ethClient.Client) {
 	fmt.Println("Balance:", balance) // 25893180161173005034
 }
 
+func initKeystore(privateKey *ecdsa.PrivateKey) accounts.Account {
+	// Generate keystore with private key
+	ks := keystore.NewKeyStore("./wallets", keystore.StandardScryptN, keystore.StandardScryptP)
+	input := scan("Enter passphrase for new keystore:")
+	account,err := ks.ImportECDSA(privateKey,input)
+	if(err != nil) { panic(err) }
+	fmt.Println("New keystore created for address",account.Address)
+	fmt.Println("URL:",account.URL)
+	return account
+}
+
+func generateKeypair() (string, string) {
+	// Generate private key
+	privateKey, err := crypto.GenerateKey()
+	if err != nil { log.Fatal(err) }
+	privateKeyHex := hexutil.Encode(crypto.FromECDSA(privateKey))[2:]
+
+	account := initKeystore(privateKey)
+	_ = account
+	
+	// Generate public key
+	publicKey := privateKey.Public()
+	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
+	if !ok { log.Fatal("error casting public key to ECDSA") }
+	publicKeyHex := hexutil.Encode(crypto.FromECDSAPub(publicKeyECDSA))[4:]
+
+	fmt.Println("Wallet Created:",crypto.PubkeyToAddress(*publicKeyECDSA))
+	
+	return privateKeyHex, publicKeyHex
+}
+
+func handleStakingEvent(vLog *NodestakingStakedNode) {
+	node := vLog.Node
+	chainId := vLog.ChainId
+	amount := vLog.Amount
+	claimTime := vLog.ClaimTime
+
+	fmt.Println(node,chainId,amount,claimTime)
+}
+
+func listenForStaking(eth *ethClient.Client) {
+	contractAddress := common.HexToAddress(NODE_STAKING_ADDRESS)
+
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	
+	currentBlock, _ := eth.BlockNumber(ctx)
+	query := ethereum.FilterQuery{
+		Addresses: []common.Address{contractAddress},
+//		Topics:    [][]common.Hash{{myTopic}},
+		FromBlock: big.NewInt(int64(currentBlock)),
+	}
+	logs := make(chan types.Log)
+
+	for {
+		sub, err := eth.SubscribeFilterLogs(ctx, query, logs)
+		if err != nil {
+			log.Fatal(err)
+			return
+		}
+		defer sub.Unsubscribe()
+		fmt.Println("Listening to contract", NODE_STAKING_ADDRESS)
+		fmt.Println(logs)
+		select {
+			case err := <-sub.Err():
+				log.Fatal(err)
+				continue
+			case vLog := <-logs:
+//				handleStakingEvent(vLog)
+				fmt.Println(vLog.Address)
+		}
+	}
+}
+
+func generateStateRootString(eth *ethClient.Client, block *types.Block) string {
+	stateRootSeparator := "::"
+	
+	blockRoot := block.Root().String()
+	blockTime := strconv.FormatUint(block.Time(),10)
+	blockNumber := block.Number().String()
+	chain,err := eth.ChainID(context.Background())
+	if err != nil { panic(err) }
+	chainID := chain.String()		
+	
+	stateRootStr := blockRoot + stateRootSeparator + blockTime + stateRootSeparator + blockNumber + stateRootSeparator + chainID	
+	fmt.Println("State Root String:",stateRootStr)
+
+	return stateRootStr
+}
+
+func keccakHash(stateRootStr string) []byte {
+	return crypto.Keccak256([]byte(stateRootStr))
+}
+
+func keccakHashString(stateRootStr string) string {
+	return hexutil.Encode(keccakHash(stateRootStr))
+}
+
+type StateRootMessage struct {
+	StateRoot string
+	Timestamp string
+	BlockNumber string
+	ShardedEdDSASignatureTuple string
+	ECDSASignatureTuple string
+	EthereumPublicKey string
+}
+
 func listenForBlocks(eth *ethClient.Client,node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nick string, subscription *pubsub.Subscription) {
 	for {
 		block, err := eth.BlockByNumber(context.Background(),nil)
 		if(err != nil) { panic(err) }
 		txns := block.Transactions()
+		
+		// concatenate relevant fields
+		stateRootStr := generateStateRootString(eth, block)
+		
+		// generate hash from concatenated fields
+		stateHash := keccakHash(stateRootStr)
+		fmt.Println("keccak256 hex:",keccakHashString(stateRootStr))
+		
+		// sign resultant hash
+		creds := getCredentials()
+		privateKey := creds.privateKeyECDSA
+		signature, err := crypto.Sign([]byte(stateHash), privateKey) // we should probably be signing the raw signature, not the hex (TODO)
+		if err != nil { panic(err) }
+		signatureHex := hexutil.Encode(signature)
+		fmt.Println("signature hex:",signatureHex)
+		
+/*
+For gossiping of state roots:
+
+1. State Root
+2. Timestamp
+3. Block Number
+4. Sharded EdDSA Signature Tuple (TBD exact parameters)
+5. ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the State root, Timestamp, Block Number and Sharded EdDSA Signature Tuple
+6. Ethereum Public Key
+*/
+		
 		msg := "{'block.Number':"+block.Number().String()+",'block.Hash':"+block.Hash().String()+",'txnCount':"+strconv.Itoa(len(txns))+"}"
 		writeMessages(node,topic,nick,msg)
 		
@@ -116,17 +259,17 @@ func getCredentials() *LagrangeNodeCredentials {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Private key loaded.");
+//	fmt.Println("Private key loaded.");
 
 	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
 	if !ok {
 		log.Fatal("error casting public key to ECDSA")
 	}
-	fmt.Println("Public key loaded.")
+//	fmt.Println("Public key loaded.")
 
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-	fmt.Println("Address isolated.")
+//	fmt.Println("Address isolated.")
 	
 	res := LagrangeNodeCredentials {
 		privateKey: privateKeyString,
@@ -201,6 +344,14 @@ func VerifyStake(client *ethClient.Client, instance *Nodestaking, addr common.Ad
 	return activeStakes == STAKE_STATUS_OPEN
 }
 
+func activeStakesTest(rpc *rpc.Client, client *ethClient.Client) {
+	instance := getStakingContract(client)
+	_ = instance
+//	activeStakes,err := instance.ActiveStakes(&bind.CallOpts{},common.Address(""),big.NewInt(4))
+//	if(err != nil) { panic(err) }
+//	fmt.Println(activestakes)
+}
+
 func ctrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	// Connect to Staking Contract
 	instance := getStakingContract(client)
@@ -268,4 +419,7 @@ func ctrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	// Verify Stake
 	isStaked = VerifyStake(client,instance,fromAddress)
 	fmt.Println("Stake Verification:",isStaked)
+	
+	fmt.Println("*DONE*")
+	os.Exit(0)
 }

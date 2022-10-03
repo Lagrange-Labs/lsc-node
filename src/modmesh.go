@@ -1,54 +1,91 @@
 package main
 
-import "fmt"
-import "flag"
-import "os"
-import "os/signal"
-import "syscall"
-import "context"
+import (
+	"fmt"
+	"os"
+	"os/signal"
+	"syscall"
+	"context"
+	"io/ioutil"
+	"log"
 
-import host "github.com/libp2p/go-libp2p-core/host"
-import ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
+	host "github.com/libp2p/go-libp2p-core/host"
+	ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
+	keystore "github.com/ethereum/go-ethereum/accounts/keystore"
+//	accounts "github.com/ethereum/go-ethereum/accounts"
+//	common "github.com/ethereum/go-ethereum/common"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+)
 
 const NODE_STAKING_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+//const NODE_STAKING_ADDRESS = "0x00000000006c3852cbef3e08e8df289169ede581"	// test
 
 // Placeholder - Return first Hardhat private key for now
+var PRIVATE_KEY string = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+// Placeholder - Track staking listening to contract via rpc
+var STAKE_STATE []string
+
 func getPrivateKey() string {
-	return "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	return PRIVATE_KEY
+}
+
+func setPrivateKey(privateKey string) {
+	PRIVATE_KEY = privateKey
 }
 
 func main() {
-	// Parse Port
-	portPtr := flag.Int("port",8081,"Server listening port")
-	// Parse Nickname
-	nickPtr := flag.String("nick","","Nickname - CLI flag, blank by default, consider addresses or protocol TLDs later.")
-	// Parse Room
-	roomPtr := flag.String("room","rinkeby","Room / Network")
-	// Parse Remote Peer
-	peerAddrPtr := flag.String("peerAddr","","Remote Peer Address")
-	// Parse ETH (Staking) URL
-	stakingEndpointPtr := flag.String("stakingEndpoint","https://34.229.73.193:8545","Staking Endpoint URL:Port")
-	// Parse ETH (Attestation) URL
-	attestEndpointPtr := flag.String("attestEndpoint","https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab992c4da79","Attestation Endpoint URL:Port")
+	args := getOpts()
+	
+	ks := args.keystore
+	port := args.port
+	stakingEndpoint := args.stakingEndpoint
+	stakingWS := args.stakingWS
+	attestEndpoint := args.attestEndpoint
+	nick := args.nick
+	peerAddr := args.peerAddr
 
-	flag.Parse()
+	if(true) {} else
+	if(ks == "") {
+		privateKeyHex, publicKeyHex := generateKeypair()
+		_ = publicKeyHex
+		setPrivateKey(privateKeyHex)
+	} else {
+		os.RemoveAll("./tmp/")
+		store := keystore.NewKeyStore("./tmp", keystore.StandardScryptN, keystore.StandardScryptP)
 
-	port := *portPtr
-	nick := *nickPtr
-	room := *roomPtr
-	peerAddr := *peerAddrPtr
-	stakingEndpoint := *stakingEndpointPtr
-	attestEndpoint := *attestEndpointPtr
+		jsonBytes, err := ioutil.ReadFile(ks)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		input := scan("Enter passphrase for keystore:")
+		account, err := store.Import(jsonBytes, input, input)
+		if err != nil {
+			log.Fatal(err)
+		}
+
+		fmt.Println(account)
+
+		return
+	}
 	
 	fmt.Println("Port:",port)
 
 	rpcStaking := loadRpcClient(stakingEndpoint)
 	ethStaking := loadEthClient(stakingEndpoint)
+	_ = rpcStaking
+	_ = ethStaking
+
+	rpcWS := loadRpcClient(stakingWS)
+	ethWS := loadEthClient(stakingWS)
+	_ = rpcWS
+	_ = ethWS
 
 	rpcAttest := loadRpcClient(attestEndpoint)
 	_ = rpcAttest
 	ethAttest := loadEthClient(attestEndpoint)
-	
+	_ = ethAttest
 	// Create listener
 	node := createListener(port)
 
@@ -71,18 +108,47 @@ func main() {
 	// Connect to Remote Peer
 	connectRemote(node,peerAddr)
 	
-	ps, topic, subscription := getGossipSub(node,room)
-
-	go handleMessaging(node,topic,ps,nick,subscription)
-	go listenForBlocks(ethAttest,node,topic,ps,nick,subscription)
+//	ps, topic, subscription := getGossipSub(node,room)
+//	go handleMessaging(node,topic,ps,nick,subscription)
+//	go listenForBlocks(ethAttest,node,topic,ps,nick,subscription)
+//	os.Exit(0)
 	
 	// Sandbox - Contract Interaction
-	ctrIntTest(rpcStaking,ethStaking)
+//	ctrIntTest(rpcStaking,ethStaking)
+
+	go listenForStaking(ethWS)
+
+	sc := getStakingContract(ethWS)
+	_ = sc
+	logs := make(chan *NodestakingStakedNode)
+	fmt.Println(logs)
+
+	block := uint64(100)
+	
+	sub,err := sc.WatchStakedNode(&bind.WatchOpts{&block,context.Background()},logs)
+	if err != nil { panic(err) }
+	
+	for {
+		fmt.Println("Listening to contract", NODE_STAKING_ADDRESS)
+		select {
+			case err := <-sub.Err():
+				log.Fatal(err)
+				continue
+			case vLog := <-logs:
+				handleStakingEvent(vLog)
+		}
+	}
+/*
+*/
+
+//	activeStakesTest(rpcStaking,ethStaking)
 //	ethTest(eth)
 
         // SIGINT | SIGTERM Signal Handling - End
         termHandler(node)
 }
+
+func foo(s string) {}
 
 func termHandler(node host.Host) {
         ch := make(chan os.Signal, 1)
