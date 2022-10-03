@@ -9,6 +9,9 @@ import (
 	"io/ioutil"
 	"log"
 
+	"math/rand"
+	"time"
+
 	host "github.com/libp2p/go-libp2p-core/host"
 	ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
 	keystore "github.com/ethereum/go-ethereum/accounts/keystore"
@@ -123,6 +126,23 @@ func main() {
 
         // SIGINT | SIGTERM Signal Handling - End
         termHandler(node)
+}
+
+func genSalt32() string {
+	res := ""
+	
+	rand.Seed(time.Now().UnixNano())
+
+	// String
+	charset := "0123456789abcdef"
+	
+	for i := 0; i < 32; i++ {
+		// Getting random character
+		c := charset[rand.Intn(len(charset))]
+		res += string(c)
+	}
+	
+	return res
 }
 
 func foo(s string) {}

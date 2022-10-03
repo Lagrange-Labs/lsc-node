@@ -177,13 +177,6 @@ func keccakHashString(stateRootStr string) string {
 	return hexutil.Encode(keccakHash(stateRootStr))
 }
 
-type JoinMessage struct {
-	PublicKey string
-	GenericMessage string
-	Timestamp string
-	Salt string
-}
-
 type StateRootMessage struct {
 	StateRoot string
 	Timestamp string
@@ -247,7 +240,7 @@ func listenForBlocks(eth *ethClient.Client, node host.Host, topic *pubsub.Topic,
 		bytes := []byte(json)
 		msg := string(bytes)
 		
-		writeMessages(node,topic,nick,msg)
+		writeMessages(node,topic,creds.address.Hex(),msg)
 		
 		time.Sleep(1 * time.Second)
 	}
