@@ -14,8 +14,6 @@ import (
 	keystore "github.com/ethereum/go-ethereum/accounts/keystore"
 //	accounts "github.com/ethereum/go-ethereum/accounts"
 //	common "github.com/ethereum/go-ethereum/common"
-
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 )
 
 const NODE_STAKING_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
@@ -117,29 +115,6 @@ func main() {
 //	ctrIntTest(rpcStaking,ethStaking)
 
 	go listenForStaking(ethWS)
-
-	sc := getStakingContract(ethWS)
-	_ = sc
-	logs := make(chan *NodestakingStakedNode)
-	fmt.Println(logs)
-
-	block := uint64(100)
-	
-	sub,err := sc.WatchStakedNode(&bind.WatchOpts{&block,context.Background()},logs)
-	if err != nil { panic(err) }
-	
-	for {
-		fmt.Println("Listening to contract", NODE_STAKING_ADDRESS)
-		select {
-			case err := <-sub.Err():
-				log.Fatal(err)
-				continue
-			case vLog := <-logs:
-				handleStakingEvent(vLog)
-		}
-	}
-/*
-*/
 
 //	activeStakesTest(rpcStaking,ethStaking)
 //	ethTest(eth)
