@@ -26,7 +26,6 @@ import (
 
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	ethereum "github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/core/types"
 
 	accounts "github.com/ethereum/go-ethereum/accounts"
@@ -129,36 +128,24 @@ func handleStakingEvent(vLog *NodestakingStakedNode) {
 	fmt.Println(node,chainId,amount,claimTime)
 }
 
-func listenForStaking(eth *ethClient.Client) {
-	contractAddress := common.HexToAddress(NODE_STAKING_ADDRESS)
+func listenForStaking(ethWS *ethClient.Client) {
+	sc := getStakingContract(ethWS)
+	_ = sc
+	logs := make(chan *NodestakingStakedNode)
 
-	ctx, cancel := context.WithCancel(context.Background())
-	defer cancel()
+	block := uint64(100)
 	
-	currentBlock, _ := eth.BlockNumber(ctx)
-	query := ethereum.FilterQuery{
-		Addresses: []common.Address{contractAddress},
-//		Topics:    [][]common.Hash{{myTopic}},
-		FromBlock: big.NewInt(int64(currentBlock)),
-	}
-	logs := make(chan types.Log)
-
+	sub,err := sc.WatchStakedNode(&bind.WatchOpts{&block,context.Background()},logs)
+	if err != nil { panic(err) }
+	
 	for {
-		sub, err := eth.SubscribeFilterLogs(ctx, query, logs)
-		if err != nil {
-			log.Fatal(err)
-			return
-		}
-		defer sub.Unsubscribe()
 		fmt.Println("Listening to contract", NODE_STAKING_ADDRESS)
-		fmt.Println(logs)
 		select {
 			case err := <-sub.Err():
 				log.Fatal(err)
 				continue
 			case vLog := <-logs:
-//				handleStakingEvent(vLog)
-				fmt.Println(vLog.Address)
+				handleStakingEvent(vLog)
 		}
 	}
 }
