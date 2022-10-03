@@ -14,7 +14,7 @@ import (
 
 	context "context"
 
-	//json "encoding/json"
+	json "encoding/json"
 
 	host "github.com/libp2p/go-libp2p-core/host"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -150,8 +150,11 @@ func listenForStaking(ethWS *ethClient.Client) {
 	}
 }
 
+func getSeparator() string { return "::" }
+
 func generateStateRootString(eth *ethClient.Client, block *types.Block) string {
-	stateRootSeparator := "::"
+	//5. ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the State root, Timestamp, Block Number and Sharded EdDSA Signature Tuple
+	stateRootSeparator := getSeparator()
 	
 	blockRoot := block.Root().String()
 	blockTime := strconv.FormatUint(block.Time(),10)
@@ -160,7 +163,7 @@ func generateStateRootString(eth *ethClient.Client, block *types.Block) string {
 	if err != nil { panic(err) }
 	chainID := chain.String()		
 	
-	stateRootStr := blockRoot + stateRootSeparator + blockTime + stateRootSeparator + blockNumber + stateRootSeparator + chainID	
+	stateRootStr := blockRoot + stateRootSeparator + blockTime + stateRootSeparator + blockNumber + stateRootSeparator + chainID
 	fmt.Println("State Root String:",stateRootStr)
 
 	return stateRootStr
@@ -174,6 +177,13 @@ func keccakHashString(stateRootStr string) string {
 	return hexutil.Encode(keccakHash(stateRootStr))
 }
 
+type JoinMessage struct {
+	PublicKey string
+	GenericMessage string
+	Timestamp string
+	Salt string
+}
+
 type StateRootMessage struct {
 	StateRoot string
 	Timestamp string
@@ -183,27 +193,6 @@ type StateRootMessage struct {
 	EthereumPublicKey string
 }
 
-func listenForBlocks(eth *ethClient.Client,node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nick string, subscription *pubsub.Subscription) {
-	for {
-		block, err := eth.BlockByNumber(context.Background(),nil)
-		if(err != nil) { panic(err) }
-		txns := block.Transactions()
-		
-		// concatenate relevant fields
-		stateRootStr := generateStateRootString(eth, block)
-		
-		// generate hash from concatenated fields
-		stateHash := keccakHash(stateRootStr)
-		fmt.Println("keccak256 hex:",keccakHashString(stateRootStr))
-		
-		// sign resultant hash
-		creds := getCredentials()
-		privateKey := creds.privateKeyECDSA
-		signature, err := crypto.Sign([]byte(stateHash), privateKey) // we should probably be signing the raw signature, not the hex (TODO)
-		if err != nil { panic(err) }
-		signatureHex := hexutil.Encode(signature)
-		fmt.Println("signature hex:",signatureHex)
-		
 /*
 For gossiping of state roots:
 
@@ -214,8 +203,50 @@ For gossiping of state roots:
 5. ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the State root, Timestamp, Block Number and Sharded EdDSA Signature Tuple
 6. Ethereum Public Key
 */
+func listenForBlocks(eth *ethClient.Client, node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nick string, subscription *pubsub.Subscription) {
+	stateRootSeparator := getSeparator()
+
+	for {
+		block, err := eth.BlockByNumber(context.Background(),nil)
+		if(err != nil) { panic(err) }
 		
-		msg := "{'block.Number':"+block.Number().String()+",'block.Hash':"+block.Hash().String()+",'txnCount':"+strconv.Itoa(len(txns))+"}"
+		// concatenate relevant fields
+		stateRootStr := generateStateRootString(eth, block)
+		
+		//ShardedEdDSASignatureTuple - TBD
+		shardedSignatureTuple := ""
+		
+		stateRootStrWithShardedSignatureTuple := stateRootStr + stateRootSeparator + shardedSignatureTuple
+		
+		// generate hash from concatenated fields
+		stateHash := keccakHash(stateRootStrWithShardedSignatureTuple)
+		
+		// sign resultant hash
+		creds := getCredentials()
+		privateKey := creds.privateKeyECDSA
+		signature, err := crypto.Sign([]byte(stateHash), privateKey) // we should probably be signing the raw signature, not the hex (TODO)
+		if err != nil { panic(err) }
+		ecdsaSignatureHex := hexutil.Encode(signature)
+
+		//timestamp
+		timestamp := time.Now().UTC().Unix()
+		
+		//public key
+		publicKeyECDSA := creds.publicKeyECDSA
+		
+		stateRootMessage := StateRootMessage {
+			StateRoot: stateRootStr,
+			Timestamp: strconv.FormatInt(timestamp,10),
+			BlockNumber: block.Number().String(),
+			ShardedEdDSASignatureTuple: shardedSignatureTuple,
+			ECDSASignatureTuple: ecdsaSignatureHex,
+			EthereumPublicKey: hexutil.Encode(crypto.FromECDSAPub(publicKeyECDSA)) }
+		
+		json,err := json.Marshal(stateRootMessage)
+		if err != nil { panic(err) }
+		bytes := []byte(json)
+		msg := string(bytes)
+		
 		writeMessages(node,topic,nick,msg)
 		
 		time.Sleep(1 * time.Second)
@@ -318,9 +349,15 @@ func getAuth(privateKey *ecdsa.PrivateKey) *bind.TransactOpts {
 	return auth
 }
 
-func mineBlocks(rpc *rpc.Client) {
+func mineTest(rpc *rpc.Client) {
+	for {
+		mineBlocks(rpc,1)
+		time.Sleep(1 * time.Second)
+	}
+}
+func mineBlocks(rpc *rpc.Client, num int) {
 	var hex hexutil.Bytes
-	for i := 0; i < 5; i++ {
+	for i := 0; i < num; i++ {
 		rpc.Call(&hex,"evm_mine")
 	}
 }
@@ -379,7 +416,7 @@ func ctrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	fmt.Println("Stake Verification:",isStaked)
 
 	// Hardhat - Mine Blocks
-	mineBlocks(rpc)
+	mineBlocks(rpc,5)
 
 	// Update Nonce and Val
 	nonce = getNonce(client,fromAddress)
@@ -394,7 +431,7 @@ func ctrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	fmt.Println("Stake Verification:",isStaked)
 
 	// Hardhat - Mine More Blocks
-	mineBlocks(rpc)
+	mineBlocks(rpc,5)
 	
 	// Update Nonce
 	nonce = getNonce(client,fromAddress)

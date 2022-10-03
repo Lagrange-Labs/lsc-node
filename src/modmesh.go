@@ -42,6 +42,7 @@ func main() {
 	attestEndpoint := args.attestEndpoint
 	nick := args.nick
 	peerAddr := args.peerAddr
+	room := args.room
 
 	if(true) {} else
 	if(ks == "") {
@@ -106,15 +107,16 @@ func main() {
 	// Connect to Remote Peer
 	connectRemote(node,peerAddr)
 	
-//	ps, topic, subscription := getGossipSub(node,room)
-//	go handleMessaging(node,topic,ps,nick,subscription)
-//	go listenForBlocks(ethAttest,node,topic,ps,nick,subscription)
+	ps, topic, subscription := getGossipSub(node,room)
+	go handleMessaging(node,topic,ps,nick,subscription)
+	go listenForBlocks(ethAttest,node,topic,ps,nick,subscription)
+	go mineTest(rpcStaking)
 //	os.Exit(0)
 	
 	// Sandbox - Contract Interaction
 //	ctrIntTest(rpcStaking,ethStaking)
 
-	go listenForStaking(ethWS)
+//	go listenForStaking(ethWS)
 
 //	activeStakesTest(rpcStaking,ethStaking)
 //	ethTest(eth)
