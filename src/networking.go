@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"strconv"
+	"time"
 
 	"github.com/libp2p/go-libp2p"
 
@@ -14,6 +15,10 @@ import (
 	multiaddr "github.com/multiformats/go-multiaddr"
 
 	context "context"
+
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	json "encoding/json"
+	"github.com/ethereum/go-ethereum/crypto"
 )
 
 func createListener(portPtr int) host.Host {
@@ -39,7 +44,26 @@ func getAddrInfo(node host.Host) peerstore.AddrInfo {
 	_ = err
 	return peerInfo
 }
+
+type JoinMessage struct {
+	PublicKey string
+	GenericMessage string
+	Timestamp string
+	Salt string
+	ECDSASignatureTuple string
+}
+
+/*
+Ethereum Public Key
+Generic Message (i.e. “Hello Network”)
+Timestamp
+Salt
+ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the generic message + timestamp + salt
+*/
+
 func getGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic,*pubsub.Subscription) {
+	separator := getSeparator()
+	
 	ps, err := pubsub.NewGossipSub(context.Background(), node)
 	if err != nil {
 		panic(err)
@@ -64,7 +88,36 @@ func getGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic
 	}
 	
 	fmt.Println("Room joined and subscribed:",topicName(roomName))
-	fmt.Println("{address: '0x...'}")
+	
+	creds := getCredentials()
+	
+	// ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the generic message + timestamp + salt
+	
+	genericMessage := "It's always morning in web3."
+	timestampStr := strconv.FormatInt(time.Now().UTC().Unix(),10)
+	saltStr := genSalt32()
+	tuple := genericMessage + separator + timestampStr + separator + saltStr
+
+	tupleHash := keccakHash(tuple)
+
+	signatureTuple,err := crypto.Sign(tupleHash, creds.privateKeyECDSA)
+	if err != nil { panic(err) }
+	
+	signatureHex := hexutil.Encode(signatureTuple)
+	
+	joinMessage := JoinMessage {
+		PublicKey: hexutil.Encode(crypto.FromECDSAPub(creds.publicKeyECDSA)),
+		GenericMessage: genericMessage,
+		Timestamp: timestampStr,
+		Salt: saltStr,
+		ECDSASignatureTuple: signatureHex }
+
+	json,err := json.Marshal(joinMessage)
+	if err != nil { panic(err) }
+	bytes := []byte(json)
+	msg := string(bytes)
+	
+	writeMessages(node,topic,creds.address.Hex(),msg)
 	
 	return ps,topic,sub
 }
