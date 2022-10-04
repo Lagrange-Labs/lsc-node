@@ -5,6 +5,8 @@ import (
 	"time"
 	"os"
 	"bufio"
+	
+	"math/rand"
 
 	context "context"
 
@@ -69,8 +71,25 @@ func scan(prompt string) string {
 	input, _ := reader.ReadString('\n')
 	return input
 }
-/*
-func signMessage(privateKey *ecdsa.PrivateKey, message string) (string, error) {
+
+func genSalt32() string {
+	res := ""
+	
+	rand.Seed(time.Now().UnixNano())
+
+	// String
+	charset := "0123456789abcdef"
+	
+	for i := 0; i < 32; i++ {
+		// Getting random character
+		c := charset[rand.Intn(len(charset))]
+		res += string(c)
+	}
+	
+	return res
+}
+
+func signMessageWithPrivateKey(privateKey *ecdsa.PrivateKey, message string) (string, error) {
 	messageHash := accounts.TextHash([]byte(message))
 
 	signature, err := crypto.Sign(messageHash, privateKey)
@@ -82,4 +101,3 @@ func signMessage(privateKey *ecdsa.PrivateKey, message string) (string, error) {
 
 	return hexutil.Encode(signature), nil
 }
-*/
