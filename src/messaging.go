@@ -43,9 +43,12 @@ func handleMessaging(node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nic
 		time.Sleep(1 * time.Second)
 	}
 }
+
+
 // Converted to/from JSON and sent in the body of pubsub messages.
 type GossipMessage struct {
 	Message    string
+	// peer controls a private key
 	SenderID   string
 	SenderNick string
 }
