@@ -1,13 +1,48 @@
 package main
 
 import (
+	"os"
 	"fmt"
 	"testing"
 )
 
 func TestMain(m *testing.M) {
-    testVar := 1
-    if testVar != 1 {
-        fmt.Errorf("Problem.")
-    }
+  if err := setup(); err != nil {
+    os.Exit(1)
+  }
+
+  exitCode := m.Run()
+
+  if err := tearDown(); err != nil {
+    os.Exit(1)
+  }
+
+  fmt.Println("*DONE*")
+  os.Exit(exitCode)
+}
+
+func setup() error {
+  return nil
+}
+
+func tearDown() error {
+  return nil
+}
+
+func TestKeccakHashString(t *testing.T) {
+	// Remember that hex-encoded Keccak hashes return a '0x' prefix.
+	NullKeccakHash := "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
+	KeccakHash := KeccakHashString("")
+	
+	expectString(t, KeccakHash, NullKeccakHash)
+}
+
+func expectString(t *testing.T, a string, b string) {
+	assert(t, a == b,"Expected '"+a+"', got '"+b+"'.")
+}
+
+func assert(t *testing.T, cond bool, desc string) {
+	if cond == false {
+		t.Errorf(desc)
+	}
 }
