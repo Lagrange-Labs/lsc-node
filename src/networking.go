@@ -21,7 +21,7 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
-func createListener(portPtr int) host.Host {
+func CreateListener(portPtr int) host.Host {
 	node, err := libp2p.New(
 		libp2p.ListenAddrStrings("/ip4/0.0.0.0/tcp/"+strconv.Itoa(portPtr)),
 	)
@@ -32,7 +32,7 @@ func createListener(portPtr int) host.Host {
 	return node
 }
 
-func getAddrInfo(node host.Host) peerstore.AddrInfo {
+func GetAddrInfo(node host.Host) peerstore.AddrInfo {
 	// print the node's PeerInfo in multiaddr format
 	peerInfo := peerstore.AddrInfo{
 		ID:    node.ID(),
@@ -61,8 +61,8 @@ Salt
 ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the generic message + timestamp + salt
 */
 
-func getGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic,*pubsub.Subscription) {
-	separator := getSeparator()
+func GetGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic,*pubsub.Subscription) {
+	separator := GetSeparator()
 	
 	ps, err := pubsub.NewGossipSub(context.Background(), node)
 	if err != nil {
@@ -70,12 +70,12 @@ func getGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic
 	}
 	
 	// mDNS discovery
-	if err := setupDiscovery(node); err != nil {
+	if err := SetupDiscovery(node); err != nil {
 		panic(err)
 	}
 	
 	// Join
-	topic, err := ps.Join(topicName(roomName))
+	topic, err := ps.Join(TopicName(roomName))
 	if err != nil {
 		panic(err)
 	}
@@ -87,18 +87,18 @@ func getGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic
 		panic(err)
 	}
 	
-	fmt.Println("Room joined and subscribed:",topicName(roomName))
+	fmt.Println("Room joined and subscribed:",TopicName(roomName))
 	
-	creds := getCredentials()
+	creds := GetCredentials()
 	
 	// ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the generic message + timestamp + salt
 	
 	genericMessage := "It's always morning in web3."
 	timestampStr := strconv.FormatInt(time.Now().UTC().Unix(),10)
-	saltStr := genSalt32()
+	saltStr := GenSalt32()
 	tuple := genericMessage + separator + timestampStr + separator + saltStr
 
-	tupleHash := keccakHash(tuple)
+	tupleHash := KeccakHash(tuple)
 
 	signatureTuple,err := crypto.Sign(tupleHash, creds.privateKeyECDSA)
 	if err != nil { panic(err) }
@@ -117,16 +117,16 @@ func getGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic
 	bytes := []byte(json)
 	msg := string(bytes)
 	
-	writeMessages(node,topic,creds.address.Hex(),msg)
+	WriteMessages(node,topic,creds.address.Hex(),msg)
 	
 	return ps,topic,sub
 }
 
-func topicName(networkName string) string {
+func TopicName(networkName string) string {
 	return "modmesh-" + networkName
 }
 
-func connectRemote(node host.Host, peerAddr string) {
+func ConnectRemote(node host.Host, peerAddr string) {
 	if (len(peerAddr) > 0) {
 		addr, err := multiaddr.NewMultiaddr(peerAddr)
 		if err != nil {
@@ -147,6 +147,6 @@ func connectRemote(node host.Host, peerAddr string) {
 	}
 }
 
-func handleNewPeer() {
+func HandleNewPeer() {
 	
 }

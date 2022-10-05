@@ -14,6 +14,13 @@ import (
 	host "github.com/libp2p/go-libp2p-core/host"
 
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/ethereum/go-ethereum/crypto"
+
+	"crypto/ecdsa"
+
+	accounts "github.com/ethereum/go-ethereum/accounts"
 )
 /* pubsub example helpers */
 
@@ -23,15 +30,15 @@ const DiscoveryInterval = time.Hour
 // DiscoveryServiceTag is used in our mDNS advertisements to discover other chat peers.
 const DiscoveryServiceTag = "modmesh"
 
-// discoveryNotifee gets notified when we find a new peer via mDNS discovery
-type discoveryNotifee struct {
+// DiscoveryNotifee gets notified when we find a new peer via mDNS discovery
+type DiscoveryNotifee struct {
 	h host.Host
 }
 
 // HandlePeerFound connects to peers discovered via mDNS. Once they're connected,
 // the PubSub system will automatically start interacting with them if they also
 // support PubSub.
-func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
+func (n *DiscoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 	fmt.Printf("discovered new peer %s\n", pi.ID.Pretty())
 	fmt.Println("peer.AddrInfo:",pi);
 	err := n.h.Connect(context.Background(), pi)
@@ -42,14 +49,14 @@ func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 
 // setupDiscovery creates an mDNS discovery service and attaches it to the libp2p Host.
 // This lets us automatically discover peers on the same LAN and connect to them.
-func setupDiscovery(h host.Host) error {
+func SetupDiscovery(h host.Host) error {
 	// setup mDNS discovery to find local peers
-	s := mdns.NewMdnsService(h, DiscoveryServiceTag, &discoveryNotifee{h: h})
+	s := mdns.NewMdnsService(h, DiscoveryServiceTag, &DiscoveryNotifee{h: h})
 	return s.Start()
 }
 
 // shortID returns the last 8 chars of a base58-encoded peer id.
-func shortID(p peer.ID) string {
+func ShortID(p peer.ID) string {
 	pretty := p.Pretty()
 	return pretty[len(pretty)-8:]
 }
@@ -63,7 +70,7 @@ const (
 )
 
 
-func scan(prompt string) string {
+func Scan(prompt string) string {
 	if(prompt != "") {
 		fmt.Println(prompt)
 	}
@@ -72,7 +79,7 @@ func scan(prompt string) string {
 	return input
 }
 
-func genSalt32() string {
+func GenSalt32() string {
 	res := ""
 	
 	rand.Seed(time.Now().UnixNano())
@@ -89,7 +96,7 @@ func genSalt32() string {
 	return res
 }
 
-func signMessageWithPrivateKey(privateKey *ecdsa.PrivateKey, message string) (string, error) {
+func SignMessageWithPrivateKey(privateKey *ecdsa.PrivateKey, message string) (string, error) {
 	messageHash := accounts.TextHash([]byte(message))
 
 	signature, err := crypto.Sign(messageHash, privateKey)

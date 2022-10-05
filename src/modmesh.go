@@ -24,16 +24,18 @@ var PRIVATE_KEY string = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d
 // Placeholder - Track staking listening to contract via rpc
 var STAKE_STATE []string
 
-func getPrivateKey() string {
+// Returns private key as hex string.
+func GetPrivateKey() string {
 	return PRIVATE_KEY
 }
 
-func setPrivateKey(privateKey string) {
+// Sets private key in the form of a hex string.
+func SetPrivateKey(privateKey string) {
 	PRIVATE_KEY = privateKey
 }
 
 func main() {
-	args := getOpts()
+	args := GetOpts()
 	
 	ks := args.keystore
 	port := args.port
@@ -46,9 +48,9 @@ func main() {
 
 	if(true) {} else
 	if(ks == "") {
-		privateKeyHex, publicKeyHex := generateKeypair()
+		privateKeyHex, publicKeyHex := GenerateKeypair()
 		_ = publicKeyHex
-		setPrivateKey(privateKeyHex)
+		SetPrivateKey(privateKeyHex)
 	} else {
 		os.RemoveAll("./tmp/")
 		store := keystore.NewKeyStore("./tmp", keystore.StandardScryptN, keystore.StandardScryptP)
@@ -58,7 +60,7 @@ func main() {
 			log.Fatal(err)
 		}
 
-		input := scan("Enter passphrase for keystore:")
+		input := Scan("Enter passphrase for keystore:")
 		account, err := store.Import(jsonBytes, input, input)
 		if err != nil {
 			log.Fatal(err)
@@ -71,30 +73,30 @@ func main() {
 	
 	fmt.Println("Port:",port)
 
-	rpcStaking := loadRpcClient(stakingEndpoint)
-	ethStaking := loadEthClient(stakingEndpoint)
+	rpcStaking := LoadRpcClient(stakingEndpoint)
+	ethStaking := LoadEthClient(stakingEndpoint)
 	_ = rpcStaking
 	_ = ethStaking
 
-	rpcWS := loadRpcClient(stakingWS)
-	ethWS := loadEthClient(stakingWS)
+	rpcWS := LoadRpcClient(stakingWS)
+	ethWS := LoadEthClient(stakingWS)
 	_ = rpcWS
 	_ = ethWS
 
-	rpcAttest := loadRpcClient(attestEndpoint)
+	rpcAttest := LoadRpcClient(attestEndpoint)
 	_ = rpcAttest
-	ethAttest := loadEthClient(attestEndpoint)
+	ethAttest := LoadEthClient(attestEndpoint)
 	_ = ethAttest
 	// Create listener
-	node := createListener(port)
+	node := CreateListener(port)
 
 	if(len(nick) == 0) {
-		nick = fmt.Sprintf("%s-%s", os.Getenv("USER"), shortID(node.ID()))
+		nick = fmt.Sprintf("%s-%s", os.Getenv("USER"), ShortID(node.ID()))
 	}
 	fmt.Println("Nickname:",nick)
 
 	// Get P2P Address Info
-	localInfo := getAddrInfo(node);
+	localInfo := GetAddrInfo(node);
 	_ = localInfo
 
 	// Ping test - please determine an approach to finding peers, rather than self-pinging	
@@ -105,12 +107,12 @@ func main() {
 	}
 	
 	// Connect to Remote Peer
-	connectRemote(node,peerAddr)
+	ConnectRemote(node,peerAddr)
 	
-	ps, topic, subscription := getGossipSub(node,room)
-	go handleMessaging(node,topic,ps,nick,subscription)
-	go listenForBlocks(ethAttest,node,topic,ps,nick,subscription)
-	go mineTest(rpcStaking)
+	ps, topic, subscription := GetGossipSub(node,room)
+	go HandleMessaging(node,topic,ps,nick,subscription)
+	go ListenForBlocks(ethAttest,node,topic,ps,nick,subscription)
+	go MineTest(rpcStaking)
 //	os.Exit(0)
 	
 	// Sandbox - Contract Interaction
@@ -122,10 +124,10 @@ func main() {
 //	ethTest(eth)
 
         // SIGINT | SIGTERM Signal Handling - End
-        termHandler(node)
+        TermHandler(node)
 }
 
-func termHandler(node host.Host) {
+func TermHandler(node host.Host) {
         ch := make(chan os.Signal, 1)
         signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
         <-ch
