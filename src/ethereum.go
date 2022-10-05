@@ -38,6 +38,7 @@ const (
 	STAKE_STATUS_OPEN = 2
 )
 
+// Loads Ethereum client provided an endpoint URL.
 func LoadEthClient(ethEndpoint string) *ethClient.Client {
 	eth, err := ethClient.Dial(ethEndpoint)
 	if err != nil {
@@ -47,6 +48,7 @@ func LoadEthClient(ethEndpoint string) *ethClient.Client {
 	return eth
 }
 
+// Loads RPC client provided an endpoint URL.
 func LoadRpcClient(ethEndpoint string) *rpc.Client {
 	rpc, err := rpc.DialHTTP(ethEndpoint)
 	if err != nil {
@@ -56,6 +58,7 @@ func LoadRpcClient(ethEndpoint string) *rpc.Client {
 	return rpc
 }
 
+// Reference function testing a raw RPC call.
 func RpcCall(rpc *rpc.Client,To string,Data string) {
 	type request struct {
 		To   string `json:"to"`
@@ -73,6 +76,7 @@ func RpcCall(rpc *rpc.Client,To string,Data string) {
 	fmt.Printf("RPC Result: %s\n", owner.Hex()) // 0x281017b4E914b79371d62518b17693B36c7a221e
 }
 
+// Reference function testing retrieval of Ethereum transaction and balance.
 func EthTest(eth *ethClient.Client) {
 	ctx := context.Background()
 	tx, pending, _ := eth.TransactionByHash(ctx, common.HexToHash("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))
@@ -88,8 +92,8 @@ func EthTest(eth *ethClient.Client) {
 	fmt.Println("Balance:", balance) // 25893180161173005034
 }
 
+// Generates and returns keystore from private key.
 func InitKeystore(privateKey *ecdsa.PrivateKey) accounts.Account {
-	// Generate keystore with private key
 	ks := keystore.NewKeyStore("./wallets", keystore.StandardScryptN, keystore.StandardScryptP)
 	input := Scan("Enter passphrase for new keystore:")
 	account,err := ks.ImportECDSA(privateKey,input)
@@ -99,6 +103,7 @@ func InitKeystore(privateKey *ecdsa.PrivateKey) accounts.Account {
 	return account
 }
 
+// Generates and returns new ECDSA keypair.
 func GenerateKeypair() (string, string) {
 	// Generate private key
 	privateKey, err := crypto.GenerateKey()
@@ -119,6 +124,7 @@ func GenerateKeypair() (string, string) {
 	return privateKeyHex, publicKeyHex
 }
 
+// Handler function for NodeStaking smart contract events detected while listening to network.
 func HandleStakingEvent(vLog *NodestakingStakedNode) {
 	node := vLog.Node
 	chainId := vLog.ChainId
@@ -128,6 +134,7 @@ func HandleStakingEvent(vLog *NodestakingStakedNode) {
 	fmt.Println(node,chainId,amount,claimTime)
 }
 
+// Listens to network for NodeStaking smart contract events and handles accordingly.
 func ListenForStaking(ethWS *ethClient.Client) {
 	sc := GetStakingContract(ethWS)
 	_ = sc
@@ -150,6 +157,7 @@ func ListenForStaking(ethWS *ethClient.Client) {
 	}
 }
 
+// Returns standard delimiter for strings that are hashed and signed.
 func GetSeparator() string { return "::" }
 
 func GenerateStateRootString(eth *ethClient.Client, block *types.Block) string {
@@ -169,14 +177,17 @@ func GenerateStateRootString(eth *ethClient.Client, block *types.Block) string {
 	return stateRootStr
 }
 
+// Returns Keccak hash of string as bytes.
 func KeccakHash(stateRootStr string) []byte {
 	return crypto.Keccak256([]byte(stateRootStr))
 }
 
+// Returns Keccak hash of string as hex string with '0x' prefix.
 func KeccakHashString(stateRootStr string) string {
 	return hexutil.Encode(KeccakHash(stateRootStr))
 }
 
+// Format of gossiped state root message
 type StateRootMessage struct {
 	StateRoot string
 	Timestamp string
@@ -350,12 +361,15 @@ func GetAuth(privateKey *ecdsa.PrivateKey) *bind.TransactOpts {
 	return auth
 }
 
+// Test function - mines a new block each second.
 func MineTest(rpc *rpc.Client) {
 	for {
 		MineBlocks(rpc,1)
 		time.Sleep(1 * time.Second)
 	}
 }
+
+// Test function - mines n blocks on Hardhat node
 func MineBlocks(rpc *rpc.Client, num int) {
 	var hex hexutil.Bytes
 	for i := 0; i < num; i++ {
@@ -363,6 +377,7 @@ func MineBlocks(rpc *rpc.Client, num int) {
 	}
 }
 
+// Returns true if address provided is currently staked; false if not staked, or in the process of unstaking.
 func VerifyStake(client *ethClient.Client, instance *Nodestaking, addr common.Address) bool {
 	activeStakes,err := instance.ActiveStakes(&bind.CallOpts{},addr,big.NewInt(4))
 	if(err != nil) { panic(err) }
@@ -377,6 +392,7 @@ func ActiveStakesTest(rpc *rpc.Client, client *ethClient.Client) {
 //	fmt.Println(activestakes)
 }
 
+// Reference function walking through NodeStaking contract's staking and unstaking transactions
 func CtrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	// Connect to Staking Contract
 	instance := GetStakingContract(client)
