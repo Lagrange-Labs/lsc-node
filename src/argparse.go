@@ -4,7 +4,7 @@ import (
 	"flag"
 )
 
-type opts struct {
+type Opts struct {
 	port int
 	nick string
 	room string
@@ -16,7 +16,7 @@ type opts struct {
 	address string
 }
 
-func getOpts() *opts {
+func GetOpts() *Opts {
 	// Parse Port
 	portPtr := flag.Int("port",8081,"Server listening port")
 	// Parse Nickname
@@ -38,7 +38,7 @@ func getOpts() *opts {
 
 	flag.Parse()
 	
-	res := opts{
+	res := Opts{
 		*portPtr,
 		*nickPtr,
 		*roomPtr,

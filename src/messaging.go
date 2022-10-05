@@ -16,7 +16,7 @@ import (
 // handleEvents runs an event loop that sends user input to the chat room
 // and displays messages received from the chat room. It also periodically
 // refreshes the list of peers in the UI.
-func handleMessaging(node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nick string, subscription *pubsub.Subscription) {
+func HandleMessaging(node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nick string, subscription *pubsub.Subscription) {
 /*
 	peerRefreshTicker := time.NewTicker(time.Second)
 	defer peerRefreshTicker.Stop()
@@ -27,7 +27,7 @@ func handleMessaging(node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nic
 	for {
 		//input, _ := reader.ReadString('\n')
 		//go writeMessages(node,topic,nick,input)
-		go readMessages(node,topic,ps,subscription);
+		go ReadMessages(node,topic,ps,subscription);
 			
 /*
 		select {
@@ -42,6 +42,7 @@ func handleMessaging(node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nic
 			return
 		}
 */
+
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -52,7 +53,7 @@ type GossipMessage struct {
 	SenderNick string
 }
 
-const bufferSize = 4096
+const BufferSize = 4096
 
 type MsgParams struct {
 	ps *pubsub.PubSub
@@ -63,8 +64,8 @@ type MsgParams struct {
 	message string
 }
 
-func readMessages(node host.Host, topic *pubsub.Topic, subscription *pubsub.PubSub, room *pubsub.Subscription) {
-	messages :=  make(chan *GossipMessage, bufferSize)
+func ReadMessages(node host.Host, topic *pubsub.Topic, subscription *pubsub.PubSub, room *pubsub.Subscription) {
+	messages :=  make(chan *GossipMessage, BufferSize)
 	
 	for {
 		msg, err := room.Next(context.Background())
@@ -87,7 +88,7 @@ func readMessages(node host.Host, topic *pubsub.Topic, subscription *pubsub.PubS
 	}
 }
 
-func writeMessages(node host.Host, topic *pubsub.Topic, nick string, message string) error {
+func WriteMessages(node host.Host, topic *pubsub.Topic, nick string, message string) error {
 	m := GossipMessage{
 		Message:    message,
 		SenderID:   node.ID().Pretty(),
