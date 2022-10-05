@@ -37,6 +37,7 @@ func NewSession(ch Channel) *Session {
 }
 
 func keyExchange(shared *[32]byte, priv, pub []byte) {
+	// implement ECDH key exchange
 	var kexPriv [32]byte
 	copy(kexPriv[:], priv)
 	util.Zero(priv)

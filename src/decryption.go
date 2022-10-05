@@ -4,6 +4,10 @@ import (
 	box "golang.org/x/crypto/nacl/box"
 )
 
+type AEAD struct {
+	key []byte
+}
+
 func curveDec(ciphertext []byte, senderPublicKey, receiverPrivateKey *[32]byte) []byte {
 	// implement curve25519 (asymmertic) for decryption
 
@@ -20,4 +24,12 @@ func curveDec(ciphertext []byte, senderPublicKey, receiverPrivateKey *[32]byte) 
 		panic("decryption error")
 	}
 	return decrypted
+}
+
+func asconDec(cipher, nonce []byte, aead *AEAD) []byte {
+	plaintext, err := &aead.Open(nil, nonce, cipher, nil)
+	if err != nil {
+		panic(err)
+	}
+	return plaintext
 }

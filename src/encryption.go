@@ -13,11 +13,20 @@ import (
 	"io"
 
 	box "golang.org/x/crypto/nacl/box"
+	ascon "lukechampine.com/ascon"
 )
 
+type AEAD struct {
+	key []byte
+}
+
 // implement ascon as the symmetric encryption method
-func asconEnc() {
-	var nonce [16]byte
+func asconEnc(msg []byte) ([]byte, *AEAD) {
+	key := make([]byte, ascon.KeySize)
+	aead, _ := ascon.New(key)
+	nonce := make([]byte, ascon.NonceSize)
+	ciphertext := aead.Seal(nil, nonce, msg, nil)
+	return ciphertext, &aead
 
 }
 
