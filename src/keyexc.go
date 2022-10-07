@@ -1,5 +1,9 @@
 package main
 
+/*
+	Implementation of asymmertic key exchange
+*/
+
 import (
 	"io"
 	"util"
