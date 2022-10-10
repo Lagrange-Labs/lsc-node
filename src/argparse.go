@@ -14,6 +14,7 @@ type Opts struct {
 	attestEndpoint string
 	keystore string
 	address string
+	leveldb string
 }
 
 func GetOpts() *Opts {
@@ -35,6 +36,8 @@ func GetOpts() *Opts {
 	keystorePtr := flag.String("keystore","","/path/to/keystore")
 	// Parse Address
 	addressPtr := flag.String("address","","Staker Address")
+	// LevelDB Location
+	leveldbPtr := flag.String("leveldb","./leveldb","Level DB storage location")
 
 	flag.Parse()
 	
@@ -47,7 +50,8 @@ func GetOpts() *Opts {
 		*stakingWSPtr,
 		*attestEndpointPtr,
 		*keystorePtr,
-		*addressPtr}
+		*addressPtr,
+		*leveldbPtr}
 	return &res
 }
 

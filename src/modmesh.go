@@ -45,6 +45,8 @@ func main() {
 	nick := args.nick
 	peerAddr := args.peerAddr
 	room := args.room
+	leveldb := args.leveldb
+	_ = leveldb
 
 	if(true) {} else
 	if(ks == "") {
