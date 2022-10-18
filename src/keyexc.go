@@ -31,6 +31,11 @@ func (s *Session) LastRecv() uint32 {
 	return s.lastRecv
 }
 
+func GenerateKeyPair() (
+	
+)
+
+
 func NewSession(ch Channel) *Session {
 	return &Session{
 		// define pointer type
@@ -48,7 +53,7 @@ func keyExchange(shared *[32]byte, priv, pub []byte) {
 
 	var kexPub [32]byte
 	copy(kexPub[:], pub)
-
+	// 
 	box.Precompute(shared, &kexPub, &kexPriv)
 	util.Zero(kexPriv[:])
 }

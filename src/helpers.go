@@ -1,14 +1,17 @@
 package main
 
-import "fmt"
-import "time"
+import (
+	context "context"
+	rand "crypto/rand"
+	"fmt"
+	"io"
+	"time"
+	box "golang.org/x/crypto/nacl/box"
+	peer "github.com/libp2p/go-libp2p-core/peer"
 
-import context "context"
-
-import peer "github.com/libp2p/go-libp2p-core/peer"
-import host "github.com/libp2p/go-libp2p-core/host"
-
-import "github.com/libp2p/go-libp2p/p2p/discovery/mdns"
+	host "github.com/libp2p/go-libp2p-core/host"
+	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
+)
 
 /* pubsub example helpers */
 
@@ -28,7 +31,7 @@ type discoveryNotifee struct {
 // support PubSub.
 func (n *discoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
 	fmt.Printf("discovered new peer %s\n", pi.ID.Pretty())
-	fmt.Println("peer.AddrInfo:",pi);
+	fmt.Println("peer.AddrInfo:", pi)
 	err := n.h.Connect(context.Background(), pi)
 	if err != nil {
 		fmt.Printf("error connecting to peer %s: %s\n", pi.ID.Pretty(), err)
@@ -49,11 +52,34 @@ func shortID(p peer.ID) string {
 	return pretty[len(pretty)-8:]
 }
 
-const (
-        InfoColor    = "\033[1;34m%s\033[0m"
-        NoticeColor  = "\033[1;36m%s\033[0m"
-        WarningColor = "\033[1;33m%s\033[0m"
-        ErrorColor   = "\033[1;31m%s\033[0m"
-        DebugColor   = "\033[0;36m%s\033[0m"
-)
+// the only length that need to be defined ahead
+const KeySize = 16
 
+// func to generate initial secret key 
+func GenerateKey() (*[KeySize]byte, error) {
+	// create a pointer variable in order to change
+	key := new([KeySize]byte)
+	_, err := io.ReadFull(rand.Reader, key[:])
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
+}
+
+// func to generate initial key pairs
+func generateKeyPairs() (*[]byte, *[]byte)
+	publicKey, privateKey, err := box.GenerateKey(rand.Reader)
+	if err != nil {
+		panic(err)
+	}
+
+	return publicKey, privateKey
+
+
+const (
+	InfoColor    = "\033[1;34m%s\033[0m"
+	NoticeColor  = "\033[1;36m%s\033[0m"
+	WarningColor = "\033[1;33m%s\033[0m"
+	ErrorColor   = "\033[1;31m%s\033[0m"
+	DebugColor   = "\033[0;36m%s\033[0m"
+)
