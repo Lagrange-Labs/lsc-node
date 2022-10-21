@@ -6,8 +6,10 @@ import (
 	"fmt"
 	"io"
 	"time"
-	box "golang.org/x/crypto/nacl/box"
+
+	argon2id "github.com/alexedwards/argon2id"
 	peer "github.com/libp2p/go-libp2p-core/peer"
+	box "golang.org/x/crypto/nacl/box"
 
 	host "github.com/libp2p/go-libp2p-core/host"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
@@ -52,13 +54,10 @@ func shortID(p peer.ID) string {
 	return pretty[len(pretty)-8:]
 }
 
-// the only length that need to be defined ahead
-const KeySize = 16
-
-// func to generate initial secret key 
-func GenerateKey() (*[KeySize]byte, error) {
-	// create a pointer variable in order to change
-	key := new([KeySize]byte)
+// func to generate initial secret key
+func GenerateKey(KeySize int) ([]byte, error) {
+	// create a pointer key in order to change
+	key := make([]byte, KeySize)
 	_, err := io.ReadFull(rand.Reader, key[:])
 	if err != nil {
 		return nil, err
@@ -66,15 +65,43 @@ func GenerateKey() (*[KeySize]byte, error) {
 	return key, nil
 }
 
+type Params struct {
+	// The amount of memory used by the algorithm (in kibibytes).
+	Memory uint32
+
+	// The number of iterations over the memory.
+	Iterations uint32
+
+	// The number of threads (or lanes) used by the algorithm.
+	// Recommended value is between 1 and runtime.NumCPU().
+	Parallelism uint8
+
+	// Length of the random salt. 16 bytes is recommended for password hashing.
+	SaltLength uint32
+
+	// Length of the generated key. 16 bytes or more is recommended.
+	KeyLength uint32
+}
+
+// func to generate key from a given password --- recommended
+func KeyDerive(password string, params *Params) ([]byte, error) {
+	key, err := argon2id.CreateHash(password, params)
+	if err != nil {
+		return nil, err
+	}
+	return key, nil
+}
+
 // func to generate initial key pairs
-func generateKeyPairs() (*[]byte, *[]byte)
+const PairKeySize = 32
+
+func generateKeyPairs() (*[PairKeySize]byte, *[PairKeySize]byte, error) {
 	publicKey, privateKey, err := box.GenerateKey(rand.Reader)
 	if err != nil {
-		panic(err)
+		return nil, nil, err
 	}
-
-	return publicKey, privateKey
-
+	return publicKey, privateKey, nil
+}
 
 const (
 	InfoColor    = "\033[1;34m%s\033[0m"
