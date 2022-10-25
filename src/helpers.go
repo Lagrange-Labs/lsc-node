@@ -55,7 +55,7 @@ func shortID(p peer.ID) string {
 }
 
 // func to generate initial secret key
-func GenerateKey(KeySize int) ([]byte, error) {
+func GenerateSingleKey(KeySize int) ([]byte, error) {
 	// create a pointer key in order to change
 	key := make([]byte, KeySize)
 	_, err := io.ReadFull(rand.Reader, key[:])
@@ -95,7 +95,7 @@ func KeyDerive(password string, params *Params) ([]byte, error) {
 // func to generate initial key pairs
 const PairKeySize = 32
 
-func generateKeyPairs() (*[PairKeySize]byte, *[PairKeySize]byte, error) {
+func GenerateKeyPairs() (*[PairKeySize]byte, *[PairKeySize]byte, error) {
 	publicKey, privateKey, err := box.GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, nil, err
