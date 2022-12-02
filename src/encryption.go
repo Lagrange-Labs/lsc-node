@@ -29,7 +29,7 @@ var (
 )
 
 // implement ascon as the symmetric encryption method
-func asconEnc(msg []byte, key [16]byte) ([]byte, []byte, error) {
+func AsconEnc(msg []byte, key []byte) ([]byte, []byte, error) {
 	/*
 			KeySize=16
 			Nonce=16
@@ -53,7 +53,7 @@ func asconEnc(msg []byte, key [16]byte) ([]byte, []byte, error) {
 }
 
 // implement chacha20 as the symmetric encrytion method
-func cha20Enc(msg []byte) ([]byte, error) {
+func Cha20Enc(msg []byte) ([]byte, error) {
 	/*
 			KeySize = 32
 			NonceSize = 12
@@ -75,7 +75,7 @@ func cha20Enc(msg []byte) ([]byte, error) {
 	return ciphertext, nil
 }
 
-func curveEnc(msg []byte, senderPrivateKey, receiverPublicKey *[32]byte) ([]byte, error) {
+func CurveEnc(msg []byte, senderPrivateKey, receiverPublicKey *[32]byte) ([]byte, error) {
 	// implement curve25519 (asymmertic) for encryption
 
 	// create shared key to speed up processing, new defines a pointer type
@@ -93,5 +93,5 @@ func curveEnc(msg []byte, senderPrivateKey, receiverPublicKey *[32]byte) ([]byte
 	// encrypt msg and appends the result to the nonce
 	ciphertext := box.SealAfterPrecomputation(nonce[:], msg, &nonce, sharedEncKey)
 
-	return ciphertext.nil
+	return ciphertext, nil
 }

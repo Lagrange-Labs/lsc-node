@@ -12,6 +12,8 @@ require (
 
 require (
 	github.com/VictoriaMetrics/fastcache v1.10.0 // indirect
+	github.com/agl/ed25519 v0.0.0-20200225211852-fd4d107ace12 // indirect
+	github.com/alexedwards/argon2id v0.0.0-20211130144151-3585854a6387 // indirect
 	github.com/benbjohnson/clock v1.3.0 // indirect
 	github.com/beorn7/perks v1.0.1 // indirect
 	github.com/btcsuite/btcd v0.22.1 // indirect
@@ -137,5 +139,6 @@ require (
 	google.golang.org/protobuf v1.28.0 // indirect
 	gopkg.in/natefinch/npipe.v2 v2.0.0-20160621034901-c1b8fa8bdcce // indirect
 	gopkg.in/tomb.v1 v1.0.0-20141024135613-dd632973f1e7 // indirect
+	lukechampine.com/ascon v1.0.0 // indirect
 	lukechampine.com/blake3 v1.1.7 // indirect
 )

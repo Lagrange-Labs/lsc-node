@@ -1,33 +1,37 @@
 package main
 
-import "fmt"
-import "time"
+import (
+	"fmt"
+	"math/big"
+	"time"
 
-import "math/big"
+	common "github.com/ethereum/go-ethereum/common"
 
-import common "github.com/ethereum/go-ethereum/common"
-import ethClient "github.com/ethereum/go-ethereum/ethclient"
-import rpc "github.com/ethereum/go-ethereum/rpc"
-import log "log"
+	ethClient "github.com/ethereum/go-ethereum/ethclient"
 
-import context "context"
+	rpc "github.com/ethereum/go-ethereum/rpc"
 
-//import json "encoding/json"
+	log "log"
 
-import host "github.com/libp2p/go-libp2p-core/host"
-import pubsub "github.com/libp2p/go-libp2p-pubsub"
-import "strconv"
+	context "context"
 
-import "github.com/ethereum/go-ethereum/crypto"
-import "github.com/ethereum/go-ethereum/accounts/abi/bind"
+	//import json "encoding/json"
 
-import	"crypto/ecdsa"
-import	"github.com/ethereum/go-ethereum/common/hexutil"
+	host "github.com/libp2p/go-libp2p-core/host"
+
+	"crypto/ecdsa"
+	"strconv"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
+	pubsub "github.com/libp2p/go-libp2p-pubsub"
+)
 
 const (
-	STAKE_STATUS_CLOSED = 0
+	STAKE_STATUS_CLOSED  = 0
 	STAKE_STATUS_PENDING = 1
-	STAKE_STATUS_OPEN = 2
+	STAKE_STATUS_OPEN    = 2
 )
 
 func loadEthClient(ethEndpoint string) *ethClient.Client {
@@ -35,7 +39,7 @@ func loadEthClient(ethEndpoint string) *ethClient.Client {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Endpoint:",ethEndpoint)
+	fmt.Println("Endpoint:", ethEndpoint)
 	return eth
 }
 
@@ -48,7 +52,7 @@ func loadRpcClient(ethEndpoint string) *rpc.Client {
 	return rpc
 }
 
-func rpcCall(rpc *rpc.Client,To string,Data string) {
+func rpcCall(rpc *rpc.Client, To string, Data string) {
 	type request struct {
 		To   string `json:"to"`
 		Data string `json:"data"`
@@ -56,7 +60,7 @@ func rpcCall(rpc *rpc.Client,To string,Data string) {
 
 	var result string
 
-	req := request{To,Data}
+	req := request{To, Data}
 	if err := rpc.Call(&result, "eth_call", req, "latest"); err != nil {
 		log.Fatal(err)
 	}
@@ -69,7 +73,7 @@ func ethTest(eth *ethClient.Client) {
 	ctx := context.Background()
 	tx, pending, _ := eth.TransactionByHash(ctx, common.HexToHash("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))
 	if !pending {
-		fmt.Println("tx:",tx)
+		fmt.Println("tx:", tx)
 	}
 
 	account := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -80,14 +84,16 @@ func ethTest(eth *ethClient.Client) {
 	fmt.Println("Balance:", balance) // 25893180161173005034
 }
 
-func listenForBlocks(eth *ethClient.Client,node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nick string, subscription *pubsub.Subscription) {
+func listenForBlocks(eth *ethClient.Client, node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nick string, subscription *pubsub.Subscription) {
 	for {
-		block, err := eth.BlockByNumber(context.Background(),nil)
-		if(err != nil) { panic(err) }
+		block, err := eth.BlockByNumber(context.Background(), nil)
+		if err != nil {
+			panic(err)
+		}
 		txns := block.Transactions()
-		msg := "{'block.Number':"+block.Number().String()+",'block.Hash':"+block.Hash().String()+",'txnCount':"+strconv.Itoa(len(txns))+"}"
-		writeMessages(node,topic,nick,msg)
-		
+		msg := "{'block.Number':" + block.Number().String() + ",'block.Hash':" + block.Hash().String() + ",'txnCount':" + strconv.Itoa(len(txns)) + "}"
+		writeMessages(node, topic, nick, msg)
+
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -97,17 +103,17 @@ func getNonce(client *ethClient.Client, fromAddress common.Address) uint64 {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Nonce:",nonce)
-	return nonce;
+	fmt.Println("Nonce:", nonce)
+	return nonce
 }
 
 type LagrangeNodeCredentials struct {
 	privateKey string
-	publicKey interface{} // crypto.PublicKey
-	address common.Address
-	
+	publicKey  interface{} // crypto.PublicKey
+	address    common.Address
+
 	privateKeyECDSA *ecdsa.PrivateKey
-	publicKeyECDSA *ecdsa.PublicKey
+	publicKeyECDSA  *ecdsa.PublicKey
 }
 
 func getCredentials() *LagrangeNodeCredentials {
@@ -116,7 +122,7 @@ func getCredentials() *LagrangeNodeCredentials {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Private key loaded.");
+	fmt.Println("Private key loaded.")
 
 	publicKey := privateKey.Public()
 	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
@@ -127,24 +133,24 @@ func getCredentials() *LagrangeNodeCredentials {
 
 	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
 	fmt.Println("Address isolated.")
-	
-	res := LagrangeNodeCredentials {
-		privateKey: privateKeyString,
-		publicKey: publicKey,
-		address: fromAddress,
+
+	res := LagrangeNodeCredentials{
+		privateKey:      privateKeyString,
+		publicKey:       publicKey,
+		address:         fromAddress,
 		privateKeyECDSA: privateKey,
-		publicKeyECDSA: publicKeyECDSA }
-	
+		publicKeyECDSA:  publicKeyECDSA}
+
 	return &res
 }
 
 func getStakingContract(client *ethClient.Client) *Nodestaking {
-	address := common.HexToAddress(NODE_STAKING_ADDRESS)
-	instance, err := NewNodestaking(address,client)
+	address := common.HexToAddress(getNodeStakingAddress())
+	instance, err := NewNodestaking(address, client)
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Loaded contract address",address)
+	fmt.Println("Loaded contract address", address)
 	return instance
 }
 
@@ -161,25 +167,31 @@ func StakeBegin(instance *Nodestaking) *big.Int {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("Stake amount:",stake)
+	fmt.Println("Stake amount:", stake)
 	return stake
 }
 
 func StakeAdd(instance *Nodestaking, auth *bind.TransactOpts) {
-	res,err := instance.AddStake(auth,big.NewInt(4))
-	if(err != nil) { panic(err) }
+	res, err := instance.AddStake(auth, big.NewInt(4))
+	if err != nil {
+		panic(err)
+	}
 	_ = res
 }
 
 func StakeRemoveBegin(instance *Nodestaking, auth *bind.TransactOpts) {
-	res,err := instance.StartStakeRemoval(auth,big.NewInt(4))
-	if(err != nil) { panic(err) }
+	res, err := instance.StartStakeRemoval(auth, big.NewInt(4))
+	if err != nil {
+		panic(err)
+	}
 	_ = res
 }
 
 func StakeRemoveFinish(instance *Nodestaking, auth *bind.TransactOpts) {
-	res,err := instance.FinishStakeRemoval(auth,big.NewInt(4))
-	if(err != nil) { panic(err) }
+	res, err := instance.FinishStakeRemoval(auth, big.NewInt(4))
+	if err != nil {
+		panic(err)
+	}
 	_ = res
 }
 
@@ -191,13 +203,15 @@ func getAuth(privateKey *ecdsa.PrivateKey) *bind.TransactOpts {
 func mineBlocks(rpc *rpc.Client) {
 	var hex hexutil.Bytes
 	for i := 0; i < 5; i++ {
-		rpc.Call(&hex,"evm_mine")
+		rpc.Call(&hex, "evm_mine")
 	}
 }
 
 func VerifyStake(client *ethClient.Client, instance *Nodestaking, addr common.Address) bool {
-	activeStakes,err := instance.ActiveStakes(&bind.CallOpts{},addr,big.NewInt(4))
-	if(err != nil) { panic(err) }
+	activeStakes, err := instance.ActiveStakes(&bind.CallOpts{}, addr, big.NewInt(4))
+	if err != nil {
+		panic(err)
+	}
 	return activeStakes == STAKE_STATUS_OPEN
 }
 
@@ -211,11 +225,11 @@ func ctrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	fromAddress := credentials.address
 
 	// Verify Stake
-	isStaked := VerifyStake(client,instance,fromAddress)
-	fmt.Println("Stake Verification:",isStaked)
+	isStaked := VerifyStake(client, instance, fromAddress)
+	fmt.Println("Stake Verification:", isStaked)
 
-	// Request nonce for transaction	
-	nonce := getNonce(client,fromAddress)
+	// Request nonce for transaction
+	nonce := getNonce(client, fromAddress)
 
 	// Request gas price
 	gasPrice := getGasPrice(client)
@@ -230,42 +244,42 @@ func ctrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	auth.GasPrice = gasPrice
 
 	// Verify Stake
-	isStaked = VerifyStake(client,instance,fromAddress)
-	fmt.Println("Stake Verification:",isStaked)
+	isStaked = VerifyStake(client, instance, fromAddress)
+	fmt.Println("Stake Verification:", isStaked)
 
 	// Add Stake
-	StakeAdd(instance,auth)
-	
+	StakeAdd(instance, auth)
+
 	// Verify Stake
-	isStaked = VerifyStake(client,instance,fromAddress)
-	fmt.Println("Stake Verification:",isStaked)
+	isStaked = VerifyStake(client, instance, fromAddress)
+	fmt.Println("Stake Verification:", isStaked)
 
 	// Hardhat - Mine Blocks
 	mineBlocks(rpc)
 
 	// Update Nonce and Val
-	nonce = getNonce(client,fromAddress)
+	nonce = getNonce(client, fromAddress)
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)
-	
+
 	// Begin Stake Removal
 	StakeRemoveBegin(instance, auth)
 
 	// Verify Stake
-	isStaked = VerifyStake(client,instance,fromAddress)
-	fmt.Println("Stake Verification:",isStaked)
+	isStaked = VerifyStake(client, instance, fromAddress)
+	fmt.Println("Stake Verification:", isStaked)
 
 	// Hardhat - Mine More Blocks
 	mineBlocks(rpc)
-	
+
 	// Update Nonce
-	nonce = getNonce(client,fromAddress)
+	nonce = getNonce(client, fromAddress)
 	auth.Nonce = big.NewInt(int64(nonce))
-	
+
 	// Finalize Stake Removal
-	StakeRemoveFinish(instance,auth)
+	StakeRemoveFinish(instance, auth)
 
 	// Verify Stake
-	isStaked = VerifyStake(client,instance,fromAddress)
-	fmt.Println("Stake Verification:",isStaked)
+	isStaked = VerifyStake(client, instance, fromAddress)
+	fmt.Println("Stake Verification:", isStaked)
 }

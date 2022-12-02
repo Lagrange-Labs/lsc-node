@@ -6,7 +6,7 @@ import (
 	ascon "lukechampine.com/ascon"
 )
 
-func curveDec(ciphertext []byte, senderPublicKey, receiverPrivateKey *[32]byte) ([]byte, error) {
+func CurveDec(ciphertext []byte, senderPublicKey, receiverPrivateKey *[32]byte) ([]byte, error) {
 	// implement curve25519 (asymmertic) for decryption
 	// check the length of ciphertext --- valid encryption message
 	if len(ciphertext) < (24 + box.Overhead) {
@@ -28,7 +28,7 @@ func curveDec(ciphertext []byte, senderPublicKey, receiverPrivateKey *[32]byte) 
 	return decrypted, nil
 }
 
-func asconDec(nonce, key [16]byte, cipher []byte) ([]byte, error) {
+func AsconDec(nonce, key []byte, cipher []byte) ([]byte, error) {
 	/*
 		:param nonce: the same nonce used for encryption
 		:param key: the same key used for encryption
@@ -46,7 +46,7 @@ func asconDec(nonce, key [16]byte, cipher []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-func cha20Dec(nonce, key [32]byte, cipher []byte) ([]byte, error) {
+func Cha20Dec(nonce, key [32]byte, cipher []byte) ([]byte, error) {
 	/*
 		:param nonce: the same nonce as in encryption
 		:param key: the same key used to encrypt"
