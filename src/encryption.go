@@ -19,9 +19,9 @@ import (
 	ascon "lukechampine.com/ascon"
 )
 
-type AEAD struct {
-	key []byte
-}
+// type AEAD struct {
+// 	aeadKey []byte
+// }
 
 var (
 	ErrEncrypt = errors.New("secret: encryption failed")
@@ -53,25 +53,24 @@ func AsconEnc(msg []byte, key []byte) ([]byte, []byte, error) {
 }
 
 // implement chacha20 as the symmetric encrytion method
-func Cha20Enc(msg []byte) ([]byte, error) {
+func Cha20Enc(passphrase *[32]byte, msg []byte) ([]byte, error) {
 	/*
 			KeySize = 32
 			NonceSize = 12
 		:param msg: the message to encrypt
 	*/
 	// generate key by hashing with sha256 --- 32 bytes
-	key := sha256.Sum256([]byte(msg))
+	key := sha256.Sum256(passphrase[:])
 	// create symmertic key
 	aead, _ := chacha20.NewX(key[:])
 	// make nonce
-	nonce := make([]byte, chacha20.NonceSize)
+	nonce := make([]byte, chacha20.NonceSizeX)
 	// encrypt
 	if _, err := io.ReadFull(rand.Reader, nonce[:]); err != nil {
 		return nil, err
 	}
 
-	ciphertext := aead.Seal(nil, nonce, msg, nil)
-
+	ciphertext := aead.Seal(nonce, nonce, msg, nil)
 	return ciphertext, nil
 }
 
