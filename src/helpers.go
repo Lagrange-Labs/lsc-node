@@ -84,23 +84,38 @@ type Params struct {
 }
 
 // func to generate key from a given password --- recommended
-func KeyDerive(password string, params *Params) ([]byte, error) {
+func KeyDerive(password string, params *argon2id.Params) ([]byte, error) {
 	key, err := argon2id.CreateHash(password, params)
 	if err != nil {
 		return nil, err
 	}
-	return key, nil
+	return []byte(key), nil
 }
 
 // func to generate initial key pairs
-const PairKeySize = 32
+const PairKeySize = 64
 
 func GenerateKeyPairs() (*[PairKeySize]byte, *[PairKeySize]byte, error) {
+	// define bespoke length for needed size of pub and priv keys
+	pub := new([64]byte)
+	priv := new([64]byte)
+
 	publicKey, privateKey, err := box.GenerateKey(rand.Reader)
 	if err != nil {
 		return nil, nil, err
 	}
-	return publicKey, privateKey, nil
+
+	copy(pub[:], publicKey[:])
+	copy(priv[:], privateKey[:])
+
+	sendPub, sendPriv, err := box.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, nil, err
+	}
+	copy(pub[32:], sendPub[:])
+	copy(priv[32:], sendPriv[:])
+
+	return pub, priv, nil
 }
 
 const (
