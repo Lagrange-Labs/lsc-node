@@ -1,6 +1,8 @@
 package main
 
 import (
+	sha256 "crypto/sha256"
+
 	chacha20 "golang.org/x/crypto/chacha20poly1305"
 	box "golang.org/x/crypto/nacl/box"
 	ascon "lukechampine.com/ascon"
@@ -46,19 +48,25 @@ func AsconDec(nonce, key []byte, cipher []byte) ([]byte, error) {
 	return plaintext, nil
 }
 
-func Cha20Dec(nonce, key [32]byte, cipher []byte) ([]byte, error) {
+func Cha20Dec(passphrase *[32]byte, cipher []byte) ([]byte, error) {
 	/*
 		:param nonce: the same nonce as in encryption
 		:param key: the same key used to encrypt"
 		:param cipher: encrypted message
 	*/
+	key := sha256.Sum256(passphrase[:])
 	aead, _ := chacha20.NewX(key[:])
+	// make nonce
+	nonce, ciphertext := cipher[:aead.NonceSize()], cipher[aead.NonceSize():]
 
-	if len(cipher) < aead.NonceSize() {
+	if len(ciphertext) < aead.NonceSize() {
 		return nil, ErrDecrypt
 	}
 
-	plaintext, _ := aead.Open(nil, nonce[:], cipher, nil)
+	plaintext, err := aead.Open(nil, nonce, ciphertext, nil)
+	if err != nil {
+		return nil, err
+	}
 
 	return plaintext, nil
 }

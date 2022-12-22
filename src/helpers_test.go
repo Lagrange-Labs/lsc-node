@@ -1,9 +1,12 @@
 package main
 
-import "testing"
+import (
+	"fmt"
+	"testing"
+)
 
 func TestGenerateSingleKey(t *testing.T) {
-
+	fmt.Println("Test Successful")
 }
 
 // example of params

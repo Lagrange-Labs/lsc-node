@@ -34,7 +34,7 @@ import (
 	"math/big"
 	"time"
 
-	// "github.com/agl/ed25519"
+	"github.com/kisom/sbuf"
 	box "golang.org/x/crypto/nacl/box"
 )
 
@@ -82,8 +82,8 @@ type Identity struct {
 
 // need to change as required
 type EdDSASet struct {
-	public  []byte
-	private []byte
+	// public  []byte
+	// private []byte
 }
 
 // need to change as required
@@ -113,60 +113,80 @@ type Content struct {
 }
 
 type Message struct {
-	Content
+	Content []byte
 	// used to track the sequence --- four bytes default
 	Number uint32 `json:"number"`
 }
 
 // =============================================================
 
-// serialise a message into a byte slice in order to encrypt
-func MarshalMessage(m Message) (*bytes.Buffer, error) {
-	/*
-		:param m: the struct of message going to be encrypted
-	*/
-
-	// implement with binary.BigEndian
-	// get the size of content, use len here in order to add
-	out := make([]byte, 4, binary.Size(m.Content)+4)
-	buffer := bytes.NewBuffer(out)
-	binary.Write(buffer, binary.BigEndian, m.Number)
-	// interpret it as a byte array pointer then turn it into a slice
-	err := binary.Write(buffer, binary.BigEndian, m.Content)
-	if err != nil {
-		return nil, err
+// Marshal serialises a copy of the Identity. It is intended to support
+// persistent Identities.
+func Marshal(id *Identity) []byte {
+	bufSize := ed25519.PrivateKeySize + ed25519.PublicKeySize
+	bufSize += len(id.peers) * ed25519.PublicKeySize
+	buf := sbuf.NewBuffer(bufSize)
+	buf.Write(id.private[:])
+	buf.Write(id.public[:])
+	for i := range id.peers {
+		buf.Write(id.peers[i][:])
 	}
 
-	return buffer, nil
+	return buf.Bytes()
+}
 
-	// implement with unsafe
-	// out := make([]byte, 4, unsafe.Sizeof(m.Content) + 4)
-	// contentSize := unsafe.Sizeof(m.Content)
-	// out = append(out[:4], byte(m.Number))
-	// // binary.BigEndian.PutUint32(out[:4], m.Number)
+// ErrInvalidIdentity is returned if the Identity being unmarshalled
+// is invalid.
+var ErrInvalidIdentity = errors.New("sessions: invalid identity")
 
-	// // interpret it as a byte array pointer then turn it into a slice
-	// return append(out, (*[contentSize]byte)(unsafe.Pointer(&m.Content))[:])
+// Unmarshal parses an identity.
+func Unmarshal(in []byte) (*Identity, error) {
+	buf := sbuf.NewBufferFrom(in)
+	id := &Identity{}
+
+	_, err := io.ReadFull(buf, id.private[:])
+	if err != nil {
+		return nil, ErrInvalidIdentity
+	}
+
+	_, err = io.ReadFull(buf, id.public[:])
+	if err != nil {
+		return nil, ErrInvalidIdentity
+	}
+
+	if (buf.Len() % ed25519.PublicKeySize) != 0 {
+		return nil, ErrInvalidIdentity
+	}
+
+	for {
+		if buf.Len() == 0 {
+			break
+		}
+
+		peer := new([ed25519.PublicKeySize]byte)
+		io.ReadFull(buf, peer[:])
+		id.peers = append(id.peers, peer)
+	}
+
+	return id, nil
+}
+
+func MarshalMessage(m Message) []byte {
+	out := make([]byte, 4, len(m.Content)+4)
+	binary.BigEndian.PutUint32(out[:4], m.Number)
+	return append(out, m.Content...)
 }
 
 // parse a message from byte slice in order to decrypt
-func UnmarshalMessage(cipher *bytes.Buffer) (Message, error) {
-	// decode from binary implemetation
+func UnmarshalMessage(in []byte) (Message, bool) {
 	m := Message{}
-	binary.Read(cipher, binary.BigEndian, m.Number)
-	err := binary.Read(cipher, binary.BigEndian, m.Content)
-	if err != nil {
-		return m, err
+	if len(in) <= 4 {
+		return m, false
 	}
-	return m, nil
 
-	// m := Message{}
-	// if len(cipher) < 4 {
-	// 	return nil, false
-	// }
-	// // return the number
-	// m.Number = *(*[4]byte)(unsafe.Pointer(cipher[:4]))
-	// // return the context
+	m.Number = binary.BigEndian.Uint32(in[:4])
+	m.Content = in[4:]
+	return m, true
 }
 
 // add a new peer key to the Identity's peer list -- handler
@@ -178,6 +198,13 @@ func (id *Identity) AddPeer(peerId *[ed25519.PublicKeySize]byte) {
 		}
 	}
 	id.peers = append(id.peers, peerId)
+}
+
+// Public exports a copy of the Identity's public key.
+func (id *Identity) Public() *[ed25519.PublicKeySize]byte {
+	pub := new([ed25519.PublicKeySize]byte)
+	copy(pub[:], id.public[:])
+	return pub
 }
 
 func (s *Session) LastSent() uint32 {
@@ -196,6 +223,18 @@ const SessionKeySize = ed25519.PublicKeySize + 64 + ed25519.SignatureSize
 
 // information needs to be signed
 const blobDataSize = ed25519.PublicKeySize + 64
+
+// NewIdentity generates a new identity.
+func NewIdentity() (*Identity, error) {
+	var err error
+	id := &Identity{}
+	id.public, id.private, err = ed25519.GenerateKey(rand.Reader)
+	if err != nil {
+		return nil, err
+	}
+
+	return id, nil
+}
 
 // create a new session, return with signed key
 func (id *Identity) NewSession() (*[SessionKeySize]byte, *Session, error) {
@@ -371,6 +410,82 @@ func (id *Identity) Listen(ch Channel) (*Session, error) {
 	s.ChangeKeys(peer, false)
 	s.Channel = ch
 	return s, nil
+}
+
+// Encrypt adds a message number to the session and secures it with a
+// symmetric ciphersuite. The message cannot be empty.
+func (s *Session) Encrypt(message []byte) ([]byte, error) {
+	if len(message) == 0 {
+		return nil, ErrEncrypt
+	}
+	s.lastSent++
+	m := MarshalMessage(Message{message, s.lastSent})
+	return Cha20Enc(s.sendKey, m)
+}
+
+// Send encrypts the message and sends it out over the channel.
+func (s *Session) Send(message []byte) error {
+	m, err := s.Encrypt(message)
+	if err != nil {
+		return err
+	}
+
+	err = binary.Write(s.Channel, binary.BigEndian, uint32(len(m)))
+	if err != nil {
+		return err
+	}
+
+	_, err = s.Channel.Write(m)
+	return err
+}
+
+// Decrypt recovers the message and verifies the message number. If the
+// message number hasn't incremented, it's considered a decryption
+// failure.
+func (s *Session) Decrypt(message []byte) ([]byte, error) {
+	out, err := Cha20Dec(s.recvKey, message)
+	if err != nil {
+		return nil, err
+	}
+
+	m, ok := UnmarshalMessage(out)
+	if !ok {
+		return nil, ErrDecrypt
+	}
+
+	if m.Number <= s.lastRecv {
+		return nil, ErrDecrypt
+	}
+
+	s.lastRecv = m.Number
+
+	return m.Content, nil
+}
+
+// Receive listens for a new message on the channel.
+func (s *Session) Receive() ([]byte, error) {
+	var mlen uint32
+	err := binary.Read(s.Channel, binary.BigEndian, &mlen)
+	if err != nil {
+		return nil, err
+	}
+	message := make([]byte, int(mlen))
+	_, err = io.ReadFull(s.Channel, message)
+	if err != nil {
+		return nil, err
+	}
+
+	return s.Decrypt(message)
+}
+
+// Close zeroises the keys in the session. Once a session is closed,
+// the traffic that was sent over the channel can no longer be decrypted
+// and any attempts at sending or receiving messages over the channel
+// will fail.
+func (s *Session) Close() error {
+	Zero(s.sendKey[:])
+	Zero(s.recvKey[:])
+	return nil
 }
 
 // RandBytes attempts to read the selected number of bytes from the
