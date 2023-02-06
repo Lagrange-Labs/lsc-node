@@ -6,7 +6,7 @@ import (
 	"os"
 	"bufio"
 	
-	"math/rand"
+	"crypto/rand"
 
 	context "context"
 
@@ -39,11 +39,11 @@ type DiscoveryNotifee struct {
 // the PubSub system will automatically start interacting with them if they also
 // support PubSub.
 func (n *DiscoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
-	fmt.Printf("discovered new peer %s\n", pi.ID.Pretty())
-	fmt.Println("peer.AddrInfo:",pi);
+	LogMessage(fmt.Sprintf("discovered new peer %s", pi.ID.Pretty()),LOG_INFO)
+	LogMessage("peer.AddrInfo: "+fmt.Sprintf("%v",pi),LOG_INFO);
 	err := n.h.Connect(context.Background(), pi)
 	if err != nil {
-		fmt.Printf("error connecting to peer %s: %s\n", pi.ID.Pretty(), err)
+		LogMessage(fmt.Sprintf("error connecting to peer %s: %s", pi.ID.Pretty(), err),LOG_ERROR)
 	}
 }
 
@@ -69,6 +69,49 @@ const (
         DebugColor   = "\033[0;36m%s\033[0m"
 )
 
+const (
+	LOG_INFO = 1
+	LOG_NOTICE = 2
+	LOG_WARNING = 3
+	LOG_ERROR = 4
+	LOG_DEBUG = 5
+)
+
+func getTimestamp() string {
+	time := time.Now()
+	return time.Format("2006-01-02 15:04:05")
+}
+
+func LogMessage(message string, level int) {
+	if LOG_LEVEL < level {
+		return
+	}
+	
+	var color string
+	var cat string
+	switch level {
+		case LOG_INFO:
+			color = InfoColor
+			cat = "INFO"
+		case LOG_NOTICE:
+			color = NoticeColor
+			cat = "NOTICE"
+		case LOG_WARNING:
+			color = WarningColor
+			cat = "WARN"
+		case LOG_ERROR:
+			color = ErrorColor
+			cat = "ERROR"
+		case LOG_DEBUG:
+			color = DebugColor
+			cat = "DEBUG"
+	}
+	fmt.Printf(color,cat)
+	fmt.Printf("["+getTimestamp()+"] ")
+	fmt.Printf(message)
+	fmt.Println("")
+}
+
 
 func Scan(prompt string) string {
 	if(prompt != "") {
@@ -80,19 +123,12 @@ func Scan(prompt string) string {
 }
 
 func GenSalt32() string {
-	res := ""
-	
-	rand.Seed(time.Now().UnixNano())
-
-	// String
-	charset := "0123456789abcdef"
-	
-	for i := 0; i < 32; i++ {
-		// Getting random character
-		c := charset[rand.Intn(len(charset))]
-		res += string(c)
+	salt := make([]byte, 32)
+	_, err := rand.Read(salt)
+	if err != nil {
+		panic(err)
 	}
-	
+	res := hexutil.Encode(salt)
 	return res
 }
 
@@ -107,4 +143,8 @@ func SignMessageWithPrivateKey(privateKey *ecdsa.PrivateKey, message string) (st
 	signature[crypto.RecoveryIDOffset] += 27
 
 	return hexutil.Encode(signature), nil
+}
+
+func GetUnixTimestamp() int64 {
+	return time.Now().Unix()
 }
