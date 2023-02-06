@@ -148,3 +148,6 @@ func SignMessageWithPrivateKey(privateKey *ecdsa.PrivateKey, message string) (st
 func GetUnixTimestamp() int64 {
 	return time.Now().Unix()
 }
+
+// Returns standard delimiter for strings that are hashed and signed.
+func GetSeparator() string { return "::" }
