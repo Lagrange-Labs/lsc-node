@@ -48,9 +48,10 @@ func HandleMessaging(node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nic
 }
 // Converted to/from JSON and sent in the body of pubsub messages.
 type GossipMessage struct {
-	Message    string
-	SenderID   string
-	SenderNick string
+	Type        string
+	Data        string
+	SenderID    string
+	SenderNick  string
 }
 
 const BufferSize = 4096
@@ -73,24 +74,56 @@ func ReadMessages(node host.Host, topic *pubsub.Topic, subscription *pubsub.PubS
 			close(messages)
 			return
 		}
-		// only forward messages delivered by others
+		// Only forward messages delivered by others
 		if msg.ReceivedFrom == node.ID() {
 			continue
 		}
-		fmt.Println(string(msg.Data))
+		
+		// Parse message
 		cm := new(GossipMessage)
 		err = json.Unmarshal(msg.Data, cm)
 		if err != nil {
 			continue
 		}
-		// send valid messages onto the Messages channel
-		messages <- cm
+
+		// 1. Verify peer.  Check if peer is authenticated, otherwise authenticate, otherwise ignore.
+		val, ok := peerRegistry[cm.SenderNick]
+		_ = val
+		if !ok && cm.Type != "JoinMessage" {
+			// Ignore
+			continue
+		} else {
+		// 2. Process message (e.g., attestation).
+			LogMessage(fmt.Sprintf("ReadMessages: %v",string(msg.Data)),LOG_DEBUG)
+
+			processMessageError := ProcessMessage(cm)
+			if processMessageError != nil {
+				LogMessage(fmt.Sprintf("%v",processMessageError),LOG_WARNING)
+				return
+			}
+			
+			UpdatePeerRegistry(cm,msg)
+
+			// send valid messages onto the Messages channel
+			messages <- cm
+		}		
 	}
 }
 
-func WriteMessages(node host.Host, topic *pubsub.Topic, nick string, message string) error {
+func UpdatePeerRegistry(cm *GossipMessage, msg *pubsub.Message) {
+	// Address
+	fromId := fmt.Sprintf("%v",msg.ReceivedFrom)		
+	localTime := GetUnixTimestamp()
+	summary := peerSummary{fromId, cm.SenderNick, localTime}
+	// TODO use address instead of fromId once authentication and verification is ready
+	// Counterpoint: additional processing required to derive address from public key.  Continue using fromID for time being.
+	peerRegistry[cm.SenderNick] = summary
+}
+
+func WriteMessages(node host.Host, topic *pubsub.Topic, nick string, message string, messagetype string) error {
 	m := GossipMessage{
-		Message:    message,
+		Type:       messagetype,
+		Data:       message,
 		SenderID:   node.ID().Pretty(),
 		SenderNick: nick,
 	}
@@ -98,6 +131,6 @@ func WriteMessages(node host.Host, topic *pubsub.Topic, nick string, message str
 	if err != nil {
 		return err
 	}
-	fmt.Println(string(msgBytes))
+//	LogMessage("WriteMessages: "+string(msgBytes),LOG_DEBUG)
 	return topic.Publish(context.Background(), msgBytes)
 }
