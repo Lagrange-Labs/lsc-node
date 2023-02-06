@@ -6,6 +6,8 @@ import (
 	"testing"
 )
 
+// Main test running function
+
 func TestMain(m *testing.M) {
   if err := setup(); err != nil {
     os.Exit(1)
@@ -21,13 +23,31 @@ func TestMain(m *testing.M) {
   os.Exit(exitCode)
 }
 
+// Setup test environment
+
 func setup() error {
   return nil
 }
 
+// Cleanup test environment
+
 func tearDown() error {
   return nil
 }
+
+// Common assertion wrappers
+
+func assert(t *testing.T, cond bool, desc string) {
+	if cond == false {
+		t.Errorf(desc)
+	}
+}
+
+func expectString(t *testing.T, a string, b string) {
+	assert(t, a == b,"Expected '"+a+"', got '"+b+"'.")
+}
+
+// Testing keccak hashing wrapper function
 
 func TestKeccakHashString(t *testing.T) {
 	// Remember that hex-encoded Keccak hashes return a '0x' prefix.
@@ -37,12 +57,4 @@ func TestKeccakHashString(t *testing.T) {
 	expectString(t, KeccakHash, NullKeccakHash)
 }
 
-func expectString(t *testing.T, a string, b string) {
-	assert(t, a == b,"Expected '"+a+"', got '"+b+"'.")
-}
 
-func assert(t *testing.T, cond bool, desc string) {
-	if cond == false {
-		t.Errorf(desc)
-	}
-}
