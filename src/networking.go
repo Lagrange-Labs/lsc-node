@@ -19,6 +19,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	json "encoding/json"
 	"github.com/ethereum/go-ethereum/crypto"
+	ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
 )
 
 func CreateListener(portPtr int) host.Host {
@@ -28,7 +29,7 @@ func CreateListener(portPtr int) host.Host {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Listen addresses:", node.Addrs())
+	LogMessage("Listen addresses:"+ fmt.Sprintf("%v",node.Addrs()),LOG_INFO)
 	return node
 }
 
@@ -39,8 +40,8 @@ func GetAddrInfo(node host.Host) peerstore.AddrInfo {
 		Addrs: node.Addrs(),
 	}
 	addrs, err := peerstore.AddrInfoToP2pAddrs(&peerInfo)
-	fmt.Println("libp2p node address:", addrs[0])
-	fmt.Println(peerInfo)
+	LogMessage("libp2p node address: " + fmt.Sprintf("%v",addrs[0]),LOG_INFO)
+	LogMessage("Peer Info: "+fmt.Sprintf("%v",peerInfo),LOG_INFO)
 	_ = err
 	return peerInfo
 }
@@ -53,6 +54,18 @@ type JoinMessage struct {
 	ECDSASignatureTuple string
 }
 
+func pingPeer(node host.Host) {
+	// Get P2P Address Info
+	localInfo := GetAddrInfo(node);
+	_ = localInfo
+	// Ping test
+	ch := ping.Ping(context.Background(), node, localInfo.ID)
+	for i := 0; i < 3; i++ {
+		res := <-ch
+		LogMessage("Got ping response. Latency: "+fmt.Sprintf("%v",res.RTT), LOG_DEBUG)
+	}
+}
+
 /*
 Ethereum Public Key
 Generic Message (i.e. “Hello Network”)
@@ -61,9 +74,49 @@ Salt
 ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the generic message + timestamp + salt
 */
 
-func GetGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic,*pubsub.Subscription) {
+func GenerateVerificationTuple() (string, string, string, string) {
+	timestampStr := strconv.FormatInt(time.Now().UTC().Unix(),10)
+	genericMessage := "It's always morning in web3."
+	saltStr := GenSalt32()
+	return GenerateVerificationTupleFromJoinMessage(genericMessage, timestampStr, saltStr), timestampStr, genericMessage, saltStr
+}
+
+func GenerateVerificationTupleFromJoinMessage(genericMessage string, timestampStr string, salt string) string {
 	separator := GetSeparator()
+	return genericMessage + separator + timestampStr + separator + salt
+}
+
+func SendVerificationMessage(node host.Host,topic *pubsub.Topic) {
+
+	creds := GetCredentials()
 	
+	// ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the generic message + timestamp + salt
+	
+	tuple, timestampStr, genericMessage, saltStr := GenerateVerificationTuple()
+
+	tupleHash := KeccakHash(tuple)
+
+	signatureTuple,err := crypto.Sign(tupleHash, creds.privateKeyECDSA)
+	if err != nil { panic(err) }
+	
+	signatureHex := hexutil.Encode(signatureTuple)
+	
+	joinMessage := JoinMessage {
+		PublicKey: hexutil.Encode(crypto.FromECDSAPub(creds.publicKeyECDSA)),
+		GenericMessage: genericMessage,
+		Timestamp: timestampStr,
+		Salt: saltStr,
+		ECDSASignatureTuple: signatureHex }
+
+	json,err := json.Marshal(joinMessage)
+	if err != nil { panic(err) }
+	bytes := []byte(json)
+	msg := string(bytes)
+	
+	WriteMessages(node,topic,creds.address.Hex(),msg,"JoinMessage")
+}
+
+func GetGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic,*pubsub.Subscription) {
 	ps, err := pubsub.NewGossipSub(context.Background(), node)
 	if err != nil {
 		panic(err)
@@ -87,38 +140,8 @@ func GetGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic
 		panic(err)
 	}
 	
-	fmt.Println("Room joined and subscribed:",TopicName(roomName))
-	
-	creds := GetCredentials()
-	
-	// ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the generic message + timestamp + salt
-	
-	genericMessage := "It's always morning in web3."
-	timestampStr := strconv.FormatInt(time.Now().UTC().Unix(),10)
-	saltStr := GenSalt32()
-	tuple := genericMessage + separator + timestampStr + separator + saltStr
-
-	tupleHash := KeccakHash(tuple)
-
-	signatureTuple,err := crypto.Sign(tupleHash, creds.privateKeyECDSA)
-	if err != nil { panic(err) }
-	
-	signatureHex := hexutil.Encode(signatureTuple)
-	
-	joinMessage := JoinMessage {
-		PublicKey: hexutil.Encode(crypto.FromECDSAPub(creds.publicKeyECDSA)),
-		GenericMessage: genericMessage,
-		Timestamp: timestampStr,
-		Salt: saltStr,
-		ECDSASignatureTuple: signatureHex }
-
-	json,err := json.Marshal(joinMessage)
-	if err != nil { panic(err) }
-	bytes := []byte(json)
-	msg := string(bytes)
-	
-	WriteMessages(node,topic,creds.address.Hex(),msg)
-	
+	LogMessage("Room joined and subscribed: "+TopicName(roomName),LOG_INFO)
+		
 	return ps,topic,sub
 }
 
@@ -142,7 +165,7 @@ func ConnectRemote(node host.Host, peerAddr string) {
 		if err := node.Connect(context.Background(), *peer); err != nil {
 			panic(err)
 		} else {
-			fmt.Println("Connected:", *peer)
+			LogMessage("Connected: "+fmt.Sprintf("%v",*peer),LOG_INFO)
 		}
 	}
 }
