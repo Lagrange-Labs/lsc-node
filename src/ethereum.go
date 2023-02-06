@@ -3,39 +3,19 @@ package main
 import (
 	"fmt"
 	"time"
-	"os"
-
+	"strings"
 	"math/big"
-	
 	common "github.com/ethereum/go-ethereum/common"
 	ethClient "github.com/ethereum/go-ethereum/ethclient"
 	rpc "github.com/ethereum/go-ethereum/rpc"
 	log "log"
-
 	context "context"
-
-	json "encoding/json"
-
-	host "github.com/libp2p/go-libp2p-core/host"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	"strconv"
-
 	"github.com/ethereum/go-ethereum/crypto"
-//	sha3 "github.com/ethereum/go-ethereum/crypto/sha3"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-
 	"crypto/ecdsa"
 	"github.com/ethereum/go-ethereum/common/hexutil"
-	"github.com/ethereum/go-ethereum/core/types"
-
 	accounts "github.com/ethereum/go-ethereum/accounts"
 	keystore "github.com/ethereum/go-ethereum/accounts/keystore"
-)
-
-const (
-	STAKE_STATUS_CLOSED = 0
-	STAKE_STATUS_PENDING = 1
-	STAKE_STATUS_OPEN = 2
 )
 
 // Loads Ethereum client provided an endpoint URL.
@@ -44,8 +24,23 @@ func LoadEthClient(ethEndpoint string) *ethClient.Client {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Endpoint:",ethEndpoint)
+	LogMessage("Endpoint Loaded: "+ethEndpoint,LOG_INFO)
 	return eth
+}
+
+//
+func LoadEthClientMulti(ethEndpoint string) []*ethClient.Client {
+	ethAttestAddrs := strings.Split(ethEndpoint,",")
+	var ethAttestClients []*ethClient.Client
+	_ = ethAttestClients
+	var ethAttest *ethClient.Client
+	_ = ethAttest
+	for i, addr := range ethAttestAddrs {
+		_ = i
+		ethAttest := LoadEthClient(addr)
+		ethAttestClients = append(ethAttestClients, ethAttest)
+	}
+	return ethAttestClients
 }
 
 // Loads RPC client provided an endpoint URL.
@@ -124,59 +119,6 @@ func GenerateKeypair() (string, string) {
 	return privateKeyHex, publicKeyHex
 }
 
-// Handler function for NodeStaking smart contract events detected while listening to network.
-func HandleStakingEvent(vLog *NodestakingStakedNode) {
-	node := vLog.Node
-	chainId := vLog.ChainId
-	amount := vLog.Amount
-	claimTime := vLog.ClaimTime
-
-	fmt.Println(node,chainId,amount,claimTime)
-}
-
-// Listens to network for NodeStaking smart contract events and handles accordingly.
-func ListenForStaking(ethWS *ethClient.Client) {
-	sc := GetStakingContract(ethWS)
-	_ = sc
-	logs := make(chan *NodestakingStakedNode)
-
-	block := uint64(100)
-	
-	sub,err := sc.WatchStakedNode(&bind.WatchOpts{&block,context.Background()},logs)
-	if err != nil { panic(err) }
-	
-	for {
-		fmt.Println("Listening to contract", NODE_STAKING_ADDRESS)
-		select {
-			case err := <-sub.Err():
-				log.Fatal(err)
-				continue
-			case vLog := <-logs:
-				HandleStakingEvent(vLog)
-		}
-	}
-}
-
-// Returns standard delimiter for strings that are hashed and signed.
-func GetSeparator() string { return "::" }
-
-func GenerateStateRootString(eth *ethClient.Client, block *types.Block) string {
-	//5. ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the State root, Timestamp, Block Number and Sharded EdDSA Signature Tuple
-	stateRootSeparator := GetSeparator()
-	
-	blockRoot := block.Root().String()
-	blockTime := strconv.FormatUint(block.Time(),10)
-	blockNumber := block.Number().String()
-	chain,err := eth.ChainID(context.Background())
-	if err != nil { panic(err) }
-	chainID := chain.String()		
-	
-	stateRootStr := blockRoot + stateRootSeparator + blockTime + stateRootSeparator + blockNumber + stateRootSeparator + chainID
-	fmt.Println("State Root String:",stateRootStr)
-
-	return stateRootStr
-}
-
 // Returns Keccak hash of string as bytes.
 func KeccakHash(stateRootStr string) []byte {
 	return crypto.Keccak256([]byte(stateRootStr))
@@ -187,74 +129,14 @@ func KeccakHashString(stateRootStr string) string {
 	return hexutil.Encode(KeccakHash(stateRootStr))
 }
 
-// Format of gossiped state root message
-type StateRootMessage struct {
-	StateRoot string
-	Timestamp string
-	BlockNumber string
-	ShardedEdDSASignatureTuple string
-	ECDSASignatureTuple string
-	EthereumPublicKey string
-}
-
-/*
-For gossiping of state roots:
-
-1. State Root
-2. Timestamp
-3. Block Number
-4. Sharded EdDSA Signature Tuple (TBD exact parameters)
-5. ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the State root, Timestamp, Block Number and Sharded EdDSA Signature Tuple
-6. Ethereum Public Key
-*/
-func ListenForBlocks(eth *ethClient.Client, node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nick string, subscription *pubsub.Subscription) {
-	stateRootSeparator := GetSeparator()
-
-	for {
-		block, err := eth.BlockByNumber(context.Background(),nil)
-		if(err != nil) { panic(err) }
-		
-		// concatenate relevant fields
-		stateRootStr := GenerateStateRootString(eth, block)
-		
-		//ShardedEdDSASignatureTuple - TBD
-		shardedSignatureTuple := ""
-		
-		stateRootStrWithShardedSignatureTuple := stateRootStr + stateRootSeparator + shardedSignatureTuple
-		
-		// generate hash from concatenated fields
-		stateHash := KeccakHash(stateRootStrWithShardedSignatureTuple)
-		
-		// sign resultant hash
-		creds := GetCredentials()
-		privateKey := creds.privateKeyECDSA
-		signature, err := crypto.Sign([]byte(stateHash), privateKey) // we should probably be signing the raw signature, not the hex (TODO)
-		if err != nil { panic(err) }
-		ecdsaSignatureHex := hexutil.Encode(signature)
-
-		//timestamp
-		timestamp := time.Now().UTC().Unix()
-		
-		//public key
-		publicKeyECDSA := creds.publicKeyECDSA
-		
-		stateRootMessage := StateRootMessage {
-			StateRoot: stateRootStr,
-			Timestamp: strconv.FormatInt(timestamp,10),
-			BlockNumber: block.Number().String(),
-			ShardedEdDSASignatureTuple: shardedSignatureTuple,
-			ECDSASignatureTuple: ecdsaSignatureHex,
-			EthereumPublicKey: hexutil.Encode(crypto.FromECDSAPub(publicKeyECDSA)) }
-		
-		json,err := json.Marshal(stateRootMessage)
-		if err != nil { panic(err) }
-		bytes := []byte(json)
-		msg := string(bytes)
-		
-		WriteMessages(node,topic,creds.address.Hex(),msg)
-		
-		time.Sleep(1 * time.Second)
+// Simple pop function for discarding offline/malfunctioning endpoints
+func ethClientsShift(ethClients []*ethClient.Client,recycle bool) (*ethClient.Client, []*ethClient.Client) {
+	eth := ethClients[0]
+	ethClients = ethClients[1:]
+	if(recycle) {
+		ethClients = append(ethClients,eth)
 	}
+	return eth, ethClients
 }
 
 func GetNonce(client *ethClient.Client, fromAddress common.Address) uint64 {
@@ -303,17 +185,6 @@ func GetCredentials() *LagrangeNodeCredentials {
 	return &res
 }
 
-// Returns a NodeStaking struct instance.
-func GetStakingContract(client *ethClient.Client) *Nodestaking {
-	address := common.HexToAddress(NODE_STAKING_ADDRESS)
-	instance, err := NewNodestaking(address,client)
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Loaded contract address",address)
-	return instance
-}
-
 // Requests and returns network gas price.
 func GetGasPrice(client *ethClient.Client) *big.Int {
 	gasPrice, err := client.SuggestGasPrice(context.Background())
@@ -321,39 +192,6 @@ func GetGasPrice(client *ethClient.Client) *big.Int {
 		log.Fatal(err)
 	}
 	return gasPrice
-}
-
-// Initializes staking transaction with NodeStaking smart contract.
-func StakeBegin(instance *Nodestaking) *big.Int {
-	stake, err := instance.StakeAmount(&bind.CallOpts{})
-	if err != nil {
-		log.Fatal(err)
-	}
-	fmt.Println("Stake amount:",stake)
-	return stake
-}
-
-// Adds stake to NodeStaking smart contract.
-// Staking transaction must first be initialized with StakeBegin().
-func StakeAdd(instance *Nodestaking, auth *bind.TransactOpts) {
-	res,err := instance.AddStake(auth,big.NewInt(4))
-	if(err != nil) { panic(err) }
-	_ = res
-}
-
-// Begins removal of stake from NodeStaking smart contract.
-func StakeRemoveBegin(instance *Nodestaking, auth *bind.TransactOpts) {
-	res,err := instance.StartStakeRemoval(auth,big.NewInt(4))
-	if(err != nil) { panic(err) }
-	_ = res
-}
-
-// Finalizes removal of stake from NodeStaking smart contract.
-// Staking removal transaction must first be initialzied with StakeRemoveBegin().
-func StakeRemoveFinish(instance *Nodestaking, auth *bind.TransactOpts) {
-	res,err := instance.FinishStakeRemoval(auth,big.NewInt(4))
-	if(err != nil) { panic(err) }
-	_ = res
 }
 
 func GetAuth(privateKey *ecdsa.PrivateKey) *bind.TransactOpts {
@@ -375,92 +213,4 @@ func MineBlocks(rpc *rpc.Client, num int) {
 	for i := 0; i < num; i++ {
 		rpc.Call(&hex,"evm_mine")
 	}
-}
-
-// Returns true if address provided is currently staked; false if not staked, or in the process of unstaking.
-func VerifyStake(client *ethClient.Client, instance *Nodestaking, addr common.Address) bool {
-	activeStakes,err := instance.ActiveStakes(&bind.CallOpts{},addr,big.NewInt(4))
-	if(err != nil) { panic(err) }
-	return activeStakes == STAKE_STATUS_OPEN
-}
-
-func ActiveStakesTest(rpc *rpc.Client, client *ethClient.Client) {
-	instance := GetStakingContract(client)
-	_ = instance
-//	activeStakes,err := instance.ActiveStakes(&bind.CallOpts{},common.Address(""),big.NewInt(4))
-//	if(err != nil) { panic(err) }
-//	fmt.Println(activestakes)
-}
-
-// Reference function walking through NodeStaking contract's staking and unstaking transactions
-func CtrIntTest(rpc *rpc.Client, client *ethClient.Client) {
-	// Connect to Staking Contract
-	instance := GetStakingContract(client)
-
-	// Retrieve private key, public key, address
-	credentials := GetCredentials()
-	privateKey := credentials.privateKeyECDSA
-	fromAddress := credentials.address
-
-	// Verify Stake
-	isStaked := VerifyStake(client,instance,fromAddress)
-	fmt.Println("Stake Verification:",isStaked)
-
-	// Request nonce for transaction	
-	nonce := GetNonce(client,fromAddress)
-
-	// Request gas price
-	gasPrice := GetGasPrice(client)
-
-	// Begin Staking Transaction
-	stake := StakeBegin(instance)
-
-	auth := GetAuth(privateKey)
-	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = stake
-	auth.GasLimit = uint64(300000) // in units
-	auth.GasPrice = gasPrice
-
-	// Verify Stake
-	isStaked = VerifyStake(client,instance,fromAddress)
-	fmt.Println("Stake Verification:",isStaked)
-
-	// Add Stake
-	StakeAdd(instance,auth)
-	
-	// Verify Stake
-	isStaked = VerifyStake(client,instance,fromAddress)
-	fmt.Println("Stake Verification:",isStaked)
-
-	// Hardhat - Mine Blocks
-	MineBlocks(rpc,5)
-
-	// Update Nonce and Val
-	nonce = GetNonce(client,fromAddress)
-	auth.Nonce = big.NewInt(int64(nonce))
-	auth.Value = big.NewInt(0)
-	
-	// Begin Stake Removal
-	StakeRemoveBegin(instance, auth)
-
-	// Verify Stake
-	isStaked = VerifyStake(client,instance,fromAddress)
-	fmt.Println("Stake Verification:",isStaked)
-
-	// Hardhat - Mine More Blocks
-	MineBlocks(rpc,5)
-	
-	// Update Nonce
-	nonce = GetNonce(client,fromAddress)
-	auth.Nonce = big.NewInt(int64(nonce))
-	
-	// Finalize Stake Removal
-	StakeRemoveFinish(instance,auth)
-
-	// Verify Stake
-	isStaked = VerifyStake(client,instance,fromAddress)
-	fmt.Println("Stake Verification:",isStaked)
-	
-	fmt.Println("*DONE*")
-	os.Exit(0)
 }
