@@ -31,7 +31,7 @@ func GetStakingContract(client *ethClient.Client) *Nodestaking {
 	if err != nil {
 		log.Fatal(err)
 	}
-	LogMessage("Loaded contract address "+fmt.Sprintf("%v",address),LOG_INFO)
+	LogMessage("Loaded contract address "+fmt.Sprintf("%v",address),LOG_DEBUG)
 	return instance
 }
 
@@ -51,7 +51,8 @@ func HandleStakingEvent(vLog *NodestakingStakedNode) {
 }
 
 // Listens to network for NodeStaking smart contract events and handles accordingly.
-func ListenForStaking(ethWS *ethClient.Client) {
+func (lnode *LagrangeNode) ListenForStaking() {
+	ethWS := lnode.ethWS
 	// For local hardhat testing, use --stakingWS="ws://0.0.0.0:8545"
 	sc := GetStakingContract(ethWS)
 	_ = sc
@@ -108,7 +109,10 @@ func StakeRemoveFinish(instance *Nodestaking, auth *bind.TransactOpts) {
 }
 
 // Returns true if address provided is currently staked; false if not staked, or in the process of unstaking.
-func VerifyStake(client *ethClient.Client, instance *Nodestaking, addr common.Address) bool {
+func (lnode *LagrangeNode) VerifyStake(addr common.Address) bool {
+	client := lnode.ethStaking
+	instance := GetStakingContract(client)
+	
 	activeStakes,err := instance.ActiveStakes(&bind.CallOpts{},addr,big.NewInt(4))
 	if(err != nil) { panic(err) }
 	return activeStakes == STAKE_STATUS_OPEN
@@ -123,20 +127,27 @@ func ActiveStakesTest(rpc *rpc.Client, client *ethClient.Client) {
 }
 
 // Reference function walking through NodeStaking contract's staking and unstaking transactions
-func CtrIntTest(rpc *rpc.Client, client *ethClient.Client) {
+func (lnode *LagrangeNode) SimulateStaking(rpc *rpc.Client, client *ethClient.Client) {
 	// Connect to Staking Contract
-	instance := GetStakingContract(client)
+	instance := lnode.nodeStakingInstance
 
 	// Retrieve private key, public key, address
 	credentials := GetCredentials()
 	privateKey := credentials.privateKeyECDSA
 	fromAddress := credentials.address
 
+	LogMessage("Testing staking for address "+fromAddress.String(),LOG_NOTICE)
+	
+	// Cleanup previous session if necessary
+	if(lnode.VerifyStake(fromAddress)) {
+		lnode.SimulateUnstaking(rpc,client)
+	}
+
 	// Verify Stake
-	isStaked := VerifyStake(client,instance,fromAddress)
+	isStaked := lnode.VerifyStake(fromAddress)
 	fmt.Println("Stake Verification:",isStaked)
 
-	// Request nonce for transaction	
+	// Request nonce for transaction
 	nonce := GetNonce(client,fromAddress)
 
 	// Request gas price
@@ -152,21 +163,38 @@ func CtrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	auth.GasPrice = gasPrice
 
 	// Verify Stake
-	isStaked = VerifyStake(client,instance,fromAddress)
+	isStaked = lnode.VerifyStake(fromAddress)
 	fmt.Println("Stake Verification:",isStaked)
 
 	// Add Stake
 	StakeAdd(instance,auth)
 	
 	// Verify Stake
-	isStaked = VerifyStake(client,instance,fromAddress)
+	isStaked = lnode.VerifyStake(fromAddress)
 	fmt.Println("Stake Verification:",isStaked)
 
 	// Hardhat - Mine Blocks
 	MineBlocks(rpc,5)
+}
+
+func (lnode *LagrangeNode) SimulateUnstaking(rpc *rpc.Client, client *ethClient.Client) {
+	// Connect to Staking Contract
+	instance := lnode.nodeStakingInstance
+
+	// Retrieve private key, public key, address
+	credentials := GetCredentials()
+	privateKey := credentials.privateKeyECDSA
+	fromAddress := credentials.address
+
+	// Request gas price
+	gasPrice := GetGasPrice(client)
+
+	auth := GetAuth(privateKey)
+	auth.GasLimit = uint64(300000) // in units
+	auth.GasPrice = gasPrice
 
 	// Update Nonce and Val
-	nonce = GetNonce(client,fromAddress)
+	nonce := GetNonce(client,fromAddress)
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = big.NewInt(0)
 	
@@ -174,7 +202,7 @@ func CtrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	StakeRemoveBegin(instance, auth)
 
 	// Verify Stake
-	isStaked = VerifyStake(client,instance,fromAddress)
+	isStaked := lnode.VerifyStake(fromAddress)
 	fmt.Println("Stake Verification:",isStaked)
 
 	// Hardhat - Mine More Blocks
@@ -188,7 +216,7 @@ func CtrIntTest(rpc *rpc.Client, client *ethClient.Client) {
 	StakeRemoveFinish(instance,auth)
 
 	// Verify Stake
-	isStaked = VerifyStake(client,instance,fromAddress)
+	isStaked = lnode.VerifyStake(fromAddress)
 	fmt.Println("Stake Verification:",isStaked)
 	
 	fmt.Println("End staking test.")

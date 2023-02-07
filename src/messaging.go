@@ -16,7 +16,7 @@ import (
 // handleEvents runs an event loop that sends user input to the chat room
 // and displays messages received from the chat room. It also periodically
 // refreshes the list of peers in the UI.
-func HandleMessaging(node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nick string, subscription *pubsub.Subscription) {
+func (lnode *LagrangeNode) HandleMessaging() {
 /*
 	peerRefreshTicker := time.NewTicker(time.Second)
 	defer peerRefreshTicker.Stop()
@@ -27,7 +27,7 @@ func HandleMessaging(node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nic
 	for {
 		//input, _ := reader.ReadString('\n')
 		//go writeMessages(node,topic,nick,input)
-		go ReadMessages(node,topic,ps,subscription);
+		go lnode.ReadMessages();
 			
 /*
 		select {
@@ -65,11 +65,14 @@ type MsgParams struct {
 	message string
 }
 
-func ReadMessages(node host.Host, topic *pubsub.Topic, subscription *pubsub.PubSub, room *pubsub.Subscription) {
+func (lnode *LagrangeNode) ReadMessages() {
+	node := lnode.node
+	subscription := lnode.subscription
+	
 	messages :=  make(chan *GossipMessage, BufferSize)
 	
 	for {
-		msg, err := room.Next(context.Background())
+		msg, err := subscription.Next(context.Background())
 		if err != nil {
 			close(messages)
 			return
@@ -96,7 +99,7 @@ func ReadMessages(node host.Host, topic *pubsub.Topic, subscription *pubsub.PubS
 		// 2. Process message (e.g., attestation).
 			LogMessage(fmt.Sprintf("ReadMessages: %v",string(msg.Data)),LOG_DEBUG)
 
-			processMessageError := ProcessMessage(cm)
+			processMessageError := lnode.ProcessMessage(cm)
 			if processMessageError != nil {
 				LogMessage(fmt.Sprintf("%v",processMessageError),LOG_WARNING)
 				return
