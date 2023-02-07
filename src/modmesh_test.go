@@ -48,7 +48,6 @@ func expectString(t *testing.T, a string, b string) {
 }
 
 // Testing keccak hashing wrapper function
-
 func TestKeccakHashString(t *testing.T) {
 	// Remember that hex-encoded Keccak hashes return a '0x' prefix.
 	NullKeccakHash := "0xc5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"
@@ -57,4 +56,23 @@ func TestKeccakHashString(t *testing.T) {
 	expectString(t, KeccakHash, NullKeccakHash)
 }
 
+// Test instantiation of a LagrangeNode object
+func testNewLagrangeNode(t *testing.T) *LagrangeNode {
+	n := NewLagrangeNode()
+	assert(t, n != nil, "LagrangeNode object is nil")
+	return n
+}
+func TestNewLagrangeNode(t *testing.T) {
+	testNewLagrangeNode(t)
+}
 
+// Test initialization of LagrangeNode
+func testInitializeLagrangeNode(t *testing.T) {
+}
+func TestInitializeLagrangeNode(t *testing.T) {
+	n := testNewLagrangeNode(t)
+	n.SetOpts(&Opts{})
+	n.Start()
+	n.Stop()
+	_ = n
+}
