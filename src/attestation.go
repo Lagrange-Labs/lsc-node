@@ -4,8 +4,6 @@ import (
 	"time"
 	context "context"
 	json "encoding/json"
-	host "github.com/libp2p/go-libp2p-core/host"
-	pubsub "github.com/libp2p/go-libp2p-pubsub"
 	"strconv"
 	ethClient "github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -51,7 +49,11 @@ For gossiping of state roots:
 5. ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the State root, Timestamp, Block Number and Sharded EdDSA Signature Tuple
 6. Ethereum Public Key
 */
-func ListenForBlocks(ethClients []*ethClient.Client, node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nick string, subscription *pubsub.Subscription) {
+func (lnode *LagrangeNode) ListenForBlocks() {
+	ethClients := lnode.ethAttestClients
+	node := lnode.node
+	topic := lnode.topic
+	
 	// Separator for gossip messaging
 	stateRootSeparator := GetSeparator()
 	// Pull ethClient from list of clients
