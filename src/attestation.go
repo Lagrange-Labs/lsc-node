@@ -7,7 +7,6 @@ import (
 	"strconv"
 	ethClient "github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
@@ -18,7 +17,6 @@ type StateRootMessage struct {
 	BlockNumber string
 	ShardedEdDSASignatureTuple string
 	ECDSASignatureTuple string
-	EthereumPublicKey string
 }
 
 func GenerateStateRootString(eth *ethClient.Client, block *types.Block) string {
@@ -87,32 +85,26 @@ func (lnode *LagrangeNode) ListenForBlocks() {
 		stateHash := KeccakHash(stateRootStrWithShardedSignatureTuple)
 		
 		// sign resultant hash
-		creds := GetCredentials()
-		privateKey := creds.privateKeyECDSA
-		signature, err := crypto.Sign([]byte(stateHash), privateKey)
+		signature, err := lnode.keystore.SignHash(lnode.account, []byte(stateHash))
 		if err != nil { panic(err) }
 		ecdsaSignatureHex := hexutil.Encode(signature)
 
 		//timestamp
 		timestamp := time.Now().UTC().Unix()
 		
-		//public key
-		publicKeyECDSA := creds.publicKeyECDSA
-		
 		stateRootMessage := StateRootMessage {
 			StateRoot: stateRootStr,
 			Timestamp: strconv.FormatInt(timestamp,10),
 			BlockNumber: block.Number().String(),
 			ShardedEdDSASignatureTuple: shardedSignatureTuple,
-			ECDSASignatureTuple: ecdsaSignatureHex,
-			EthereumPublicKey: hexutil.Encode(crypto.FromECDSAPub(publicKeyECDSA))}
+			ECDSASignatureTuple: ecdsaSignatureHex}
 		
 		json,err := json.Marshal(stateRootMessage)
 		if err != nil { panic(err) }
 		bytes := []byte(json)
 		msg := string(bytes)
 		
-		WriteMessages(node,topic,creds.address.Hex(),msg,"StateRootMessage")
+		WriteMessages(node,topic,lnode.GetAddressString(),msg,"StateRootMessage")
 		
 		time.Sleep(1 * time.Second)
 	}

@@ -88,35 +88,38 @@ func EthTest(eth *ethClient.Client) {
 }
 
 // Generates and returns keystore from private key.
-func InitKeystore(privateKey *ecdsa.PrivateKey) accounts.Account {
+func InitKeystore(privateKey *ecdsa.PrivateKey) (accounts.Account, *keystore.KeyStore) {
 	ks := keystore.NewKeyStore("./wallets", keystore.StandardScryptN, keystore.StandardScryptP)
-	input := Scan("Enter passphrase for new keystore:")
-	account,err := ks.ImportECDSA(privateKey,input)
+	// No password until key management strategy established
+	//input := Scan("Enter passphrase for new keystore:")
+	//account,err := ks.ImportECDSA(privateKey,input)
+	account,err := ks.ImportECDSA(privateKey,"")
 	if(err != nil) { panic(err) }
 	fmt.Println("New keystore created for address",account.Address)
 	fmt.Println("URL:",account.URL)
-	return account
+	return account,ks
 }
 
-// Generates and returns new ECDSA keypair.
-func GenerateKeypair() (string, string) {
+//
+func (lnode *LagrangeNode) GenerateAccount() {
 	// Generate private key
 	privateKey, err := crypto.GenerateKey()
 	if err != nil { log.Fatal(err) }
-	privateKeyHex := hexutil.Encode(crypto.FromECDSA(privateKey))[2:]
+	lnode.GenerateAccountFromPrivateKey(privateKey)
+}
 
-	account := InitKeystore(privateKey)
-	_ = account
-	
-	// Generate public key
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok { log.Fatal("error casting public key to ECDSA") }
-	publicKeyHex := hexutil.Encode(crypto.FromECDSAPub(publicKeyECDSA))[4:]
+//
+func (lnode *LagrangeNode) GenerateAccountFromPrivateKey(privateKey *ecdsa.PrivateKey) {
+	account,keystore := InitKeystore(privateKey)
+	lnode.account = account
+	lnode.keystore = keystore
+}
 
-	fmt.Println("Wallet Created:",crypto.PubkeyToAddress(*publicKeyECDSA))
-	
-	return privateKeyHex, publicKeyHex
+//
+func (lnode *LagrangeNode) GenerateAccountFromPrivateKeyString(privateKeyString string) {
+	privateKey, err := crypto.HexToECDSA(privateKeyString)
+	if err != nil { panic(err) }
+	lnode.GenerateAccountFromPrivateKey(privateKey)
 }
 
 // Returns Keccak hash of string as bytes.
@@ -148,43 +151,6 @@ func GetNonce(client *ethClient.Client, fromAddress common.Address) uint64 {
 	return nonce;
 }
 
-type LagrangeNodeCredentials struct {
-	privateKey string
-	publicKey interface{} // crypto.PublicKey
-	address common.Address
-	
-	privateKeyECDSA *ecdsa.PrivateKey
-	publicKeyECDSA *ecdsa.PublicKey
-}
-
-func GetCredentials() *LagrangeNodeCredentials {
-	privateKeyString := GetPrivateKey()
-	privateKey, err := crypto.HexToECDSA(privateKeyString)
-	if err != nil {
-		log.Fatal(err)
-	}
-//	fmt.Println("Private key loaded.");
-
-	publicKey := privateKey.Public()
-	publicKeyECDSA, ok := publicKey.(*ecdsa.PublicKey)
-	if !ok {
-		log.Fatal("error casting public key to ECDSA")
-	}
-//	fmt.Println("Public key loaded.")
-
-	fromAddress := crypto.PubkeyToAddress(*publicKeyECDSA)
-//	fmt.Println("Address isolated.")
-	
-	res := LagrangeNodeCredentials {
-		privateKey: privateKeyString,
-		publicKey: publicKey,
-		address: fromAddress,
-		privateKeyECDSA: privateKey,
-		publicKeyECDSA: publicKeyECDSA }
-	
-	return &res
-}
-
 // Requests and returns network gas price.
 func GetGasPrice(client *ethClient.Client) *big.Int {
 	gasPrice, err := client.SuggestGasPrice(context.Background())
@@ -194,8 +160,9 @@ func GetGasPrice(client *ethClient.Client) *big.Int {
 	return gasPrice
 }
 
-func GetAuth(privateKey *ecdsa.PrivateKey) *bind.TransactOpts {
-	auth := bind.NewKeyedTransactor(privateKey)
+func (lnode *LagrangeNode) GetAuth() *bind.TransactOpts {
+	auth, err := bind.NewKeyStoreTransactor(lnode.keystore, lnode.account)
+	if err != nil { panic(err) }
 	return auth
 }
 

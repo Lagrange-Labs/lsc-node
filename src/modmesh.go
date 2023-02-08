@@ -9,7 +9,6 @@ import (
 	"errors"
 	json "encoding/json"
 
-	host "github.com/libp2p/go-libp2p-core/host"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
@@ -23,8 +22,6 @@ var LOG_LEVEL int
 const NODE_STAKING_ADDRESS = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
 //const NODE_STAKING_ADDRESS = "0x00000000006c3852cbef3e08e8df289169ede581"	// test
 
-// Placeholder - Return first Hardhat private key for now
-var PRIVATE_KEY string = "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
 // Placeholder - Track staking listening to contract via rpc
 var STAKE_STATE []string
 
@@ -37,20 +34,24 @@ type peerSummary struct {
 var peerRegistry = map[string]peerSummary {}
 
 // Returns private key as hex string.
-func GetPrivateKey() string {
-	return PRIVATE_KEY
+func (lnode *LagrangeNode) GetPrivateKey() string {
+	return lnode.privateKey
 }
 
 // Sets private key in the form of a hex string.
-func SetPrivateKey(privateKey string) {
-	PRIVATE_KEY = privateKey
+func (lnode *LagrangeNode) SetPrivateKey(privateKey string) {
+	lnode.privateKey = privateKey
 }
 
 func main() {
 	args := GetOpts()
 	lnode := NewLagrangeNode()
+	// Placeholder - Return first Hardhat private key for now
+	PRIVATE_KEY_STRING := "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
+	lnode.GenerateAccountFromPrivateKeyString(PRIVATE_KEY_STRING)
+
 	lnode.SetOpts(args)
-	lnode.Start()	
+	lnode.Start()
 }
 
 func HeartBeat() {
@@ -74,12 +75,10 @@ func (lnode *LagrangeNode) ProcessJoinMessage(message *GossipMessage) (error) {
 		panic(err)
 	}
 
-	publicKey := jm.PublicKey
 	genericMessage := jm.GenericMessage
 	timestampStr := jm.Timestamp
 	saltStr := jm.Salt
 	sigtuple := jm.ECDSASignatureTuple
-	_ = publicKey
 	_ = genericMessage
 	_ = timestampStr
 	_ = saltStr
@@ -137,9 +136,9 @@ func (lnode *LagrangeNode) ProcessMessage(message *GossipMessage) (error) {
 	return errors.New("Invalid or unspecified message type.")
 }
 
-func (lnode *LagrangeNode) TermHandler(node host.Host) {
+func (lnode *LagrangeNode) TermHandler() {
 
-	lnode.SimulateUnstaking(lnode.rpcStaking,lnode.ethStaking)	
+	lnode.SimulateUnstaking(lnode.rpcStaking,lnode.ethStaking)
 
         ch := make(chan os.Signal, 1)
         signal.Notify(ch, syscall.SIGINT, syscall.SIGTERM)
@@ -147,7 +146,7 @@ func (lnode *LagrangeNode) TermHandler(node host.Host) {
         LogMessage("Received signal, shutting down...",LOG_INFO)
 
         // shut the node down
-        if err := node.Close(); err != nil {
+        if err := lnode.node.Close(); err != nil {
                 panic(err)
         }
         LogMessage("*DONE*",LOG_INFO)
