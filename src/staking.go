@@ -132,9 +132,7 @@ func (lnode *LagrangeNode) SimulateStaking(rpc *rpc.Client, client *ethClient.Cl
 	instance := lnode.nodeStakingInstance
 
 	// Retrieve private key, public key, address
-	credentials := GetCredentials()
-	privateKey := credentials.privateKeyECDSA
-	fromAddress := credentials.address
+	fromAddress := lnode.account.Address
 
 	LogMessage("Testing staking for address "+fromAddress.String(),LOG_NOTICE)
 	
@@ -156,7 +154,7 @@ func (lnode *LagrangeNode) SimulateStaking(rpc *rpc.Client, client *ethClient.Cl
 	// Begin Staking Transaction
 	stake := StakeBegin(instance)
 
-	auth := GetAuth(privateKey)
+	auth := lnode.GetAuth()
 	auth.Nonce = big.NewInt(int64(nonce))
 	auth.Value = stake
 	auth.GasLimit = uint64(300000) // in units
@@ -182,14 +180,12 @@ func (lnode *LagrangeNode) SimulateUnstaking(rpc *rpc.Client, client *ethClient.
 	instance := lnode.nodeStakingInstance
 
 	// Retrieve private key, public key, address
-	credentials := GetCredentials()
-	privateKey := credentials.privateKeyECDSA
-	fromAddress := credentials.address
+	fromAddress := lnode.account.Address
 
 	// Request gas price
 	gasPrice := GetGasPrice(client)
 
-	auth := GetAuth(privateKey)
+	auth := lnode.GetAuth()
 	auth.GasLimit = uint64(300000) // in units
 	auth.GasPrice = gasPrice
 
