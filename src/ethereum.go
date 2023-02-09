@@ -87,16 +87,33 @@ func EthTest(eth *ethClient.Client) {
 	fmt.Println("Balance:", balance) // 25893180161173005034
 }
 
+func (lnode *LagrangeNode) LoadKeystore()  (accounts.Account, *keystore.KeyStore) {
+	ks := keystore.NewKeyStore(lnode.GetWalletPath(), keystore.StandardScryptN, keystore.StandardScryptP)
+	account,err := ks.Find(accounts.Account{Address:lnode.address})
+	if err != nil {
+		LogMessage(fmt.Sprintf("%v",err),LOG_WARNING)
+	} else {
+		LogMessage(fmt.Sprintf("Keystore loaded for address %v",account.Address),LOG_NOTICE)
+	}
+	return account,ks
+}
+
+func (lnode *LagrangeNode) LoadAccount() {
+	account, ks := lnode.LoadKeystore()
+	lnode.account = account
+	lnode.keystore = ks
+}
+
 // Generates and returns keystore from private key.
-func InitKeystore(privateKey *ecdsa.PrivateKey) (accounts.Account, *keystore.KeyStore) {
-	ks := keystore.NewKeyStore("./wallets", keystore.StandardScryptN, keystore.StandardScryptP)
+func (lnode *LagrangeNode) InitKeystore(privateKey *ecdsa.PrivateKey) (accounts.Account, *keystore.KeyStore) {
+	ks := keystore.NewKeyStore(lnode.GetWalletPath(), keystore.StandardScryptN, keystore.StandardScryptP)
 	// No password until key management strategy established
 	//input := Scan("Enter passphrase for new keystore:")
 	//account,err := ks.ImportECDSA(privateKey,input)
 	account,err := ks.ImportECDSA(privateKey,"")
 	if(err != nil) { panic(err) }
-	fmt.Println("New keystore created for address",account.Address)
-	fmt.Println("URL:",account.URL)
+	LogMessage(fmt.Sprintf("New keystore created for address %v",account.Address),LOG_NOTICE)
+	LogMessage(fmt.Sprintf("URL: %v",account.URL),LOG_NOTICE)
 	return account,ks
 }
 
@@ -110,7 +127,7 @@ func (lnode *LagrangeNode) GenerateAccount() {
 
 //
 func (lnode *LagrangeNode) GenerateAccountFromPrivateKey(privateKey *ecdsa.PrivateKey) {
-	account,keystore := InitKeystore(privateKey)
+	account,keystore := lnode.InitKeystore(privateKey)
 	lnode.account = account
 	lnode.keystore = keystore
 }
