@@ -46,9 +46,23 @@ func (lnode *LagrangeNode) SetPrivateKey(privateKey string) {
 func main() {
 	args := GetOpts()
 	lnode := NewLagrangeNode()
+
+	logLevel := args.logLevel
+	LOG_LEVEL = logLevel
+
 	// Placeholder - Return first Hardhat private key for now
 	PRIVATE_KEY_STRING := "ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80"
-	lnode.GenerateAccountFromPrivateKeyString(PRIVATE_KEY_STRING)
+	ADDRESS := "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"
+	
+	lnode.SetWalletPath("./wallets")
+	lnode.SetAddress(ADDRESS)
+	lnode.LoadAccount()
+
+	if !lnode.HasAccount(ADDRESS) {
+		lnode.GenerateAccountFromPrivateKeyString(PRIVATE_KEY_STRING)
+	} else {
+		lnode.LoadAccount()
+	}
 
 	lnode.SetOpts(args)
 	lnode.Start()

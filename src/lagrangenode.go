@@ -14,6 +14,8 @@ import (
 	rpc "github.com/ethereum/go-ethereum/rpc"
 	accounts "github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Self-contained struct for managing the lagrange node and its configuration.
@@ -44,6 +46,25 @@ type LagrangeNode struct {
 	account accounts.Account
 	keystore *keystore.KeyStore
 	publicKeyHex string
+	
+	walletPath string
+	address common.Address
+}
+
+func (lnode *LagrangeNode) GetWalletPath() string {
+	return lnode.walletPath
+}
+
+func (lnode *LagrangeNode) SetWalletPath(walletPath string) {
+	lnode.walletPath = walletPath
+}
+
+func (lnode *LagrangeNode) HasAccount(address string) bool {
+	return lnode.keystore.HasAddress(common.HexToAddress(address))
+}
+
+func (lnode *LagrangeNode) SetAddress(address string) {
+	lnode.address = common.HexToAddress(address)
 }
 
 func NewLagrangeNode() *LagrangeNode {
@@ -57,10 +78,8 @@ func (lnode *LagrangeNode) Start() {
 	peerAddr := lnode.opts.peerAddr
 	room := lnode.opts.room
 	leveldb := lnode.opts.leveldb
-	logLevel := lnode.opts.logLevel
 	_ = leveldb
 	
-	LOG_LEVEL = logLevel
 
 	LogMessage(fmt.Sprintf("Port: %v",lnode.opts.port),LOG_INFO)
 
@@ -72,6 +91,8 @@ func (lnode *LagrangeNode) Start() {
 	lnode.ethWS = LoadEthClient(lnode.opts.stakingWS)
 	lnode.rpcAttest = LoadRpcClient(lnode.opts.attestEndpoint)
 	lnode.ethAttestClients = LoadEthClientMulti(lnode.opts.attestEndpoint)
+	
+	lnode.address = common.HexToAddress(lnode.opts.address)
 	
 	// Create listener
 	node := CreateListener(lnode.opts.port)
