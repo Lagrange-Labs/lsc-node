@@ -18,7 +18,6 @@ import (
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	json "encoding/json"
-	"github.com/ethereum/go-ethereum/crypto"
 	ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
 )
 
@@ -47,7 +46,6 @@ func GetAddrInfo(node host.Host) peerstore.AddrInfo {
 }
 
 type JoinMessage struct {
-	PublicKey string
 	GenericMessage string
 	Timestamp string
 	Salt string
@@ -86,23 +84,22 @@ func GenerateVerificationTupleFromJoinMessage(genericMessage string, timestampSt
 	return genericMessage + separator + timestampStr + separator + salt
 }
 
-func SendVerificationMessage(node host.Host,topic *pubsub.Topic) {
+func (lnode *LagrangeNode) SendVerificationMessage() {
+	node := lnode.node
+	topic := lnode.topic
 
-	creds := GetCredentials()
-	
 	// ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the generic message + timestamp + salt
 	
 	tuple, timestampStr, genericMessage, saltStr := GenerateVerificationTuple()
 
 	tupleHash := KeccakHash(tuple)
 
-	signatureTuple,err := crypto.Sign(tupleHash, creds.privateKeyECDSA)
+	signatureTuple,err := lnode.keystore.SignHash(lnode.account,tupleHash)
 	if err != nil { panic(err) }
 	
 	signatureHex := hexutil.Encode(signatureTuple)
 	
 	joinMessage := JoinMessage {
-		PublicKey: hexutil.Encode(crypto.FromECDSAPub(creds.publicKeyECDSA)),
 		GenericMessage: genericMessage,
 		Timestamp: timestampStr,
 		Salt: saltStr,
@@ -113,7 +110,7 @@ func SendVerificationMessage(node host.Host,topic *pubsub.Topic) {
 	bytes := []byte(json)
 	msg := string(bytes)
 	
-	WriteMessages(node,topic,creds.address.Hex(),msg,"JoinMessage")
+	WriteMessages(node,topic,lnode.GetAddressString(),msg,"JoinMessage")
 }
 
 func GetGossipSub(node host.Host, roomName string) (*pubsub.PubSub,*pubsub.Topic,*pubsub.Subscription) {

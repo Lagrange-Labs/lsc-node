@@ -4,35 +4,49 @@ import (
 	"os"
 	"fmt"
 	"testing"
+	"time"
+	"path/filepath"
 )
 
 // Main test running function
 
 func TestMain(m *testing.M) {
-  if err := setup(); err != nil {
-    os.Exit(1)
-  }
+  
+	if err := setup(); err != nil {
+		os.Exit(1)
+	}
 
-  exitCode := m.Run()
+	exitCode := m.Run()
 
-  if err := tearDown(); err != nil {
-    os.Exit(1)
-  }
+	if err := tearDown(); err != nil {
+		os.Exit(1)
+	}
 
-  fmt.Println("*DONE*")
-  os.Exit(exitCode)
+	fmt.Println("*DONE*")
+	os.Exit(exitCode)
 }
 
 // Setup test environment
 
 func setup() error {
-  return nil
+	CleanupWallets()
+	return nil
 }
 
 // Cleanup test environment
 
 func tearDown() error {
-  return nil
+	return nil
+}
+
+func CleanupWallets() {
+	files, err := filepath.Glob("./test/wallets/*")
+	if err != nil { panic(err) }
+	for _, f := range files {
+		if err := os.Remove(f); err != nil {
+			panic(err)
+		}
+	}
 }
 
 // Common assertion wrappers
@@ -67,12 +81,28 @@ func TestNewLagrangeNode(t *testing.T) {
 }
 
 // Test initialization of LagrangeNode
-func testInitializeLagrangeNode(t *testing.T) {
+func testInitializeLagrangeNode(t *testing.T) *LagrangeNode {
+	n := testNewLagrangeNode(t)
+	
+	opts := &Opts{}
+	opts.port = 8090
+	opts.stakingEndpoint = "http://0.0.0.0:8545"
+	opts.attestEndpoint = "http://0.0.0.0:8545"
+	opts.stakingWS = "ws://0.0.0.0:8545"
+	opts.logLevel = 5
+
+	n.SetWalletPath("./test/wallets/")
+	n.GenerateAccountFromPrivateKeyString("ac0974bec39a17e36ba4a6b4d238ff944bacb478cbed5efcae784d7bf4f2ff80")
+	
+	n.SetOpts(opts)
+	go n.Start()
+	return n
 }
 func TestInitializeLagrangeNode(t *testing.T) {
-	n := testNewLagrangeNode(t)
-	n.SetOpts(&Opts{})
-	n.Start()
-	n.Stop()
+	n := testInitializeLagrangeNode(t)
+	time.Sleep(1 * time.Second)
+//	n.Stop()
 	_ = n
 }
+
+// 

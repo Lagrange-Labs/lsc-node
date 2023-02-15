@@ -3,8 +3,8 @@ package main
 import (
 	"fmt"
 	"os"
-	"io/ioutil"
-	"log"
+	//"io/ioutil"
+	//"log"
 
 	host "github.com/libp2p/go-libp2p-core/host"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
@@ -12,6 +12,10 @@ import (
 
 	ethClient "github.com/ethereum/go-ethereum/ethclient"
 	rpc "github.com/ethereum/go-ethereum/rpc"
+	accounts "github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+
+	"github.com/ethereum/go-ethereum/common"
 )
 
 // Self-contained struct for managing the lagrange node and its configuration.
@@ -37,6 +41,30 @@ type LagrangeNode struct {
 	rpcAttest *rpc.Client
 	
 	ethAttestClients []*ethClient.Client
+	
+	privateKey string
+	account accounts.Account
+	keystore *keystore.KeyStore
+	publicKeyHex string
+	
+	walletPath string
+	address common.Address
+}
+
+func (lnode *LagrangeNode) GetWalletPath() string {
+	return lnode.walletPath
+}
+
+func (lnode *LagrangeNode) SetWalletPath(walletPath string) {
+	lnode.walletPath = walletPath
+}
+
+func (lnode *LagrangeNode) HasAccount(address string) bool {
+	return lnode.keystore.HasAddress(common.HexToAddress(address))
+}
+
+func (lnode *LagrangeNode) SetAddress(address string) {
+	lnode.address = common.HexToAddress(address)
 }
 
 func NewLagrangeNode() *LagrangeNode {
@@ -45,41 +73,14 @@ func NewLagrangeNode() *LagrangeNode {
 }
 
 func (lnode *LagrangeNode) Start() {
-	ks := lnode.opts.keystore
-	
+	lnode.keystore.Unlock(lnode.account,"")
+
 	peerAddr := lnode.opts.peerAddr
 	room := lnode.opts.room
 	leveldb := lnode.opts.leveldb
-	logLevel := lnode.opts.logLevel
 	_ = leveldb
 	
-	LOG_LEVEL = logLevel
 
-	if(true) {} else
-	if(ks == "") {
-		privateKeyHex, publicKeyHex := GenerateKeypair()
-		_ = publicKeyHex
-		SetPrivateKey(privateKeyHex)
-	} else {
-		os.RemoveAll("./tmp/")
-		store := keystore.NewKeyStore("./tmp", keystore.StandardScryptN, keystore.StandardScryptP)
-
-		jsonBytes, err := ioutil.ReadFile(ks)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		input := Scan("Enter passphrase for keystore:")
-		account, err := store.Import(jsonBytes, input, input)
-		if err != nil {
-			log.Fatal(err)
-		}
-
-		fmt.Println(account)
-
-		return
-	}
-	
 	LogMessage(fmt.Sprintf("Port: %v",lnode.opts.port),LOG_INFO)
 
 	lnode.rpcStaking = LoadRpcClient(lnode.opts.stakingEndpoint)
@@ -90,6 +91,8 @@ func (lnode *LagrangeNode) Start() {
 	lnode.ethWS = LoadEthClient(lnode.opts.stakingWS)
 	lnode.rpcAttest = LoadRpcClient(lnode.opts.attestEndpoint)
 	lnode.ethAttestClients = LoadEthClientMulti(lnode.opts.attestEndpoint)
+	
+	lnode.address = common.HexToAddress(lnode.opts.address)
 	
 	// Create listener
 	node := CreateListener(lnode.opts.port)
@@ -125,19 +128,24 @@ func (lnode *LagrangeNode) Start() {
 	lnode.SimulateStaking(lnode.rpcStaking,lnode.ethStaking)
 //	go MineTest(rpcStaking)
 
-	SendVerificationMessage(node,topic)
+	lnode.SendVerificationMessage()
 
 //	activeStakesTest(rpcStaking,ethStaking)
 //	ethTest(eth)
 
         // SIGINT | SIGTERM Signal Handling - End
-        lnode.TermHandler(node)
+        lnode.TermHandler()
 }
 
-func (*LagrangeNode) Stop() {
+func (lnode *LagrangeNode) Stop() {
+	lnode.keystore.Lock(lnode.account.Address)
+	lnode.TermHandler()
 }
 
 func (lnode *LagrangeNode) SetOpts(opts *Opts) {
 	lnode.opts = opts
 }
 
+func (lnode *LagrangeNode) GetAddressString() string {
+	return hexutil.Encode(lnode.account.Address.Bytes())
+}
