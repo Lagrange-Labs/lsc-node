@@ -87,7 +87,7 @@ func (lnode *LagrangeNode) ReadMessages() {
 		}
 
 		// Decompress message data
-		decompressedMessage, decompressErr := decompressMessage(msg.Data)
+		decompressedMessage, decompressErr := DecompressMessage(msg.Data)
 		// LogMessage(fmt.Sprintf("ReadMessages: %v", string(decompressedMessage)), LOG_DEBUG)
 		if decompressErr != nil {
 			close(messages)
@@ -147,13 +147,13 @@ func WriteMessages(node host.Host, topic *pubsub.Topic, nick string, message str
 		return err
 	}
 
-	compressedMessageBytes := compressMessage(msgBytes)
+	compressedMessageBytes := CompressMessage(msgBytes)
 	// LogMessage("WriteMessages: "+string(msgBytes), LOG_DEBUG)
 	// LogMessage("I am here WriteMessages: "+string(compressedMessageBytes), LOG_DEBUG)
 	return topic.Publish(context.Background(), compressedMessageBytes)
 }
 
-func compressMessage(message []byte) []byte {
+func CompressMessage(message []byte) []byte {
 	var b bytes.Buffer
 	gz := gzip.NewWriter(&b)
 	if _, err := gz.Write(message); err != nil {
@@ -168,7 +168,7 @@ func compressMessage(message []byte) []byte {
 	return b.Bytes()
 }
 
-func decompressMessage(compressedMessage []byte) ([]byte, error) {
+func DecompressMessage(compressedMessage []byte) ([]byte, error) {
 	b := bytes.NewReader(compressedMessage)
 	gz, err := gzip.NewReader(b)
 	if err != nil {
