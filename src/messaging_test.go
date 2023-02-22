@@ -10,7 +10,7 @@ import (
 func TestCompressMessage(t *testing.T) {
 	t.Logf("TestCompressMessage started")
 	message := []byte("Hello World!")
-	compressedMessage := compressMessage(message)
+	compressedMessage := CompressMessage(message)
 
 	// Check that the compressed message is not nil
 	if compressedMessage == nil {
@@ -23,7 +23,7 @@ func TestCompressMessage(t *testing.T) {
 	}
 
 	// Check that the compressed message can be decompressed to the original message
-	decompressedMessage, err := decompressMessage(compressedMessage)
+	decompressedMessage, err := DecompressMessage(compressedMessage)
 	if err != nil {
 		t.Error("Failed to decompress message:", err)
 	}
@@ -50,7 +50,7 @@ func TestDecompressMessage(t *testing.T) {
 	compressedMessage := b.Bytes()
 
 	// Check that the decompressed message can be obtained from the compressed message
-	decompressedMessage, err := decompressMessage(compressedMessage)
+	decompressedMessage, err := DecompressMessage(compressedMessage)
 	if err != nil {
 		t.Error("Failed to decompress message:", err)
 	}
@@ -59,7 +59,7 @@ func TestDecompressMessage(t *testing.T) {
 	}
 
 	// Check that decompressing an invalid message returns an error
-	_, err = decompressMessage([]byte{0x00, 0x01, 0x02, 0x03})
+	_, err = DecompressMessage([]byte{0x00, 0x01, 0x02, 0x03})
 	if err == nil {
 		t.Error("Expected decompressing an invalid message to return an error")
 	}
