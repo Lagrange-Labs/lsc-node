@@ -88,7 +88,7 @@ func (lnode *LagrangeNode) ReadMessages() {
 
 		// Decompress message data
 		decompressedMessage, decompressErr := decompressMessage(msg.Data)
-		LogMessage(fmt.Sprintf("ReadMessages: %v", string(decompressedMessage)), LOG_DEBUG)
+		// LogMessage(fmt.Sprintf("ReadMessages: %v", string(decompressedMessage)), LOG_DEBUG)
 		if decompressErr != nil {
 			close(messages)
 			return
@@ -148,7 +148,7 @@ func WriteMessages(node host.Host, topic *pubsub.Topic, nick string, message str
 	}
 
 	compressedMessageBytes := compressMessage(msgBytes)
-	LogMessage("WriteMessages: "+string(msgBytes), LOG_DEBUG)
+	// LogMessage("WriteMessages: "+string(msgBytes), LOG_DEBUG)
 	// LogMessage("I am here WriteMessages: "+string(compressedMessageBytes), LOG_DEBUG)
 	return topic.Publish(context.Background(), compressedMessageBytes)
 }
