@@ -5,23 +5,34 @@
 
 ## pre-preparation:
 
-- download Go with version above 1.18
-- install [hardhat](https://lagrangelabs.atlassian.net/wiki/spaces/EN/pages/3342337/Engineering+ModMesh+Notes)
+- Download Go with version above 1.18
+- Install [hardhat](https://lagrangelabs.atlassian.net/wiki/spaces/EN/pages/3342337/Engineering+ModMesh+Notes)
 
 ## Run:
 ```
-docker build . -f Dockerfile -t modmesh 
-docker run --env-file ./.env modmesh
+1. make docker-build
+2. make docker-export
+3. make docker-run
+
+OR
+
+# Aggregate of the above commands
+make docker-execute-all
 ```
 
 ## References
 
-- delete before building a new docker instance
+- Delete before building a new docker instance
 ```
+# show all containers
+docker ps --all
+# Remove container
+docker rm -f {container_name}
 # show all images
 docker images -a
-# if there is name
-docker rmi -f {name} 
-# if there is no name
+# Remove docker image
+## If there is a name
+docker rmi -f {image_name} 
+## If there is no name
 docker rmi -f {image_id}
 ```
