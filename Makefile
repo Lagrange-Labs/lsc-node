@@ -11,3 +11,6 @@ docker-export:
 
 docker-run:
 	@ sh $${SCRIPTS_FOLDER}/run.sh
+
+docker-execute-all:
+	@ sh $${SCRIPTS_FOLDER}/build.sh && sh $${SCRIPTS_FOLDER}/export.sh && sh $${SCRIPTS_FOLDER}/run.sh
