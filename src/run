@@ -1,7 +1,0 @@
-#!/bin/bash
-if [ -n "$1" ]; then
-  port=$1
-else
-  port=8080
-fi
-go run modmesh.go --port $port

@@ -1,4 +1,4 @@
-package main
+package node
 
 import (
 	"fmt"
@@ -6,14 +6,14 @@ import (
 	//"io/ioutil"
 	//"log"
 
+	keystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	host "github.com/libp2p/go-libp2p-core/host"
 	pubsub "github.com/libp2p/go-libp2p-pubsub"
-	keystore "github.com/ethereum/go-ethereum/accounts/keystore"
 
-	ethClient "github.com/ethereum/go-ethereum/ethclient"
-	rpc "github.com/ethereum/go-ethereum/rpc"
 	accounts "github.com/ethereum/go-ethereum/accounts"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethClient "github.com/ethereum/go-ethereum/ethclient"
+	rpc "github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/ethereum/go-ethereum/common"
 )
@@ -23,32 +23,32 @@ import (
 type LagrangeNode struct {
 	// Opts
 	opts *Opts
-	
+
 	// Derived objects
-	node host.Host
-	topic *pubsub.Topic
-	pubsub *pubsub.PubSub
-	nick string
+	node         host.Host
+	topic        *pubsub.Topic
+	pubsub       *pubsub.PubSub
+	nick         string
 	subscription *pubsub.Subscription
-	
+
 	rpcWS *rpc.Client
 	ethWS *ethClient.Client
-	
-	rpcStaking *rpc.Client
-	ethStaking *ethClient.Client
+
+	rpcStaking          *rpc.Client
+	ethStaking          *ethClient.Client
 	nodeStakingInstance *Nodestaking
-	
+
 	rpcAttest *rpc.Client
-	
+
 	ethAttestClients []*ethClient.Client
-	
-	privateKey string
-	account accounts.Account
-	keystore *keystore.KeyStore
+
+	privateKey   string
+	account      accounts.Account
+	keystore     *keystore.KeyStore
 	publicKeyHex string
-	
+
 	walletPath string
-	address common.Address
+	address    common.Address
 }
 
 func (lnode *LagrangeNode) GetWalletPath() string {
@@ -73,45 +73,44 @@ func NewLagrangeNode() *LagrangeNode {
 }
 
 func (lnode *LagrangeNode) Start() {
-	lnode.keystore.Unlock(lnode.account,"")
+	lnode.keystore.Unlock(lnode.account, "")
 
 	peerAddr := lnode.opts.peerAddr
 	room := lnode.opts.room
 	leveldb := lnode.opts.leveldb
 	_ = leveldb
-	
 
-	LogMessage(fmt.Sprintf("Port: %v",lnode.opts.port),LOG_INFO)
+	LogMessage(fmt.Sprintf("Port: %v", lnode.opts.port), LOG_INFO)
 
 	lnode.rpcStaking = LoadRpcClient(lnode.opts.stakingEndpoint)
 	lnode.ethStaking = LoadEthClient(lnode.opts.stakingEndpoint)
 	lnode.nodeStakingInstance = GetStakingContract(lnode.ethStaking)
-	
+
 	lnode.rpcWS = LoadRpcClient(lnode.opts.stakingWS)
 	lnode.ethWS = LoadEthClient(lnode.opts.stakingWS)
 	lnode.rpcAttest = LoadRpcClient(lnode.opts.attestEndpoint)
 	lnode.ethAttestClients = LoadEthClientMulti(lnode.opts.attestEndpoint)
-	
+
 	lnode.address = common.HexToAddress(lnode.opts.address)
-	
+
 	// Create listener
 	node := CreateListener(lnode.opts.port)
 
-	if(len(lnode.opts.nick) == 0) {
+	if len(lnode.opts.nick) == 0 {
 		lnode.nick = fmt.Sprintf("%s-%s", os.Getenv("USER"), ShortID(node.ID()))
 	} else {
 		lnode.nick = lnode.opts.nick
 	}
-	LogMessage("Nickname: "+lnode.opts.nick,LOG_DEBUG)
-	
+	LogMessage("Nickname: "+lnode.opts.nick, LOG_DEBUG)
+
 	// Connect to Remote Peer
-	ConnectRemote(node,peerAddr)
-	
+	ConnectRemote(node, peerAddr)
+
 	// Core Routines
 	go HeartBeat()
 
-	// Messaging + Listening Routines	
-	ps, topic, subscription := GetGossipSub(node,room)
+	// Messaging + Listening Routines
+	ps, topic, subscription := GetGossipSub(node, room)
 
 	//node host.Host, topic *pubsub.Topic, ps *pubsub.PubSub, nick string, subscription *pubsub.Subscription
 	lnode.node = node
@@ -125,16 +124,16 @@ func (lnode *LagrangeNode) Start() {
 	go lnode.ListenForStaking()
 
 	// Sandbox - Contract Interaction
-	lnode.SimulateStaking(lnode.rpcStaking,lnode.ethStaking)
-//	go MineTest(rpcStaking)
+	lnode.SimulateStaking(lnode.rpcStaking, lnode.ethStaking)
+	//	go MineTest(rpcStaking)
 
 	lnode.SendVerificationMessage()
 
-//	activeStakesTest(rpcStaking,ethStaking)
-//	ethTest(eth)
+	//	activeStakesTest(rpcStaking,ethStaking)
+	//	ethTest(eth)
 
-        // SIGINT | SIGTERM Signal Handling - End
-        lnode.TermHandler()
+	// SIGINT | SIGTERM Signal Handling - End
+	lnode.TermHandler()
 }
 
 func (lnode *LagrangeNode) Stop() {
