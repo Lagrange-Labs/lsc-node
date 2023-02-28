@@ -1,21 +1,22 @@
-package main
+package bcclients
 
 import (
+	context "context"
+	"crypto/ecdsa"
 	"fmt"
-	"time"
-	"strings"
+	log "log"
 	"math/big"
+	"strings"
+	"time"
+
+	accounts "github.com/ethereum/go-ethereum/accounts"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	keystore "github.com/ethereum/go-ethereum/accounts/keystore"
 	common "github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/crypto"
 	ethClient "github.com/ethereum/go-ethereum/ethclient"
 	rpc "github.com/ethereum/go-ethereum/rpc"
-	log "log"
-	context "context"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"crypto/ecdsa"
-	"github.com/ethereum/go-ethereum/common/hexutil"
-	accounts "github.com/ethereum/go-ethereum/accounts"
-	keystore "github.com/ethereum/go-ethereum/accounts/keystore"
 )
 
 // Loads Ethereum client provided an endpoint URL.
@@ -24,13 +25,12 @@ func LoadEthClient(ethEndpoint string) *ethClient.Client {
 	if err != nil {
 		panic(err)
 	}
-	LogMessage("Endpoint Loaded: "+ethEndpoint,LOG_INFO)
+	LogMessage("Endpoint Loaded: "+ethEndpoint, LOG_INFO)
 	return eth
 }
 
-//
 func LoadEthClientMulti(ethEndpoint string) []*ethClient.Client {
-	ethAttestAddrs := strings.Split(ethEndpoint,",")
+	ethAttestAddrs := strings.Split(ethEndpoint, ",")
 	var ethAttestClients []*ethClient.Client
 	_ = ethAttestClients
 	var ethAttest *ethClient.Client
@@ -54,7 +54,7 @@ func LoadRpcClient(ethEndpoint string) *rpc.Client {
 }
 
 // Reference function testing a raw RPC call.
-func RpcCall(rpc *rpc.Client,To string,Data string) {
+func RpcCall(rpc *rpc.Client, To string, Data string) {
 	type request struct {
 		To   string `json:"to"`
 		Data string `json:"data"`
@@ -62,7 +62,7 @@ func RpcCall(rpc *rpc.Client,To string,Data string) {
 
 	var result string
 
-	req := request{To,Data}
+	req := request{To, Data}
 	if err := rpc.Call(&result, "eth_call", req, "latest"); err != nil {
 		log.Fatal(err)
 	}
@@ -76,7 +76,7 @@ func EthTest(eth *ethClient.Client) {
 	ctx := context.Background()
 	tx, pending, _ := eth.TransactionByHash(ctx, common.HexToHash("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))
 	if !pending {
-		fmt.Println("tx:",tx)
+		fmt.Println("tx:", tx)
 	}
 
 	account := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
@@ -87,15 +87,15 @@ func EthTest(eth *ethClient.Client) {
 	fmt.Println("Balance:", balance) // 25893180161173005034
 }
 
-func (lnode *LagrangeNode) LoadKeystore()  (accounts.Account, *keystore.KeyStore) {
+func (lnode *LagrangeNode) LoadKeystore() (accounts.Account, *keystore.KeyStore) {
 	ks := keystore.NewKeyStore(lnode.GetWalletPath(), keystore.StandardScryptN, keystore.StandardScryptP)
-	account,err := ks.Find(accounts.Account{Address:lnode.address})
+	account, err := ks.Find(accounts.Account{Address: lnode.address})
 	if err != nil {
-		LogMessage(fmt.Sprintf("%v",err),LOG_WARNING)
+		LogMessage(fmt.Sprintf("%v", err), LOG_WARNING)
 	} else {
-		LogMessage(fmt.Sprintf("Keystore loaded for address %v",account.Address),LOG_NOTICE)
+		LogMessage(fmt.Sprintf("Keystore loaded for address %v", account.Address), LOG_NOTICE)
 	}
-	return account,ks
+	return account, ks
 }
 
 func (lnode *LagrangeNode) LoadAccount() {
@@ -110,32 +110,35 @@ func (lnode *LagrangeNode) InitKeystore(privateKey *ecdsa.PrivateKey) (accounts.
 	// No password until key management strategy established
 	//input := Scan("Enter passphrase for new keystore:")
 	//account,err := ks.ImportECDSA(privateKey,input)
-	account,err := ks.ImportECDSA(privateKey,"")
-	if(err != nil) { panic(err) }
-	LogMessage(fmt.Sprintf("New keystore created for address %v",account.Address),LOG_NOTICE)
-	LogMessage(fmt.Sprintf("URL: %v",account.URL),LOG_NOTICE)
-	return account,ks
+	account, err := ks.ImportECDSA(privateKey, "")
+	if err != nil {
+		panic(err)
+	}
+	LogMessage(fmt.Sprintf("New keystore created for address %v", account.Address), LOG_NOTICE)
+	LogMessage(fmt.Sprintf("URL: %v", account.URL), LOG_NOTICE)
+	return account, ks
 }
 
-//
 func (lnode *LagrangeNode) GenerateAccount() {
 	// Generate private key
 	privateKey, err := crypto.GenerateKey()
-	if err != nil { log.Fatal(err) }
+	if err != nil {
+		log.Fatal(err)
+	}
 	lnode.GenerateAccountFromPrivateKey(privateKey)
 }
 
-//
 func (lnode *LagrangeNode) GenerateAccountFromPrivateKey(privateKey *ecdsa.PrivateKey) {
-	account,keystore := lnode.InitKeystore(privateKey)
+	account, keystore := lnode.InitKeystore(privateKey)
 	lnode.account = account
 	lnode.keystore = keystore
 }
 
-//
 func (lnode *LagrangeNode) GenerateAccountFromPrivateKeyString(privateKeyString string) {
 	privateKey, err := crypto.HexToECDSA(privateKeyString)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	lnode.GenerateAccountFromPrivateKey(privateKey)
 }
 
@@ -150,11 +153,11 @@ func KeccakHashString(stateRootStr string) string {
 }
 
 // Simple pop function for discarding offline/malfunctioning endpoints
-func ethClientsShift(ethClients []*ethClient.Client,recycle bool) (*ethClient.Client, []*ethClient.Client) {
+func ethClientsShift(ethClients []*ethClient.Client, recycle bool) (*ethClient.Client, []*ethClient.Client) {
 	eth := ethClients[0]
 	ethClients = ethClients[1:]
-	if(recycle) {
-		ethClients = append(ethClients,eth)
+	if recycle {
+		ethClients = append(ethClients, eth)
 	}
 	return eth, ethClients
 }
@@ -164,8 +167,8 @@ func GetNonce(client *ethClient.Client, fromAddress common.Address) uint64 {
 	if err != nil {
 		panic(err)
 	}
-	fmt.Println("Nonce:",nonce)
-	return nonce;
+	fmt.Println("Nonce:", nonce)
+	return nonce
 }
 
 // Requests and returns network gas price.
@@ -179,14 +182,16 @@ func GetGasPrice(client *ethClient.Client) *big.Int {
 
 func (lnode *LagrangeNode) GetAuth() *bind.TransactOpts {
 	auth, err := bind.NewKeyStoreTransactor(lnode.keystore, lnode.account)
-	if err != nil { panic(err) }
+	if err != nil {
+		panic(err)
+	}
 	return auth
 }
 
 // Test function - mines a new block each second.
 func MineTest(rpc *rpc.Client) {
 	for {
-		MineBlocks(rpc,1)
+		MineBlocks(rpc, 1)
 		time.Sleep(1 * time.Second)
 	}
 }
@@ -195,6 +200,6 @@ func MineTest(rpc *rpc.Client) {
 func MineBlocks(rpc *rpc.Client, num int) {
 	var hex hexutil.Bytes
 	for i := 0; i < num; i++ {
-		rpc.Call(&hex,"evm_mine")
+		rpc.Call(&hex, "evm_mine")
 	}
 }

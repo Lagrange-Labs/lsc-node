@@ -1,4 +1,4 @@
-module modmesh
+module github.com/Lagrange-Labs/Lagrange-Node
 
 go 1.18
 
