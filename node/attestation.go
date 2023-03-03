@@ -6,6 +6,9 @@ import (
 	"strconv"
 	"time"
 
+	"github.com/Lagrange-Labs/Lagrange-Node/bcclients"
+	"github.com/Lagrange-Labs/Lagrange-Node/network"
+	"github.com/Lagrange-Labs/Lagrange-Node/utils"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/core/types"
 	ethClient "github.com/ethereum/go-ethereum/ethclient"
@@ -22,7 +25,7 @@ type StateRootMessage struct {
 
 func GenerateStateRootString(eth *ethClient.Client, block *types.Block) string {
 	//5. ECDSA Signature Tuple (Parameters V,R,S): This signature should be done on a hash of the State root, Timestamp, Block Number and Sharded EdDSA Signature Tuple
-	stateRootSeparator := GetSeparator()
+	stateRootSeparator := utils.GetSeparator()
 
 	blockRoot := block.Root().String()
 	blockTime := strconv.FormatUint(block.Time(), 10)
@@ -32,12 +35,22 @@ func GenerateStateRootString(eth *ethClient.Client, block *types.Block) string {
 		panic(err)
 	}
 	chainID := chain.String()
-	salt := GenSalt32()
+	salt := utils.GenSalt32()
 
 	stateRootStr := blockRoot + stateRootSeparator + blockTime + stateRootSeparator + blockNumber + stateRootSeparator + chainID + stateRootSeparator + salt
-	LogMessage("State Root String: "+stateRootStr, LOG_INFO)
+	utils.LogMessage("State Root String: "+stateRootStr, utils.LOG_INFO)
 
 	return stateRootStr
+}
+
+// Simple pop function for discarding offline/malfunctioning endpoints
+func ethClientsShift(ethClients []*ethClient.Client, recycle bool) (*ethClient.Client, []*ethClient.Client) {
+	eth := ethClients[0]
+	ethClients = ethClients[1:]
+	if recycle {
+		ethClients = append(ethClients, eth)
+	}
+	return eth, ethClients
 }
 
 /*
@@ -56,7 +69,7 @@ func (lnode *LagrangeNode) ListenForBlocks() {
 	topic := lnode.topic
 
 	// Separator for gossip messaging
-	stateRootSeparator := GetSeparator()
+	stateRootSeparator := utils.GetSeparator()
 	// Pull ethClient from list of clients
 	eth, ethClients := ethClientsShift(ethClients, true)
 	// Track failures of cycled RPC endpoints in order to panic if all fail.
@@ -85,7 +98,7 @@ func (lnode *LagrangeNode) ListenForBlocks() {
 		stateRootStrWithShardedSignatureTuple := stateRootStr + stateRootSeparator + shardedSignatureTuple
 
 		// generate hash from concatenated fields
-		stateHash := KeccakHash(stateRootStrWithShardedSignatureTuple)
+		stateHash := bcclients.KeccakHash(stateRootStrWithShardedSignatureTuple)
 
 		// sign resultant hash
 		signature, err := lnode.keystore.SignHash(lnode.account, []byte(stateHash))
@@ -111,7 +124,7 @@ func (lnode *LagrangeNode) ListenForBlocks() {
 		bytes := []byte(json)
 		msg := string(bytes)
 
-		WriteMessages(node, topic, lnode.GetAddressString(), msg, "StateRootMessage")
+		network.WriteMessages(node, topic, lnode.GetAddressString(), msg, "StateRootMessage")
 
 		time.Sleep(1 * time.Second)
 	}
