@@ -10,8 +10,8 @@ import (
 
 	context "context"
 
-	host "github.com/libp2p/go-libp2p-core/host"
-	peer "github.com/libp2p/go-libp2p-core/peer"
+	host "github.com/libp2p/go-libp2p/core/host"
+	peer "github.com/libp2p/go-libp2p/core/peer"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
@@ -84,9 +84,9 @@ func getTimestamp() string {
 }
 
 func LogMessage(message string, level int) {
-	if LOG_LEVEL < level {
-		return
-	}
+	// if LOG_LEVEL < level {
+	// 	return
+	// }
 
 	var color string
 	var cat string
