@@ -1,20 +1,20 @@
-package main
+package utils
 
 import (
-	"fmt"
-	"time"
-	"os"
 	"bufio"
-	
+	"fmt"
+	"os"
+	"time"
+
 	"crypto/rand"
 
 	context "context"
 
-	peer "github.com/libp2p/go-libp2p-core/peer"
-	host "github.com/libp2p/go-libp2p-core/host"
+	host "github.com/libp2p/go-libp2p/core/host"
+	peer "github.com/libp2p/go-libp2p/core/peer"
 
-	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
 
 	"github.com/ethereum/go-ethereum/crypto"
 
@@ -22,6 +22,7 @@ import (
 
 	accounts "github.com/ethereum/go-ethereum/accounts"
 )
+
 /* pubsub example helpers */
 
 // DiscoveryInterval is how often we re-publish our mDNS records.
@@ -39,11 +40,11 @@ type DiscoveryNotifee struct {
 // the PubSub system will automatically start interacting with them if they also
 // support PubSub.
 func (n *DiscoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
-	LogMessage(fmt.Sprintf("discovered new peer %s", pi.ID.Pretty()),LOG_INFO)
-	LogMessage("peer.AddrInfo: "+fmt.Sprintf("%v",pi),LOG_INFO);
+	LogMessage(fmt.Sprintf("discovered new peer %s", pi.ID.Pretty()), LOG_INFO)
+	LogMessage("peer.AddrInfo: "+fmt.Sprintf("%v", pi), LOG_INFO)
 	err := n.h.Connect(context.Background(), pi)
 	if err != nil {
-		LogMessage(fmt.Sprintf("error connecting to peer %s: %s", pi.ID.Pretty(), err),LOG_ERROR)
+		LogMessage(fmt.Sprintf("error connecting to peer %s: %s", pi.ID.Pretty(), err), LOG_ERROR)
 	}
 }
 
@@ -62,19 +63,19 @@ func ShortID(p peer.ID) string {
 }
 
 const (
-        InfoColor    = "\033[1;34m%s\033[0m"
-        NoticeColor  = "\033[1;36m%s\033[0m"
-        WarningColor = "\033[1;33m%s\033[0m"
-        ErrorColor   = "\033[1;31m%s\033[0m"
-        DebugColor   = "\033[0;36m%s\033[0m"
+	InfoColor    = "\033[1;34m%s\033[0m"
+	NoticeColor  = "\033[1;36m%s\033[0m"
+	WarningColor = "\033[1;33m%s\033[0m"
+	ErrorColor   = "\033[1;31m%s\033[0m"
+	DebugColor   = "\033[0;36m%s\033[0m"
 )
 
 const (
-	LOG_INFO = 1
-	LOG_NOTICE = 2
+	LOG_INFO    = 1
+	LOG_NOTICE  = 2
 	LOG_WARNING = 3
-	LOG_ERROR = 4
-	LOG_DEBUG = 5
+	LOG_ERROR   = 4
+	LOG_DEBUG   = 5
 )
 
 func getTimestamp() string {
@@ -83,38 +84,37 @@ func getTimestamp() string {
 }
 
 func LogMessage(message string, level int) {
-	if LOG_LEVEL < level {
-		return
-	}
-	
+	// if LOG_LEVEL < level {
+	// 	return
+	// }
+
 	var color string
 	var cat string
 	switch level {
-		case LOG_INFO:
-			color = InfoColor
-			cat = "INFO"
-		case LOG_NOTICE:
-			color = NoticeColor
-			cat = "NOTICE"
-		case LOG_WARNING:
-			color = WarningColor
-			cat = "WARN"
-		case LOG_ERROR:
-			color = ErrorColor
-			cat = "ERROR"
-		case LOG_DEBUG:
-			color = DebugColor
-			cat = "DEBUG"
+	case LOG_INFO:
+		color = InfoColor
+		cat = "INFO"
+	case LOG_NOTICE:
+		color = NoticeColor
+		cat = "NOTICE"
+	case LOG_WARNING:
+		color = WarningColor
+		cat = "WARN"
+	case LOG_ERROR:
+		color = ErrorColor
+		cat = "ERROR"
+	case LOG_DEBUG:
+		color = DebugColor
+		cat = "DEBUG"
 	}
-	fmt.Printf(color,cat)
-	fmt.Printf("["+getTimestamp()+"] ")
+	fmt.Printf(color, cat)
+	fmt.Printf("[" + getTimestamp() + "] ")
 	fmt.Printf(message)
 	fmt.Println("")
 }
 
-
 func Scan(prompt string) string {
-	if(prompt != "") {
+	if prompt != "" {
 		fmt.Println(prompt)
 	}
 	reader := bufio.NewReader(os.Stdin)
