@@ -64,12 +64,12 @@ func main() {
 func start(ctx *cli.Context) error {
 	lnode := node.NewLagrangeNode()
 
-	c, err := config.Load(ctx)
+	cfg, err := config.Load(ctx)
 	if err != nil {
 		return err
 	}
 
-	logLevel := c.Node.LogLevel
+	logLevel := cfg.Node.LogLevel
 	LOG_LEVEL = logLevel
 
 	// Placeholder - Return first Hardhat private key for now
@@ -86,7 +86,7 @@ func start(ctx *cli.Context) error {
 		lnode.LoadAccount()
 	}
 
-	lnode.Start(&c.Node)
+	lnode.Start(&cfg.Node)
 
 	return nil
 }
