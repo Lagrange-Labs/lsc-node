@@ -14,3 +14,9 @@ docker-run:
 
 docker-execute-all:
 	@ sh $${SCRIPTS_FOLDER}/build.sh && sh $${SCRIPTS_FOLDER}/export.sh && sh $${SCRIPTS_FOLDER}/run.sh
+
+
+$(protoImage)
+proto-gen:
+	@ sh $${SCRIPTS_FOLDER}/proto-gen.sh
+.PHONY: proto-gen
