@@ -1,0 +1,53 @@
+syntax = "proto3";
+
+package network.v1;
+
+option go_package = "github.com/Lagrange-Labs/Lagrange-Node/network/pb";
+
+service NetworkService {
+    rpc JoinNetwork(JoinNetworkRequest) returns (JoinNetworkResponse);
+    rpc GetLastProof(GetLastProofRequest) returns (GetLastProofResponse);
+    rpc UploadSignature(UploadSignatureRequest) returns (UploadSignatureResponse);
+}
+
+// ProofMessage is the message for zk proofs
+message ProofMessage {
+    string message = 1;
+    string proof = 2;
+    uint64 proof_id = 3;    
+}
+
+// JoinNetworkRequest is the request to join the network
+message JoinNetworkRequest {
+    string public_key = 1;
+    string stake_address = 2;
+    string signature = 3;
+}
+
+// JoinNetworkResponse is the response for joining the network
+message JoinNetworkResponse {
+    bool result = 1;
+    string message = 2;
+}
+
+// GetLastProofRequest is the request to get the last proof 
+message GetLastProofRequest {
+    uint64 proof_id = 1;
+}
+
+// GetLastProofResponse is the response for getting the last proof
+message GetLastProofResponse {
+    ProofMessage proof = 1;
+}
+
+// UploadSignatureRequest is the request to upload the signature
+message UploadSignatureRequest {
+    uint64 proof_id = 1;
+    string signature = 2;
+}
+
+// UploadSignatureResponse is the response for uploading the signature
+message UploadSignatureResponse {
+    bool result = 1;
+    string message = 2;
+}
