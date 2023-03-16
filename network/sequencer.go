@@ -4,6 +4,7 @@ import (
 	context "context"
 	"fmt"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/umbracle/go-eth-consensus/bls"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
@@ -14,7 +15,6 @@ import (
 type sequencerService struct {
 	threshold  uint16
 	storage    storageInterface
-	proof      *pb.ProofMessage
 	publicKeys []*bls.PublicKey
 	signatures []*bls.Signature
 	pb.UnimplementedNetworkServiceServer
@@ -23,10 +23,7 @@ type sequencerService struct {
 // NewSequencer creates the sequencer service.
 func NewSequencer(storage storageInterface) (pb.NetworkServiceServer, error) {
 	ctx := context.Background()
-	proof, err := storage.GetLastProof(ctx)
-	if err != nil {
-		return nil, err
-	}
+
 	count, err := storage.GetNodeCount(ctx)
 	if err != nil {
 		return nil, err
@@ -34,7 +31,6 @@ func NewSequencer(storage storageInterface) (pb.NetworkServiceServer, error) {
 
 	return &sequencerService{
 		storage:   storage,
-		proof:     proof,
 		threshold: count * 2 / 3,
 	}, nil
 }
@@ -50,10 +46,10 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *pb.JoinNetworkR
 	}
 	sig := new(bls.Signature)
 	pub := new(bls.PublicKey)
-	if err := pub.Deserialize([]byte(req.PublicKey)); err != nil {
+	if err := pub.Deserialize(common.FromHex(req.PublicKey)); err != nil {
 		return nil, err
 	}
-	if err := sig.Deserialize([]byte(sigMessage)); err != nil {
+	if err := sig.Deserialize(common.FromHex(sigMessage)); err != nil {
 		return nil, err
 	}
 	verified, err := sig.VerifyByte(pub, msg)
@@ -96,13 +92,17 @@ func (s *sequencerService) GetLastProof(ctx context.Context, req *pb.GetLastProo
 	if err != nil {
 		return nil, err
 	}
+	proof, err := s.storage.GetLastProof(ctx)
+	if err != nil {
+		return nil, err
+	}
 
-	if s.proof.ProofId <= req.ProofId {
+	if proof.ProofId <= req.ProofId {
 		return nil, fmt.Errorf("the current proof is not ready yet")
 	}
 
 	return &pb.GetLastProofResponse{
-		Proof: s.proof,
+		Proof: proof,
 	}, nil
 }
 
@@ -118,29 +118,41 @@ func (s *sequencerService) UploadSignature(ctx context.Context, req *pb.UploadSi
 	}
 	s.publicKeys = append(s.publicKeys, node.PublicKey)
 
-	if s.proof.ProofId != req.ProofId {
+	proof, err := s.storage.GetLastProof(ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	if proof.ProofId != req.ProofId {
 		return nil, fmt.Errorf("the proof id is not correct")
 	}
 
 	sig := new(bls.Signature)
-	if err := sig.Deserialize([]byte(req.Signature)); err != nil {
+	if err := sig.Deserialize(common.FromHex(req.Signature)); err != nil {
 		return nil, err
 	}
 	s.signatures = append(s.signatures, sig)
 
 	if len(s.signatures) > int(s.threshold) {
 		// TODO next generation of the proof
+		msg, err := proto.Marshal(proof)
+		if err != nil {
+			return nil, fmt.Errorf("failed to marshal the proof: %v", err)
+		}
 		aggSig := bls.AggregateSignatures(s.signatures)
-		verified, err := aggSig.FastAggregateVerify(s.publicKeys, []byte(req.Signature))
+		verified, err := aggSig.FastAggregateVerify(s.publicKeys, msg)
 		if err != nil {
 			return nil, err
 		}
 		if !verified {
+			// TODO punishing mechanism
 			return &pb.UploadSignatureResponse{
 				Result:  false,
 				Message: "Signature verification failed",
 			}, nil
 		}
+		s.signatures = []*bls.Signature{}
+		s.publicKeys = []*bls.PublicKey{}
 	}
 
 	return &pb.UploadSignatureResponse{
