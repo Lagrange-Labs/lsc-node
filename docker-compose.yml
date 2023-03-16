@@ -1,0 +1,73 @@
+version: "3.5"
+
+services:
+  simserver:
+    container_name: sequencer
+    image: lagrange-node
+    environment:
+      - name=value
+    networks:
+      localnet:
+        ipv4_address: 192.168.10.1
+    ports:
+      - 9090:9090
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-sever"
+  simnode0:
+    container_name: node0
+    image: lagrange-node
+    environment:
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.10.1:9090
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=2.4s
+      - LAGRANGE_NODE_CLIENT_PRIVATEKEY=0xf6e5d4c3b2a19080706050403020100f1e2d3c4b5a69788796857463524130
+    networks:
+      localnet:
+        ipv4_address: 192.168.10.2
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"
+  simnode1:
+    container_name: node1
+    image: lagrange-node
+    environment:
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.10.1:9090
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=2s
+      - LAGRANGE_NODE_CLIENT_PRIVATEKEY=0x45a2b3c4d5e6f7080910111213141516171819202122232425262728293031
+    networks:
+      localnet:
+        ipv4_address: 192.168.10.3
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"
+  simnode2:
+    container_name: node2
+    image: lagrange-node
+    environment:
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.10.1:9090
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=1.8s
+      - LAGRANGE_NODE_CLIENT_PRIVATEKEY=0x45a2b3c4d5e6f7080910111213141516171819202122232425262728293031
+    networks:
+      localnet:
+        ipv4_address: 192.168.10.4
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"
+  simnode3:
+    container_name: node3
+    image: lagrange-node
+    environment:
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.10.1:9090
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=2.2s
+      - LAGRANGE_NODE_CLIENT_PRIVATEKEY=0x45a2b3c4d5e6f7080910111213141516171819202122232425262728293031
+    networks:
+      localnet:
+        ipv4_address: 192.168.10.5
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"
