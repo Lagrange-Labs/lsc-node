@@ -5,7 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Lagrange-Labs/Lagrange-Node/network"
 	"github.com/Lagrange-Labs/Lagrange-Node/node"
+	"github.com/Lagrange-Labs/Lagrange-Node/store"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
@@ -17,7 +19,10 @@ const (
 )
 
 type Config struct {
-	Node node.Config
+	Node   node.Config
+	Server network.ServerConfig
+	Client network.ClientConfig
+	Store  store.Config
 }
 
 // Default parses the default configuration values.

@@ -14,4 +14,16 @@ Keystore = ""
 StakerAddress = ""
 LevelDBPath = "./leveldb"
 LogLevel = 5
+
+[Server]
+GRPCPort = "9090"
+PublicKey = ""
+
+[Client]
+GrpcURL = "localhost:9090"
+PrivateKey = ""
+PullInterval = "2s"
+
+[Store]
+BackendType = "memdb"
 `

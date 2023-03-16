@@ -28,6 +28,7 @@ type Client struct {
 	ctx          context.Context
 	cancelFunc   context.CancelFunc
 	privateKey   *bls.SecretKey
+	lastProofID  uint64
 	pullInterval time.Duration
 }
 
@@ -50,12 +51,13 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 	return &Client{
 		NetworkServiceClient: pb.NewNetworkServiceClient(conn),
 		privateKey:           priv,
-		pullInterval:         cfg.PullInterval,
+		pullInterval:         time.Duration(cfg.PullInterval),
 		ctx:                  ctx,
 		cancelFunc:           cancel,
 	}, nil
 }
 
+// Start starts the connection loop.
 func (c *Client) Start() {
 	for {
 		select {
@@ -63,10 +65,13 @@ func (c *Client) Start() {
 			return
 		case <-time.After(c.pullInterval):
 			// TODO logging error
-			res, err := c.GetLastProof(c.ctx, &pb.GetLastProofRequest{ProofId: 0}) // TODO track the proof id
+			res, err := c.GetLastProof(c.ctx, &pb.GetLastProofRequest{ProofId: c.lastProofID}) // TODO track the proof id
 			if err != nil {
 				continue
 			}
+			// TODO proof validation
+			c.lastProofID = res.Proof.ProofId
+
 			msg, err := proto.Marshal(res.Proof)
 			if err != nil {
 				continue
