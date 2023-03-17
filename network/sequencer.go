@@ -37,6 +37,8 @@ func NewSequencer(storage storageInterface) (pb.NetworkServiceServer, error) {
 
 // JoinNetwork is a method to join the attestation network.
 func (s *sequencerService) JoinNetwork(ctx context.Context, req *pb.JoinNetworkRequest) (*pb.JoinNetworkResponse, error) {
+	fmt.Printf("JoinNetwork request: %v\n", req)
+
 	// Verify signature
 	sigMessage := req.Signature
 	req.Signature = ""
@@ -76,6 +78,8 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *pb.JoinNetworkR
 	}
 	s.threshold = count * 2 / 3
 
+	fmt.Printf("New node %v joined the network\n", req)
+
 	return &pb.JoinNetworkResponse{
 		Result:  true,
 		Message: "Joined successfully",
@@ -84,6 +88,8 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *pb.JoinNetworkR
 
 // GetLastProof is a method to get the last proof.
 func (s *sequencerService) GetLastProof(ctx context.Context, req *pb.GetLastProofRequest) (*pb.GetLastProofResponse, error) {
+	fmt.Printf("GetLastProof request: %v\n", req)
+
 	ip, err := getIPAddress(ctx)
 	if err != nil {
 		return nil, err
@@ -108,6 +114,8 @@ func (s *sequencerService) GetLastProof(ctx context.Context, req *pb.GetLastProo
 
 // UploadSignature is a method to interact with the uploading signature in consensus.
 func (s *sequencerService) UploadSignature(ctx context.Context, req *pb.UploadSignatureRequest) (*pb.UploadSignatureResponse, error) {
+	fmt.Printf("UploadSignature request: %v\n", req)
+
 	ip, err := getIPAddress(ctx)
 	if err != nil {
 		return nil, err
@@ -146,6 +154,9 @@ func (s *sequencerService) UploadSignature(ctx context.Context, req *pb.UploadSi
 		}
 		if !verified {
 			// TODO punishing mechanism
+
+			fmt.Printf("The current proof is verifed\n")
+
 			return &pb.UploadSignatureResponse{
 				Result:  false,
 				Message: "Signature verification failed",

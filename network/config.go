@@ -18,6 +18,8 @@ type ClientConfig struct {
 	GrpcURL string `mapstructure:"GrpcURL"`
 	// PrivateKey is the private key of the client node
 	PrivateKey string `mapstructure:"PrivateKey"`
+	// StakeAddress is the ethereum address of the staking
+	StakeAddress string `mapstructure:"StakeAddress"`
 	// PullInterval is the interval to pull the latest proof
 	PullInterval utils.TimeDuration `mapstructure:"PullInterval"`
 }

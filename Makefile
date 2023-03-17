@@ -15,6 +15,7 @@ LDFLAGS += -X 'github.com/Lagrange-Labs/Lagrange-Node.GitRev=$(GITREV)'
 LDFLAGS += -X 'github.com/Lagrange-Labs/Lagrange-Node.GitBranch=$(GITBRANCH)'
 LDFLAGS += -X 'github.com/Lagrange-Labs/Lagrange-Node.BuildDate=$(DATE)'
 
+
 # Building the docker image and the binary
 build: ## Builds the binary locally into ./dist
 	$(GOENVVARS) go build -ldflags "all=$(LDFLAGS)" -o $(GOBIN)/$(GOBINARY) $(GOCMD)
@@ -23,6 +24,7 @@ build: ## Builds the binary locally into ./dist
 docker-build: ## Builds a docker image with the node binary
 	docker build -t lagrange-node -f ./Dockerfile .
 .PHONY: docker-build
+
 
 # Protobuf
 proto-gen:
@@ -37,3 +39,13 @@ lint:
 	@echo "--> Running linter"
 	@ go run $(golangci_lint_cmd) run --timeout=10m
 .PHONY:	lint
+
+
+# Local testnet
+localnet-build-nodes: localnet-stop docker-build
+	docker-compose up -d
+
+localnet-stop:
+	docker-compose down
+
+.PHONY: localnet-build-nodes localnet-stop
