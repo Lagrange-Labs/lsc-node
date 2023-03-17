@@ -17,11 +17,12 @@ LogLevel = 5
 
 [Server]
 GRPCPort = "9090"
-PublicKey = ""
+PublicKey = "0xd3c6b5a2698e219e9fa9b3d3f4753d0668ecf43189d57c0d14798a68f8a32c9c9be1b020eb68d1010f83eb0c1b44b14c"
 
 [Client]
 GrpcURL = "localhost:9090"
-PrivateKey = ""
+PrivateKey = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+StakeAddress = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
 PullInterval = "2s"
 
 [Store]
