@@ -28,8 +28,11 @@ const (
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NetworkServiceClient interface {
+	// JoinNetwork is the rpc endpoint for joining the network
 	JoinNetwork(ctx context.Context, in *JoinNetworkRequest, opts ...grpc.CallOption) (*JoinNetworkResponse, error)
+	// GetLastProof is the rpc endpoint for getting the last proof from the client node
 	GetLastProof(ctx context.Context, in *GetLastProofRequest, opts ...grpc.CallOption) (*GetLastProofResponse, error)
+	// UploadSignature is the rpc endpoint for uploading the signature from the client node
 	UploadSignature(ctx context.Context, in *UploadSignatureRequest, opts ...grpc.CallOption) (*UploadSignatureResponse, error)
 }
 
@@ -72,8 +75,11 @@ func (c *networkServiceClient) UploadSignature(ctx context.Context, in *UploadSi
 // All implementations must embed UnimplementedNetworkServiceServer
 // for forward compatibility
 type NetworkServiceServer interface {
+	// JoinNetwork is the rpc endpoint for joining the network
 	JoinNetwork(context.Context, *JoinNetworkRequest) (*JoinNetworkResponse, error)
+	// GetLastProof is the rpc endpoint for getting the last proof from the client node
 	GetLastProof(context.Context, *GetLastProofRequest) (*GetLastProofResponse, error)
+	// UploadSignature is the rpc endpoint for uploading the signature from the client node
 	UploadSignature(context.Context, *UploadSignatureRequest) (*UploadSignatureResponse, error)
 	mustEmbedUnimplementedNetworkServiceServer()
 }

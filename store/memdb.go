@@ -71,7 +71,17 @@ func (d *MemDB) updateProof(interval time.Duration) {
 	defer ticker.Stop()
 
 	d.lastProof = &pb.ProofMessage{
-		Message: randomString(90),
+		Message: &pb.BlockDelta{
+			BlockNumber: 1,
+			StateRoot:   randomString(32),
+			Delta: []*pb.DeltaItem{
+				{
+					Address: randomString(32),
+					Key:     "balance",
+					Value:   &pb.DeltaItem_StringValue{StringValue: "10000"},
+				},
+			},
+		},
 		Proof:   randomString(32),
 		ProofId: 1,
 	}
@@ -79,7 +89,39 @@ func (d *MemDB) updateProof(interval time.Duration) {
 	for {
 		<-ticker.C
 		d.lastProof = &pb.ProofMessage{
-			Message: randomString(90),
+			Message: &pb.BlockDelta{
+				BlockNumber: d.lastProof.ProofId + 1,
+				StateRoot:   randomString(32),
+				Delta: []*pb.DeltaItem{
+					{
+						Address: randomString(32),
+						Key:     "balance",
+						Value:   &pb.DeltaItem_StringValue{StringValue: "100000"},
+					},
+					{
+						Address: randomString(32),
+						Key:     "storage",
+						Value: &pb.DeltaItem_StorageValue{
+							StorageValue: &pb.StorageItemList{
+								Items: []*pb.StorageItem{
+									{
+										Skey:   randomString(32),
+										Svalue: randomString(32),
+									},
+									{
+										Skey:   randomString(32),
+										Svalue: randomString(32),
+									},
+									{
+										Skey:   randomString(32),
+										Svalue: randomString(32),
+									},
+								},
+							},
+						},
+					},
+				},
+			},
 			Proof:   randomString(32),
 			ProofId: d.lastProof.ProofId + 1,
 		}

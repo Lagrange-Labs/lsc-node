@@ -115,7 +115,7 @@ func (c *Client) Start() {
 			// TODO logging error
 			res, err := c.GetLastProof(context.Background(), &pb.GetLastProofRequest{ProofId: c.lastProofID}) // TODO track the proof id
 			if err != nil {
-				fmt.Printf("failed to get the last proof: %v", err)
+				fmt.Printf("failed to get the last proof: %v\n", err)
 				continue
 			}
 			// TODO proof validation
@@ -125,12 +125,12 @@ func (c *Client) Start() {
 
 			msg, err := proto.Marshal(res.Proof)
 			if err != nil {
-				fmt.Printf("failed to marshal the proof: %v", err)
+				fmt.Printf("failed to marshal the proof: %v\n", err)
 				continue
 			}
 			sig, err := c.privateKey.Sign(msg)
 			if err != nil {
-				fmt.Printf("failed to sign the proof: %v", err)
+				fmt.Printf("failed to sign the proof: %v\n", err)
 				continue
 			}
 			sigMsg := sig.Serialize()
@@ -139,11 +139,11 @@ func (c *Client) Start() {
 				Signature: common.Bytes2Hex(sigMsg[:]),
 			})
 			if err != nil {
-				fmt.Printf("failed to upload signature: %v", err)
+				fmt.Printf("failed to upload signature: %v\n", err)
 				continue
 			}
 			if !resS.Result {
-				fmt.Printf("failed to upload signature: %s", resS.Message)
+				fmt.Printf("failed to upload signature: %s\n", resS.Message)
 				continue
 			}
 
