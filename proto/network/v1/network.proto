@@ -4,15 +4,46 @@ package network.v1;
 
 option go_package = "github.com/Lagrange-Labs/Lagrange-Node/network/pb";
 
+// NetworkService is the service for the attestation network
 service NetworkService {
+    // JoinNetwork is the rpc endpoint for joining the network
     rpc JoinNetwork(JoinNetworkRequest) returns (JoinNetworkResponse);
+    // GetLastProof is the rpc endpoint for getting the last proof from the client node
     rpc GetLastProof(GetLastProofRequest) returns (GetLastProofResponse);
+    // UploadSignature is the rpc endpoint for uploading the signature from the client node
     rpc UploadSignature(UploadSignatureRequest) returns (UploadSignatureResponse);
 }
 
-// ProofMessage is the message for zk proofs
+// StorageItem is the item for the storage data
+message StorageItem {
+    string skey = 1;
+    string svalue = 2;
+}
+
+message StorageItemList {
+    repeated StorageItem items = 1;
+}
+
+// DeltaItem is the item for the state change
+message DeltaItem {
+    string address = 1;
+    string key = 2;
+    oneof value {
+        string string_value = 3;
+        StorageItemList storage_value = 4;
+    }
+}
+
+// BlockDelta is the delta data for the current block
+message BlockDelta {
+    uint64 block_number = 1;
+    string state_root = 2;
+    repeated DeltaItem delta = 3;
+}
+
+// ProofMessage is the message for zk proofs of the block delta
 message ProofMessage {
-    string message = 1;
+    BlockDelta message = 1;
     string proof = 2;
     uint64 proof_id = 3;    
 }
