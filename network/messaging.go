@@ -22,15 +22,6 @@ type GossipMessage struct {
 
 const BufferSize = 4096
 
-type MsgParams struct {
-	ps           *pubsub.PubSub
-	topic        *pubsub.Topic
-	subscription *pubsub.Subscription
-	node         host.Host
-	nick         string
-	message      string
-}
-
 func WriteMessages(node host.Host, topic *pubsub.Topic, nick string, message string, messagetype string) error {
 	m := GossipMessage{
 		Type:       messagetype,
