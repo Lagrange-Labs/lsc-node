@@ -16,8 +16,6 @@ import (
 	multiaddr "github.com/multiformats/go-multiaddr"
 
 	context "context"
-
-	ping "github.com/libp2p/go-libp2p/p2p/protocol/ping"
 )
 
 func CreateListener(portPtr string) host.Host {
@@ -49,18 +47,6 @@ type JoinMessage struct {
 	Timestamp           string
 	Salt                string
 	ECDSASignatureTuple string
-}
-
-func pingPeer(node host.Host) {
-	// Get P2P Address Info
-	localInfo := GetAddrInfo(node)
-	_ = localInfo
-	// Ping test
-	ch := ping.Ping(context.Background(), node, localInfo.ID)
-	for i := 0; i < 3; i++ {
-		res := <-ch
-		utils.LogMessage("Got ping response. Latency: "+fmt.Sprintf("%v", res.RTT), utils.LOG_DEBUG)
-	}
 }
 
 /*
