@@ -124,6 +124,6 @@ func MineTest(rpc *rpc.Client) {
 func MineBlocks(rpc *rpc.Client, num int) {
 	var hex hexutil.Bytes
 	for i := 0; i < num; i++ {
-		rpc.Call(&hex, "evm_mine")
+		_ = rpc.Call(&hex, "evm_mine")
 	}
 }

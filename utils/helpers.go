@@ -107,10 +107,7 @@ func LogMessage(message string, level int) {
 		color = DebugColor
 		cat = "DEBUG"
 	}
-	fmt.Printf(color, cat)
-	fmt.Printf("[" + getTimestamp() + "] ")
-	fmt.Printf(message)
-	fmt.Println("")
+	fmt.Printf("%s %s [ %v ] %v\n", color, cat, getTimestamp(), message)
 }
 
 func Scan(prompt string) string {
