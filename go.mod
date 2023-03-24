@@ -7,7 +7,7 @@ require (
 	github.com/libp2p/go-libp2p v0.22.0
 	github.com/libp2p/go-libp2p-pubsub v0.8.0
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/multiformats/go-multiaddr v0.6.0
+	github.com/multiformats/go-multiaddr v0.8.0
 	github.com/spf13/viper v1.15.0
 	github.com/urfave/cli/v2 v2.11.1
 )
