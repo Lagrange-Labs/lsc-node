@@ -85,10 +85,8 @@ type LagrangeNode struct {
 
 	ethAttestClients []*ethClient.Client
 
-	privateKey   string
-	account      accounts.Account
-	keystore     *keystore.KeyStore
-	publicKeyHex string
+	account  accounts.Account
+	keystore *keystore.KeyStore
 
 	walletPath string
 	address    common.Address
@@ -100,7 +98,9 @@ func NewLagrangeNode() *LagrangeNode {
 }
 
 func (lnode *LagrangeNode) Start(cfg *Config) {
-	lnode.keystore.Unlock(lnode.account, "")
+	if err := lnode.keystore.Unlock(lnode.account, ""); err != nil {
+		panic(err)
+	}
 
 	peerAddr := cfg.PeerAddr
 	room := cfg.Room
@@ -164,7 +164,9 @@ func (lnode *LagrangeNode) Start(cfg *Config) {
 }
 
 func (lnode *LagrangeNode) Stop() {
-	lnode.keystore.Lock(lnode.account.Address)
+	if err := lnode.keystore.Lock(lnode.account.Address); err != nil {
+		panic(err)
+	}
 	lnode.TermHandler()
 }
 
@@ -337,15 +339,13 @@ func (lnode *LagrangeNode) ProcessMessage(message *network.GossipMessage) error 
 	switch message.Type {
 	case "JoinMessage":
 		return lnode.ProcessJoinMessage(message)
-		break
 	case "StateRootMessage":
 		err := json.Unmarshal([]byte(message.Data), srm)
 		fmt.Println(srm)
 		_ = err
 		return nil
-		break
 	}
-	return errors.New("Invalid or unspecified message type.")
+	return errors.New("invalid or unspecified message type")
 }
 
 func (lnode *LagrangeNode) TermHandler() {
@@ -394,7 +394,9 @@ func (lnode *LagrangeNode) SendVerificationMessage() {
 	bytes := []byte(json)
 	msg := string(bytes)
 
-	network.WriteMessages(node, topic, lnode.GetAddressString(), msg, "JoinMessage")
+	if err := network.WriteMessages(node, topic, lnode.GetAddressString(), msg, "JoinMessage"); err != nil {
+		panic(err)
+	}
 }
 
 func (lnode *LagrangeNode) LoadKeystore() (accounts.Account, *keystore.KeyStore) {
@@ -453,7 +455,11 @@ func (lnode *LagrangeNode) GenerateAccountFromPrivateKeyString(privateKeyString 
 }
 
 func (lnode *LagrangeNode) GetAuth() *bind.TransactOpts {
-	auth, err := bind.NewKeyStoreTransactor(lnode.keystore, lnode.account)
+	chainID, err := lnode.ethStaking.ChainID(context.TODO())
+	if err != nil {
+		panic(err)
+	}
+	auth, err := bind.NewKeyStoreTransactorWithChainID(lnode.keystore, lnode.account, chainID)
 	if err != nil {
 		panic(err)
 	}

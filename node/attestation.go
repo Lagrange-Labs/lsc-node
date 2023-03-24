@@ -124,7 +124,9 @@ func (lnode *LagrangeNode) ListenForBlocks() {
 		bytes := []byte(json)
 		msg := string(bytes)
 
-		network.WriteMessages(node, topic, lnode.GetAddressString(), msg, "StateRootMessage")
+		if err = network.WriteMessages(node, topic, lnode.GetAddressString(), msg, "StateRootMessage"); err != nil {
+			panic(err)
+		}
 
 		time.Sleep(1 * time.Second)
 	}
