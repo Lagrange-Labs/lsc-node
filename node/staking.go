@@ -69,7 +69,7 @@ func (lnode *LagrangeNode) ListenForStaking() {
 
 	block := uint64(100)
 
-	sub, err := sc.WatchStakedNode(&bind.WatchOpts{&block, context.Background()}, logs)
+	sub, err := sc.WatchStakedNode(&bind.WatchOpts{Start: &block, Context: context.Background()}, logs)
 	if err != nil {
 		panic(err)
 	}
