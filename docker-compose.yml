@@ -1,0 +1,81 @@
+version: "3.5"
+
+services:
+  simserver:
+    container_name: sequencer
+    image: lagrange-node
+    environment:
+      - name=value
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.6
+    ports:
+      - 9090:9090
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-server"
+  simnode0:
+    container_name: node0
+    image: lagrange-node
+    environment:
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.6:9090
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=2.4s
+      - LAGRANGE_NODE_CLIENT_PRIVATEKEY=0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f654a
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.2
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"
+  simnode1:
+    container_name: node1
+    image: lagrange-node
+    environment:
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.6:9090
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=2s
+      - LAGRANGE_NODE_CLIENT_PRIVATEKEY=0xca056e1830045cd5aa844e02e493e27b8c454b3059315b8ee34d42414141247d
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.3
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"
+  simnode2:
+    container_name: node2
+    image: lagrange-node
+    environment:
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.6:9090
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=1.8s
+      - LAGRANGE_NODE_CLIENT_PRIVATEKEY=0xa339d4976df7cc511ad3d31fb28407e0b92a3f876cc8d81434abfe27e09c0275
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.4
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"
+  simnode3:
+    container_name: node3
+    image: lagrange-node
+    environment:
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.6:9090
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=2.2s
+      - LAGRANGE_NODE_CLIENT_PRIVATEKEY=0x1002490094172864114bb1fa239db4d25399af2c2629368027d97e47b9ffaaa7
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.5
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"
+
+networks:
+  localnet:
+    driver: bridge
+    ipam:
+      driver: default
+      config:
+        - subnet: 192.168.20.0/25
