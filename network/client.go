@@ -126,7 +126,6 @@ func (c *Client) Start() {
 				continue
 			}
 			// TODO proof validation
-			c.lastBlockNumber += 1
 
 			fmt.Printf("got the current block: %v\n", res.Block)
 
@@ -154,8 +153,8 @@ func (c *Client) Start() {
 				continue
 			}
 
+			c.lastBlockNumber += 1
 			fmt.Printf("uploaded the signature: %v\n", resS)
-
 		}
 	}
 }
