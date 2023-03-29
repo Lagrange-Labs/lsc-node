@@ -11,7 +11,7 @@ for dir in $proto_dirs; do
     sudo rm -rf gen
     docker run --rm -v ./:/workspace --workdir /workspace ${protoImageName} generate  --template buf.gen.yaml $file
     sudo chmod -R 775 gen
-    cp -r gen/go/* ../$(echo "${dir}" | sed 's#^\./\([^/]*\)/.*$#\1#')/pb/
+    cp -r gen/go/* ../$(echo "${dir}" | sed 's#^\./\([^/]*\)/.*$#\1#')/types/
     sudo rm -rf gen
   done
 done
