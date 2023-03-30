@@ -4,7 +4,7 @@
 // - protoc             (unknown)
 // source: network.proto
 
-package pb
+package types
 
 import (
 	context "context"
@@ -19,9 +19,9 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	NetworkService_JoinNetwork_FullMethodName     = "/network.v1.NetworkService/JoinNetwork"
-	NetworkService_GetLastProof_FullMethodName    = "/network.v1.NetworkService/GetLastProof"
-	NetworkService_UploadSignature_FullMethodName = "/network.v1.NetworkService/UploadSignature"
+	NetworkService_JoinNetwork_FullMethodName = "/network.v1.NetworkService/JoinNetwork"
+	NetworkService_GetBlock_FullMethodName    = "/network.v1.NetworkService/GetBlock"
+	NetworkService_CommitBlock_FullMethodName = "/network.v1.NetworkService/CommitBlock"
 )
 
 // NetworkServiceClient is the client API for NetworkService service.
@@ -30,10 +30,10 @@ const (
 type NetworkServiceClient interface {
 	// JoinNetwork is the rpc endpoint for joining the network
 	JoinNetwork(ctx context.Context, in *JoinNetworkRequest, opts ...grpc.CallOption) (*JoinNetworkResponse, error)
-	// GetLastProof is the rpc endpoint for getting the last proof from the client node
-	GetLastProof(ctx context.Context, in *GetLastProofRequest, opts ...grpc.CallOption) (*GetLastProofResponse, error)
-	// UploadSignature is the rpc endpoint for uploading the signature from the client node
-	UploadSignature(ctx context.Context, in *UploadSignatureRequest, opts ...grpc.CallOption) (*UploadSignatureResponse, error)
+	// GetBlock is the rpc endpoint for getting the given block at the client node
+	GetBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (*GetBlockResponse, error)
+	// CommitBlock is the rpc endpoint for committing the given block with signature at the client node
+	CommitBlock(ctx context.Context, in *CommitBlockRequest, opts ...grpc.CallOption) (*CommitBlockResponse, error)
 }
 
 type networkServiceClient struct {
@@ -53,18 +53,18 @@ func (c *networkServiceClient) JoinNetwork(ctx context.Context, in *JoinNetworkR
 	return out, nil
 }
 
-func (c *networkServiceClient) GetLastProof(ctx context.Context, in *GetLastProofRequest, opts ...grpc.CallOption) (*GetLastProofResponse, error) {
-	out := new(GetLastProofResponse)
-	err := c.cc.Invoke(ctx, NetworkService_GetLastProof_FullMethodName, in, out, opts...)
+func (c *networkServiceClient) GetBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (*GetBlockResponse, error) {
+	out := new(GetBlockResponse)
+	err := c.cc.Invoke(ctx, NetworkService_GetBlock_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
 	return out, nil
 }
 
-func (c *networkServiceClient) UploadSignature(ctx context.Context, in *UploadSignatureRequest, opts ...grpc.CallOption) (*UploadSignatureResponse, error) {
-	out := new(UploadSignatureResponse)
-	err := c.cc.Invoke(ctx, NetworkService_UploadSignature_FullMethodName, in, out, opts...)
+func (c *networkServiceClient) CommitBlock(ctx context.Context, in *CommitBlockRequest, opts ...grpc.CallOption) (*CommitBlockResponse, error) {
+	out := new(CommitBlockResponse)
+	err := c.cc.Invoke(ctx, NetworkService_CommitBlock_FullMethodName, in, out, opts...)
 	if err != nil {
 		return nil, err
 	}
@@ -77,10 +77,10 @@ func (c *networkServiceClient) UploadSignature(ctx context.Context, in *UploadSi
 type NetworkServiceServer interface {
 	// JoinNetwork is the rpc endpoint for joining the network
 	JoinNetwork(context.Context, *JoinNetworkRequest) (*JoinNetworkResponse, error)
-	// GetLastProof is the rpc endpoint for getting the last proof from the client node
-	GetLastProof(context.Context, *GetLastProofRequest) (*GetLastProofResponse, error)
-	// UploadSignature is the rpc endpoint for uploading the signature from the client node
-	UploadSignature(context.Context, *UploadSignatureRequest) (*UploadSignatureResponse, error)
+	// GetBlock is the rpc endpoint for getting the given block at the client node
+	GetBlock(context.Context, *GetBlockRequest) (*GetBlockResponse, error)
+	// CommitBlock is the rpc endpoint for committing the given block with signature at the client node
+	CommitBlock(context.Context, *CommitBlockRequest) (*CommitBlockResponse, error)
 	mustEmbedUnimplementedNetworkServiceServer()
 }
 
@@ -91,11 +91,11 @@ type UnimplementedNetworkServiceServer struct {
 func (UnimplementedNetworkServiceServer) JoinNetwork(context.Context, *JoinNetworkRequest) (*JoinNetworkResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method JoinNetwork not implemented")
 }
-func (UnimplementedNetworkServiceServer) GetLastProof(context.Context, *GetLastProofRequest) (*GetLastProofResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetLastProof not implemented")
+func (UnimplementedNetworkServiceServer) GetBlock(context.Context, *GetBlockRequest) (*GetBlockResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method GetBlock not implemented")
 }
-func (UnimplementedNetworkServiceServer) UploadSignature(context.Context, *UploadSignatureRequest) (*UploadSignatureResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method UploadSignature not implemented")
+func (UnimplementedNetworkServiceServer) CommitBlock(context.Context, *CommitBlockRequest) (*CommitBlockResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method CommitBlock not implemented")
 }
 func (UnimplementedNetworkServiceServer) mustEmbedUnimplementedNetworkServiceServer() {}
 
@@ -128,38 +128,38 @@ func _NetworkService_JoinNetwork_Handler(srv interface{}, ctx context.Context, d
 	return interceptor(ctx, in, info, handler)
 }
 
-func _NetworkService_GetLastProof_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetLastProofRequest)
+func _NetworkService_GetBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(GetBlockRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NetworkServiceServer).GetLastProof(ctx, in)
+		return srv.(NetworkServiceServer).GetBlock(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: NetworkService_GetLastProof_FullMethodName,
+		FullMethod: NetworkService_GetBlock_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NetworkServiceServer).GetLastProof(ctx, req.(*GetLastProofRequest))
+		return srv.(NetworkServiceServer).GetBlock(ctx, req.(*GetBlockRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
 
-func _NetworkService_UploadSignature_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(UploadSignatureRequest)
+func _NetworkService_CommitBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(CommitBlockRequest)
 	if err := dec(in); err != nil {
 		return nil, err
 	}
 	if interceptor == nil {
-		return srv.(NetworkServiceServer).UploadSignature(ctx, in)
+		return srv.(NetworkServiceServer).CommitBlock(ctx, in)
 	}
 	info := &grpc.UnaryServerInfo{
 		Server:     srv,
-		FullMethod: NetworkService_UploadSignature_FullMethodName,
+		FullMethod: NetworkService_CommitBlock_FullMethodName,
 	}
 	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NetworkServiceServer).UploadSignature(ctx, req.(*UploadSignatureRequest))
+		return srv.(NetworkServiceServer).CommitBlock(ctx, req.(*CommitBlockRequest))
 	}
 	return interceptor(ctx, in, info, handler)
 }
@@ -176,12 +176,12 @@ var NetworkService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _NetworkService_JoinNetwork_Handler,
 		},
 		{
-			MethodName: "GetLastProof",
-			Handler:    _NetworkService_GetLastProof_Handler,
+			MethodName: "GetBlock",
+			Handler:    _NetworkService_GetBlock_Handler,
 		},
 		{
-			MethodName: "UploadSignature",
-			Handler:    _NetworkService_UploadSignature_Handler,
+			MethodName: "CommitBlock",
+			Handler:    _NetworkService_CommitBlock_Handler,
 		},
 	},
 	Streams:  []grpc.StreamDesc{},

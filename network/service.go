@@ -9,7 +9,7 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/network/pb"
+	"github.com/Lagrange-Labs/Lagrange-Node/network/types"
 )
 
 type sequencerService struct {
@@ -17,11 +17,11 @@ type sequencerService struct {
 	storage    storageInterface
 	publicKeys []*bls.PublicKey
 	signatures []*bls.Signature
-	pb.UnimplementedNetworkServiceServer
+	types.UnimplementedNetworkServiceServer
 }
 
-// NewSequencer creates the sequencer service.
-func NewSequencer(storage storageInterface) (pb.NetworkServiceServer, error) {
+// NewSequencerService creates the sequencer service.
+func NewSequencerService(storage storageInterface) (types.NetworkServiceServer, error) {
 	ctx := context.Background()
 
 	count, err := storage.GetNodeCount(ctx)
@@ -36,7 +36,7 @@ func NewSequencer(storage storageInterface) (pb.NetworkServiceServer, error) {
 }
 
 // JoinNetwork is a method to join the attestation network.
-func (s *sequencerService) JoinNetwork(ctx context.Context, req *pb.JoinNetworkRequest) (*pb.JoinNetworkResponse, error) {
+func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetworkRequest) (*types.JoinNetworkResponse, error) {
 	fmt.Printf("JoinNetwork request: %v\n", req)
 
 	// Verify signature
@@ -59,7 +59,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *pb.JoinNetworkR
 		return nil, err
 	}
 	if !verified {
-		return &pb.JoinNetworkResponse{
+		return &types.JoinNetworkResponse{
 			Result:  false,
 			Message: "Signature verification failed",
 		}, nil
@@ -80,16 +80,17 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *pb.JoinNetworkR
 
 	fmt.Printf("New node %v joined the network\n", req)
 
-	return &pb.JoinNetworkResponse{
+	return &types.JoinNetworkResponse{
 		Result:  true,
 		Message: "Joined successfully",
 	}, nil
 }
 
-// GetLastProof is a method to get the last proof.
-func (s *sequencerService) GetLastProof(ctx context.Context, req *pb.GetLastProofRequest) (*pb.GetLastProofResponse, error) {
-	fmt.Printf("GetLastProof request: %v\n", req)
+// GetBlock is a method to get the last block with a proof.
+func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequest) (*types.GetBlockResponse, error) {
+	fmt.Printf("GetBlock request: %v\n", req)
 
+	// verify the registered node
 	ip, err := getIPAddress(ctx)
 	if err != nil {
 		return nil, err
@@ -98,23 +99,20 @@ func (s *sequencerService) GetLastProof(ctx context.Context, req *pb.GetLastProo
 	if err != nil {
 		return nil, err
 	}
-	proof, err := s.storage.GetLastProof(ctx)
+
+	block, err := s.storage.GetBlock(ctx, req.BlockNumber)
 	if err != nil {
 		return nil, err
 	}
 
-	if proof.ProofId <= req.ProofId {
-		return nil, fmt.Errorf("the current proof is not ready yet")
-	}
-
-	return &pb.GetLastProofResponse{
-		Proof: proof,
+	return &types.GetBlockResponse{
+		Block: block,
 	}, nil
 }
 
-// UploadSignature is a method to interact with the uploading signature in consensus.
-func (s *sequencerService) UploadSignature(ctx context.Context, req *pb.UploadSignatureRequest) (*pb.UploadSignatureResponse, error) {
-	fmt.Printf("UploadSignature request: %v\n", req)
+// CommitBlock is a method to commit a block.
+func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlockRequest) (*types.CommitBlockResponse, error) {
+	fmt.Printf("CommitBlock request: %v\n", req)
 
 	ip, err := getIPAddress(ctx)
 	if err != nil {
@@ -124,17 +122,17 @@ func (s *sequencerService) UploadSignature(ctx context.Context, req *pb.UploadSi
 	if err != nil {
 		return nil, err
 	}
-	s.publicKeys = append(s.publicKeys, node.PublicKey)
 
-	proof, err := s.storage.GetLastProof(ctx)
+	block, err := s.storage.GetLastBlock(ctx)
 	if err != nil {
 		return nil, err
 	}
 
-	if proof.ProofId != req.ProofId {
+	if block.Header.BlockNumber != req.BlockNumber {
 		return nil, fmt.Errorf("the proof id is not correct")
 	}
 
+	s.publicKeys = append(s.publicKeys, node.PublicKey)
 	sig := new(bls.Signature)
 	if err := sig.Deserialize(common.FromHex(req.Signature)); err != nil {
 		return nil, err
@@ -143,7 +141,7 @@ func (s *sequencerService) UploadSignature(ctx context.Context, req *pb.UploadSi
 
 	if len(s.signatures) > int(s.threshold) {
 		// TODO next generation of the proof
-		msg, err := proto.Marshal(proof)
+		msg, err := proto.Marshal(block)
 		if err != nil {
 			return nil, fmt.Errorf("failed to marshal the proof: %v", err)
 		}
@@ -157,16 +155,19 @@ func (s *sequencerService) UploadSignature(ctx context.Context, req *pb.UploadSi
 
 			fmt.Printf("The current proof is verifed\n")
 
-			return &pb.UploadSignatureResponse{
+			return &types.CommitBlockResponse{
 				Result:  false,
 				Message: "Signature verification failed",
 			}, nil
 		}
 		s.signatures = []*bls.Signature{}
 		s.publicKeys = []*bls.PublicKey{}
+		aggSigMsg := aggSig.Serialize()
+		block.Signature = common.Bytes2Hex(aggSigMsg[:])
+		// TODO store the block
 	}
 
-	return &pb.UploadSignatureResponse{
+	return &types.CommitBlockResponse{
 		Result:  true,
 		Message: "Uploaded successfully",
 	}, nil

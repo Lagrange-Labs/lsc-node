@@ -2,16 +2,16 @@ syntax = "proto3";
 
 package network.v1;
 
-option go_package = "github.com/Lagrange-Labs/Lagrange-Node/network/pb";
+option go_package = "github.com/Lagrange-Labs/Lagrange-Node/network/types";
 
 // NetworkService is the service for the attestation network
 service NetworkService {
     // JoinNetwork is the rpc endpoint for joining the network
     rpc JoinNetwork(JoinNetworkRequest) returns (JoinNetworkResponse);
-    // GetLastProof is the rpc endpoint for getting the last proof from the client node
-    rpc GetLastProof(GetLastProofRequest) returns (GetLastProofResponse);
-    // UploadSignature is the rpc endpoint for uploading the signature from the client node
-    rpc UploadSignature(UploadSignatureRequest) returns (UploadSignatureResponse);
+    // GetBlock is the rpc endpoint for getting the given block at the client node
+    rpc GetBlock(GetBlockRequest) returns (GetBlockResponse);
+    // CommitBlock is the rpc endpoint for committing the given block with signature at the client node
+    rpc CommitBlock(CommitBlockRequest) returns (CommitBlockResponse);
 }
 
 // StorageItem is the item for the storage data
@@ -34,18 +34,30 @@ message DeltaItem {
     }
 }
 
-// BlockDelta is the delta data for the current block
+// BlockDelta is the delta data for the given block of the specific chain
 message BlockDelta {
     uint64 block_number = 1;
     string state_root = 2;
-    repeated DeltaItem delta = 3;
+    string chain = 3;
+    repeated DeltaItem delta = 4;
+    string delta_hash = 5;
 }
 
-// ProofMessage is the message for zk proofs of the block delta
-message ProofMessage {
-    BlockDelta message = 1;
-    string proof = 2;
-    uint64 proof_id = 3;    
+// BlockHeader is the block header structure
+message BlockHeader {
+    uint64 block_number = 1;
+    string parent_hash = 2;
+    string block_hash = 3;
+    string proposer_pub_key = 4;
+    string proposer_signature = 5; // (block_hash)
+}
+
+// Block is the block body structure for zk proofs of the block delta
+message Block {
+    BlockHeader header = 1;
+    BlockDelta delta = 2;
+    string proof = 3;
+    string signature = 4; // aggregated signature of all the validators
 }
 
 // JoinNetworkRequest is the request to join the network
@@ -61,24 +73,24 @@ message JoinNetworkResponse {
     string message = 2;
 }
 
-// GetLastProofRequest is the request to get the last proof 
-message GetLastProofRequest {
-    uint64 proof_id = 1;
+// GetBlockRequest is the request to get the given block 
+message GetBlockRequest {
+    uint64 block_number = 1;
 }
 
-// GetLastProofResponse is the response for getting the last proof
-message GetLastProofResponse {
-    ProofMessage proof = 1;
+// GetBlockResponse is the response for getting the given block
+message GetBlockResponse {
+    Block block = 1;
 }
 
-// UploadSignatureRequest is the request to upload the signature
-message UploadSignatureRequest {
-    uint64 proof_id = 1;
+// CommitBlockRequest is the request to commit the signature
+message CommitBlockRequest {
+    uint64 block_number = 1;
     string signature = 2;
 }
 
-// UploadSignatureResponse is the response for uploading the signature
-message UploadSignatureResponse {
+// CommitBlockResponse is the response for uploading the signature
+message CommitBlockResponse {
     bool result = 1;
     string message = 2;
 }
