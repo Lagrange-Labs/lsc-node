@@ -12,7 +12,7 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/network/pb"
+	"github.com/Lagrange-Labs/Lagrange-Node/network/types"
 )
 
 // ClientNode is a struct to store the information of a node.
@@ -27,13 +27,13 @@ type ClientNode struct {
 
 // Client is a gRPC client to join the network
 type Client struct {
-	pb.NetworkServiceClient
-	ctx          context.Context
-	cancelFunc   context.CancelFunc
-	privateKey   *bls.SecretKey
-	stakeAddress string
-	lastProofID  uint64
-	pullInterval time.Duration
+	types.NetworkServiceClient
+	ctx             context.Context
+	cancelFunc      context.CancelFunc
+	privateKey      *bls.SecretKey
+	stakeAddress    string
+	lastBlockNumber uint64
+	pullInterval    time.Duration
 }
 
 // NewClient creates a new client.
@@ -52,16 +52,23 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 	hctx, hcancel := context.WithTimeout(context.Background(), 100*time.Second)
 	defer hcancel()
 
-	response, err := healthClient.Check(hctx, &grpc_health_v1.HealthCheckRequest{})
+	watcher, err := healthClient.Watch(hctx, &grpc_health_v1.HealthCheckRequest{})
 	if err != nil {
 		fmt.Println("Failed to check gRPC health:", err)
 		panic(err)
 	}
 
-	if response.Status == grpc_health_v1.HealthCheckResponse_SERVING {
-		fmt.Println("gRPC server is healthy")
-	} else {
-		fmt.Println("gRPC server is not healthy")
+	for {
+		response, err := watcher.Recv()
+		if err != nil {
+			fmt.Println("Failed to get gRPC health response:", err)
+		}
+		if response.Status == grpc_health_v1.HealthCheckResponse_SERVING {
+			fmt.Println("gRPC server is healthy")
+			break
+		} else {
+			fmt.Println("gRPC server is not healthy")
+		}
 	}
 
 	priv := new(bls.SecretKey)
@@ -70,7 +77,7 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 	}
 
 	return &Client{
-		NetworkServiceClient: pb.NewNetworkServiceClient(conn),
+		NetworkServiceClient: types.NewNetworkServiceClient(conn),
 		privateKey:           priv,
 		stakeAddress:         cfg.StakeAddress,
 		pullInterval:         time.Duration(cfg.PullInterval),
@@ -82,7 +89,7 @@ func NewClient(cfg ClientConfig) (*Client, error) {
 // Start starts the connection loop.
 func (c *Client) Start() {
 	pk := c.privateKey.GetPublicKey().Serialize()
-	req := &pb.JoinNetworkRequest{
+	req := &types.JoinNetworkRequest{
 		PublicKey:    common.Bytes2Hex(pk[:]),
 		StakeAddress: c.stakeAddress,
 	}
@@ -113,30 +120,29 @@ func (c *Client) Start() {
 			return
 		case <-time.After(c.pullInterval):
 			// TODO logging error
-			res, err := c.GetLastProof(context.Background(), &pb.GetLastProofRequest{ProofId: c.lastProofID}) // TODO track the proof id
+			res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber}) // TODO track the block number
 			if err != nil {
-				fmt.Printf("failed to get the last proof: %v\n", err)
+				fmt.Printf("failed to get the last block: %v\n", err)
 				continue
 			}
 			// TODO proof validation
-			c.lastProofID = res.Proof.ProofId
 
-			fmt.Printf("got the current proof: %v\n", res.Proof)
+			fmt.Printf("got the current block: %v\n", res.Block)
 
-			msg, err := proto.Marshal(res.Proof)
+			msg, err := proto.Marshal(res.Block)
 			if err != nil {
-				fmt.Printf("failed to marshal the proof: %v\n", err)
+				fmt.Printf("failed to marshal the block: %v\n", err)
 				continue
 			}
 			sig, err := c.privateKey.Sign(msg)
 			if err != nil {
-				fmt.Printf("failed to sign the proof: %v\n", err)
+				fmt.Printf("failed to sign the block: %v\n", err)
 				continue
 			}
 			sigMsg := sig.Serialize()
-			resS, err := c.UploadSignature(c.ctx, &pb.UploadSignatureRequest{
-				ProofId:   c.lastProofID,
-				Signature: common.Bytes2Hex(sigMsg[:]),
+			resS, err := c.CommitBlock(c.ctx, &types.CommitBlockRequest{
+				BlockNumber: c.lastBlockNumber,
+				Signature:   common.Bytes2Hex(sigMsg[:]),
 			})
 			if err != nil {
 				fmt.Printf("failed to upload signature: %v\n", err)
@@ -147,8 +153,8 @@ func (c *Client) Start() {
 				continue
 			}
 
+			c.lastBlockNumber += 1
 			fmt.Printf("uploaded the signature: %v\n", resS)
-
 		}
 	}
 }
