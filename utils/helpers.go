@@ -12,6 +12,7 @@ import (
 
 	host "github.com/libp2p/go-libp2p/core/host"
 	peer "github.com/libp2p/go-libp2p/core/peer"
+	"golang.org/x/crypto/sha3"
 
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/libp2p/go-libp2p/p2p/discovery/mdns"
@@ -160,4 +161,13 @@ func (d *TimeDuration) UnmarshalText(text []byte) error {
 	}
 	*d = TimeDuration(parsedDuration)
 	return nil
+}
+
+// Hash calculates  the keccak hash of elements.
+func Hash(data ...[]byte) []byte {
+	hash := sha3.NewLegacyKeccak256()
+	for _, d := range data {
+		hash.Write(d[:]) //nolint:errcheck,gosec
+	}
+	return hash.Sum(nil)
 }
