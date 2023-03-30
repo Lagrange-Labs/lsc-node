@@ -42,7 +42,7 @@ lint:
 
 
 # Local testnet
-localnet-build-nodes: localnet-stop docker-build
+localnet-start: localnet-stop docker-build
 	docker-compose up -d
 
 localnet-stop:
