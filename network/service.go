@@ -131,8 +131,11 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 	if block.Header.BlockNumber != req.BlockNumber {
 		return nil, fmt.Errorf("the proof id is not correct")
 	}
-
-	s.publicKeys = append(s.publicKeys, node.PublicKey)
+	pk := new(bls.PublicKey)
+	if err := pk.Deserialize(common.FromHex(node.PublicKey)); err != nil {
+		return nil, err
+	}
+	s.publicKeys = append(s.publicKeys, pk)
 	sig := new(bls.Signature)
 	if err := sig.Deserialize(common.FromHex(req.Signature)); err != nil {
 		return nil, err
