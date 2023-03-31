@@ -1,7 +1,7 @@
 package store
 
-// NewDB returns a new database based on the given configuration.
-func NewDB(cfg Config) (DB, error) {
+// NewStorage returns a new database based on the given configuration.
+func NewStorage(cfg Config) (Storage, error) {
 	if cfg.BackendType == "memdb" {
 		return NewMemDB()
 	}

@@ -11,6 +11,7 @@ import (
 
 	"github.com/Lagrange-Labs/Lagrange-Node/config"
 	"github.com/Lagrange-Labs/Lagrange-Node/network"
+	"github.com/Lagrange-Labs/Lagrange-Node/sequencer"
 	"github.com/Lagrange-Labs/Lagrange-Node/store"
 )
 
@@ -41,7 +42,7 @@ func main() {
 		{
 			Name:    "run-server",
 			Aliases: []string{},
-			Usage:   "Run the lagrange sequencer",
+			Usage:   "Run the lagrange sequencer server",
 			Action:  runServer,
 			Flags:   flags,
 		},
@@ -50,6 +51,13 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Run the lagrange client node",
 			Action:  runClient,
+			Flags:   flags,
+		},
+		{
+			Name:    "run-sequencer",
+			Aliases: []string{},
+			Usage:   "Run the lagrange sequencer node",
+			Action:  runSequencer,
 			Flags:   flags,
 		},
 	}
@@ -68,12 +76,12 @@ func runServer(ctx *cli.Context) error {
 		return err
 	}
 
-	db, err := store.NewDB(cfg.Store)
+	storage, err := store.NewStorage(cfg.Store)
 	if err != nil {
 		return err
 	}
 
-	if err = network.RunServer(cfg.Server, db); err != nil {
+	if err = network.RunServer(&cfg.Server, storage); err != nil {
 		return err
 	}
 
@@ -91,12 +99,40 @@ func runClient(ctx *cli.Context) error {
 		return err
 	}
 
-	client, err := network.NewClient(cfg.Client)
+	client, err := network.NewClient(&cfg.Client)
 	if err != nil {
 		return err
 	}
 
 	go client.Start()
+
+	// Wait for an in interrupt.
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	<-ch
+
+	return nil
+}
+
+func runSequencer(ctx *cli.Context) error {
+	cfg, err := config.Load(ctx)
+	if err != nil {
+		return err
+	}
+
+	storage, err := store.NewStorage(cfg.Store)
+	if err != nil {
+		return err
+	}
+
+	sequencer, err := sequencer.NewSequencer(&cfg.Sequencer, storage)
+	if err != nil {
+		return err
+	}
+
+	if err := sequencer.Start(); err != nil {
+		return err
+	}
 
 	// Wait for an in interrupt.
 	ch := make(chan os.Signal, 1)

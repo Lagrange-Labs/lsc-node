@@ -7,7 +7,7 @@ GOBASE := $(shell pwd)
 GOBIN := $(GOBASE)/dist
 GOENVVARS := GOBIN=$(GOBIN) CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH)
 GOBINARY := lagrange-node
-GOCMD := $(GOBASE)/cmd/simapp/
+GOCMD := $(GOBASE)/cmd/baseapp/
 SCRIPTS_FOLDER=$(GOBASE)/scripts
 
 LDFLAGS += -X 'github.com/Lagrange-Labs/Lagrange-Node.Version=$(VERSION)'
@@ -32,7 +32,7 @@ proto-gen:
 .PHONY: proto-gen
 
 
-# Linting
+# Linting, Teseting
 golangci_lint_cmd=github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1
 
 lint:
@@ -40,6 +40,9 @@ lint:
 	@ go run $(golangci_lint_cmd) run --timeout=10m
 .PHONY:	lint
 
+test:
+	go test ./... --timeout=10m
+.PHONY: test
 
 # Local testnet
 localnet-start: localnet-stop docker-build
