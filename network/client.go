@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"fmt"
+	"strconv"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -12,7 +13,8 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/network/types"
+	"github.com/Lagrange-Labs/lagrange-node/network/types"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 // Client is a gRPC client to join the network
@@ -116,8 +118,16 @@ func (c *Client) Start() {
 				continue
 			}
 			// TODO proof validation
-
 			fmt.Printf("got the current block: %v\n", res.Block)
+
+			// verify the delta hash
+			// verify the block hash
+			// verify the proposer signature
+			verified, err := utils.VerifySignature(common.FromHex(res.Block.Header.ProposerPubKey), common.FromHex(res.Block.Header.BlockHash), common.FromHex(res.Block.Header.ProposerSignature))
+			if err != nil || !verified {
+				fmt.Printf("failed to verify the proposer signature: %v\n", err)
+				continue
+			}
 
 			msg, err := proto.Marshal(res.Block)
 			if err != nil {
@@ -136,6 +146,15 @@ func (c *Client) Start() {
 			})
 			if err != nil {
 				fmt.Printf("failed to upload signature: %v\n", err)
+				if err == ErrWrongBlockNumber {
+					num, err := strconv.ParseUint(resS.Message, 10, 64)
+					if err != nil {
+						fmt.Println("failed to parse the loast block number:", err)
+						return
+					}
+					// TODO synchronize the history blocks
+					c.lastBlockNumber = num
+				}
 				continue
 			}
 			if !resS.Result {
