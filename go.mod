@@ -7,10 +7,11 @@ require (
 	github.com/libp2p/go-libp2p v0.25.0
 	github.com/libp2p/go-libp2p-pubsub v0.9.3
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/multiformats/go-multiaddr v0.8.0
+	github.com/multiformats/go-multiaddr v0.9.0
 	github.com/spf13/viper v1.15.0
 	github.com/umbracle/go-eth-consensus v0.1.3-0.20230304221055-e39ee9cb4167
 	github.com/urfave/cli/v2 v2.25.1
+	golang.org/x/crypto v0.4.0
 	google.golang.org/grpc v1.54.0
 	google.golang.org/protobuf v1.28.1
 )
@@ -121,7 +122,6 @@ require (
 	go.uber.org/fx v1.18.2 // indirect
 	go.uber.org/multierr v1.8.0 // indirect
 	go.uber.org/zap v1.24.0 // indirect
-	golang.org/x/crypto v0.4.0 // indirect
 	golang.org/x/exp v0.0.0-20230206171751-46f607a40771 // indirect
 	golang.org/x/mod v0.8.0 // indirect
 	golang.org/x/net v0.8.0 // indirect
