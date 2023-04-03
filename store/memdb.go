@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/network"
 	"github.com/Lagrange-Labs/Lagrange-Node/network/types"
+	sequencertypes "github.com/Lagrange-Labs/Lagrange-Node/sequencer/types"
 	"github.com/Lagrange-Labs/Lagrange-Node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/umbracle/go-eth-consensus/bls"
@@ -19,7 +19,7 @@ const KeyLen = 32
 
 // DB is an in-memory database.
 type MemDB struct {
-	nodes   map[string]network.ClientNode
+	nodes   map[string]sequencertypes.ClientNode
 	blocks  []*types.Block
 	privKey *bls.SecretKey
 	pubKey  string
@@ -27,7 +27,7 @@ type MemDB struct {
 
 // NewMemDB creates a new in-memory database.
 func NewMemDB() (*MemDB, error) {
-	nodes := make(map[string]network.ClientNode, 0)
+	nodes := make(map[string]sequencertypes.ClientNode, 0)
 	priv := new(bls.SecretKey)
 	if err := priv.Unmarshal(common.FromHex("0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f652c")); err != nil {
 		panic(err)
@@ -40,21 +40,16 @@ func NewMemDB() (*MemDB, error) {
 
 // AddNode adds a client node to the network.
 func (d *MemDB) AddNode(ctx context.Context, stakeAdr, pubKey, ipAdr string) error {
-	pk := new(bls.PublicKey)
-	err := pk.Deserialize(common.FromHex(pubKey))
-	if err != nil {
-		return err
-	}
-	d.nodes[ipAdr] = network.ClientNode{
+	d.nodes[ipAdr] = sequencertypes.ClientNode{
 		StakeAddress: stakeAdr,
-		PublicKey:    pk,
+		PublicKey:    pubKey,
 		IPAddress:    ipAdr,
 	}
 	return nil
 }
 
 // GetNode returns the node with the given IP address.
-func (d *MemDB) GetNode(ctx context.Context, ip string) (*network.ClientNode, error) {
+func (d *MemDB) GetNode(ctx context.Context, ip string) (*sequencertypes.ClientNode, error) {
 	node, ok := d.nodes[ip]
 	if !ok {
 		return nil, nil
@@ -78,6 +73,21 @@ func (d *MemDB) GetBlock(ctx context.Context, blockNumber uint64) (*types.Block,
 		return nil, fmt.Errorf("the block %d is not ready", blockNumber)
 	}
 	return d.blocks[blockNumber], nil
+}
+
+// AddBlock adds a new block to the database.
+func (d *MemDB) AddBlock(ctx context.Context, block *types.Block) error {
+	return nil
+}
+
+// UpdateNode updates the node status in the database.
+func (d *MemDB) UpdateNode(ctx context.Context, node *sequencertypes.ClientNode) error {
+	return nil
+}
+
+// GetLastBlockNumber returns the last block number.
+func (d *MemDB) GetLastBlockNumber(ctx context.Context) (uint64, error) {
+	return uint64(len(d.blocks)), nil
 }
 
 func randomHex(n int) string {

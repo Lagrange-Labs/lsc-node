@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/Lagrange-Labs/Lagrange-Node/network"
-	"github.com/Lagrange-Labs/Lagrange-Node/node"
+	"github.com/Lagrange-Labs/Lagrange-Node/sequencer"
 	"github.com/Lagrange-Labs/Lagrange-Node/store"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
@@ -19,10 +19,11 @@ const (
 )
 
 type Config struct {
-	Node   node.Config
-	Server network.ServerConfig
-	Client network.ClientConfig
-	Store  store.Config
+	Node      sequencer.Config
+	Server    network.ServerConfig
+	Client    network.ClientConfig
+	Store     store.Config
+	Sequencer sequencer.Config
 }
 
 // Default parses the default configuration values.
