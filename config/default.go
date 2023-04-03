@@ -27,4 +27,9 @@ PullInterval = "2s"
 
 [Store]
 BackendType = "memdb"
+
+[Sequencer]
+EthereumURL = "https://34.229.73.193:8545"
+StakingSCAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
+StackingCheckInterval = 20
 `

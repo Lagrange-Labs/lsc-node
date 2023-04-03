@@ -15,16 +15,6 @@ import (
 	"github.com/Lagrange-Labs/Lagrange-Node/network/types"
 )
 
-// ClientNode is a struct to store the information of a node.
-type ClientNode struct {
-	// PublicKey is the public key of the node.
-	PublicKey *bls.PublicKey
-	// IPAddress is the IP address of the client node.
-	IPAddress string
-	// StakeAddress is the ethereum address of the staking.
-	StakeAddress string
-}
-
 // Client is a gRPC client to join the network
 type Client struct {
 	types.NetworkServiceClient
@@ -37,7 +27,7 @@ type Client struct {
 }
 
 // NewClient creates a new client.
-func NewClient(cfg ClientConfig) (*Client, error) {
+func NewClient(cfg *ClientConfig) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	opts := []grpc.DialOption{

@@ -13,7 +13,7 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
-func RunServer(cfg ServerConfig, storage storageInterface) error {
+func RunServer(cfg *ServerConfig, storage storageInterface) error {
 	ctx := context.Background()
 
 	if len(cfg.GRPCPort) == 0 {
