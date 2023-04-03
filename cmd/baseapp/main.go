@@ -1,8 +1,6 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"runtime"
@@ -10,6 +8,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/Lagrange-Labs/Lagrange-Node/config"
+	"github.com/Lagrange-Labs/Lagrange-Node/logger"
 	"github.com/Lagrange-Labs/Lagrange-Node/network"
 	"github.com/Lagrange-Labs/Lagrange-Node/sequencer"
 	"github.com/Lagrange-Labs/Lagrange-Node/store"
@@ -64,7 +63,7 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		logger.Log.Fatal(err)
 		os.Exit(1)
 	}
 
@@ -144,8 +143,9 @@ func runSequencer(ctx *cli.Context) error {
 
 func versionCmd(*cli.Context) error {
 	w := os.Stdout
-	fmt.Fprintf(w, "Version:      %s\n", "v0.1.0")
-	fmt.Fprintf(w, "Go version:   %s\n", runtime.Version())
-	fmt.Fprintf(w, "OS/Arch:      %s/%s\n", runtime.GOOS, runtime.GOARCH)
+	logger.Log.Info(w)
+	logger.Log.Infof("Version:      %s", "v0.1.0")
+	logger.Log.Infof("Go version:   %s", runtime.Version())
+	logger.Log.Infof("OS/Arch:      %s/%s", runtime.GOOS, runtime.GOARCH)
 	return nil
 }
