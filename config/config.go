@@ -5,9 +5,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/network"
-	"github.com/Lagrange-Labs/Lagrange-Node/sequencer"
-	"github.com/Lagrange-Labs/Lagrange-Node/store"
+	"github.com/Lagrange-Labs/lagrange-node/network"
+	"github.com/Lagrange-Labs/lagrange-node/sequencer"
+	"github.com/Lagrange-Labs/lagrange-node/store"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"

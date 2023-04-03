@@ -8,7 +8,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/utils"
 	common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -22,7 +21,6 @@ func LoadEthClient(ethEndpoint string) *ethClient.Client {
 	if err != nil {
 		panic(err)
 	}
-	utils.LogMessage("Endpoint Loaded: "+ethEndpoint, utils.LOG_INFO)
 	return eth
 }
 

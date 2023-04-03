@@ -6,7 +6,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/sequencer/nodestaking"
+	"github.com/Lagrange-Labs/lagrange-node/sequencer/nodestaking"
 )
 
 // Sequencer is the main component of the lagrange node.
