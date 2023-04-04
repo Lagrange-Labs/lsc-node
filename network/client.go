@@ -102,7 +102,7 @@ func (c *Client) Start() {
 		logger.Log.Panicf("failed to join the network: %s", res.Message)
 	}
 
-	logger.Log.Info("joined the network: %v\n", req)
+	logger.Log.Infof("joined the network: %v\n", req)
 
 	for {
 		select {
@@ -112,7 +112,7 @@ func (c *Client) Start() {
 			// TODO logging error
 			res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber}) // TODO track the block number
 			if err != nil {
-				logger.Log.Error("failed to get the last block: %v\n", err)
+				logger.Log.Errorf("failed to get the last block: %v\n", err)
 				continue
 			}
 			// TODO proof validation
