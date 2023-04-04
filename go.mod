@@ -9,7 +9,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/umbracle/go-eth-consensus v0.1.3-0.20230304221055-e39ee9cb4167
 	github.com/urfave/cli/v2 v2.25.1
-	golang.org/x/crypto v0.4.0
+	golang.org/x/crypto v0.7.0
 	google.golang.org/grpc v1.54.0
 	google.golang.org/protobuf v1.28.1
 )
