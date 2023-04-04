@@ -172,6 +172,9 @@ func (d *MemDB) updateBlock(interval time.Duration) {
 
 	for {
 		<-ticker.C
-		d.AddBlock(context.Background(), nil)
+		if err := d.AddBlock(context.Background(), nil); err != nil {
+			panic(err)
+		}
+
 	}
 }
