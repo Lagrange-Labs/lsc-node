@@ -20,9 +20,9 @@ func newTestService() (*sequencerService, error) {
 		return nil, err
 	}
 
-	storage.AddBlock(context.Background(), nil)
-	storage.AddBlock(context.Background(), nil)
-	storage.AddBlock(context.Background(), nil)
+	storage.AddBlock(context.Background(), nil) //nolint:errcheck
+	storage.AddBlock(context.Background(), nil) //nolint:errcheck
+	storage.AddBlock(context.Background(), nil) //nolint:errcheck
 
 	return &sequencerService{
 		storage:   storage,
