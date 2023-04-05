@@ -73,7 +73,7 @@ func (d *MemDB) GetLastBlock(ctx context.Context) (*types.Block, error) {
 func (d *MemDB) GetBlock(ctx context.Context, blockNumber uint64) (*types.Block, error) {
 	if blockNumber >= uint64(len(d.blocks)) {
 		errMsg := fmt.Sprintf("the block %d is not ready", blockNumber)
-		logger.Log.WithError(errors.New(errMsg)).Error("Failed to get block")
+		logger.WithError(errors.New(errMsg)).Error("Failed to get block")
 		return nil, errors.New(errMsg)
 	}
 	return d.blocks[blockNumber], nil

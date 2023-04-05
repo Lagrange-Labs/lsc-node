@@ -1,31 +1,72 @@
 package logger
 
 import (
-	"io"
 	"os"
 
-	"github.com/natefinch/lumberjack"
 	"github.com/sirupsen/logrus"
 )
 
-var Log *logrus.Logger
+var log *logrus.Logger
 
 func init() {
-	Log = logrus.New()
+	log = logrus.New()
 
-	// Configure log rotation
-	lumberjackLogWriter := &lumberjack.Logger{
-		Filename:   "/var/log/lagrange-node/lagrange-node.log",
-		MaxSize:    1,  // Megabytes
-		MaxBackups: 10, // max number of log rotated log files to keep
-		MaxAge:     7,  // Days
-		Compress:   true,
-	}
-
-	// Set the logger output to both stdout and the log file
-	Log.SetOutput(io.MultiWriter(os.Stdout, lumberjackLogWriter))
+	// Set the logger output to stdout
+	log.SetOutput(os.Stdout)
 
 	// Set the log level and format
-	Log.SetLevel(logrus.DebugLevel)
-	Log.SetFormatter(&logrus.JSONFormatter{})
+	log.SetLevel(logrus.DebugLevel)
+	log.SetFormatter(&logrus.JSONFormatter{})
+}
+
+func Debug(args ...interface{}) {
+	log.Debug(args...)
+}
+
+func Debugf(str string, args ...interface{}) {
+	log.Debugf(str, args...)
+}
+
+func Info(args ...interface{}) {
+	log.Info(args...)
+}
+
+func Infof(str string, args ...interface{}) {
+	log.Infof(str, args...)
+}
+
+func Warn(args ...interface{}) {
+	log.Warn(args...)
+}
+
+func Warnf(str string, args ...interface{}) {
+	log.Warnf(str, args...)
+}
+
+func Error(args ...interface{}) {
+	log.Error(args...)
+}
+
+func Errorf(str string, args ...interface{}) {
+	log.Errorf(str, args...)
+}
+
+func Fatal(args ...interface{}) {
+	log.Fatal(args...)
+}
+
+func Fatalf(str string, args ...interface{}) {
+	log.Fatalf(str, args...)
+}
+
+func Panic(args ...interface{}) {
+	log.Panic(args...)
+}
+
+func Panicf(str string, args ...interface{}) {
+	log.Panicf(str, args...)
+}
+
+func WithError(err error) *logrus.Entry {
+	return log.WithError(err)
 }

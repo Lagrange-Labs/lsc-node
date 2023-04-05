@@ -63,7 +63,7 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		logger.Log.Fatal(err)
+		logger.Fatal(err)
 		os.Exit(1)
 	}
 
@@ -143,9 +143,9 @@ func runSequencer(ctx *cli.Context) error {
 
 func versionCmd(*cli.Context) error {
 	w := os.Stdout
-	logger.Log.Info(w)
-	logger.Log.Infof("Version:      %s", "v0.1.0")
-	logger.Log.Infof("Go version:   %s", runtime.Version())
-	logger.Log.Infof("OS/Arch:      %s/%s", runtime.GOOS, runtime.GOARCH)
+	logger.Info(w)
+	logger.Infof("Version:      %s", "v0.1.0")
+	logger.Infof("Go version:   %s", runtime.Version())
+	logger.Infof("OS/Arch:      %s/%s", runtime.GOOS, runtime.GOARCH)
 	return nil
 }

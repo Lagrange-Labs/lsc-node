@@ -19,7 +19,7 @@ func RunServer(cfg *ServerConfig, storage storageInterface) error {
 
 	if len(cfg.GRPCPort) == 0 {
 		errMsg := fmt.Sprintf("invalid TCP port for gRPC server: '%s'", cfg.GRPCPort)
-		logger.Log.WithError(errors.New(errMsg)).Error("Failed to start gRPC server")
+		logger.WithError(errors.New(errMsg)).Error("Failed to start gRPC server")
 		return errors.New(errMsg)
 	}
 
@@ -83,6 +83,6 @@ func runGRPCServer(ctx context.Context, svc types.NetworkServiceServer, port str
 		}
 	}()
 
-	logger.Log.Info("gRPC Server is serving at ", port)
+	logger.Info("gRPC Server is serving at ", port)
 	return server.Serve(listen)
 }

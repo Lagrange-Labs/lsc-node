@@ -20,7 +20,7 @@ func LoadEthClient(ethEndpoint string) *ethClient.Client {
 	if err != nil {
 		panic(err)
 	}
-	logger.Log.Info("Endpoint Loaded: " + ethEndpoint)
+	logger.Info("Endpoint Loaded: " + ethEndpoint)
 	return eth
 }
 
@@ -42,7 +42,7 @@ func LoadEthClientMulti(ethEndpoint string) []*ethClient.Client {
 func LoadRpcClient(ethEndpoint string) *rpc.Client {
 	rpc, err := rpc.DialHTTP(ethEndpoint)
 	if err != nil {
-		logger.Log.Fatal(err)
+		logger.Fatal(err)
 	}
 	defer rpc.Close()
 	return rpc
@@ -59,11 +59,11 @@ func RpcCall(rpc *rpc.Client, To string, Data string) {
 
 	req := request{To, Data}
 	if err := rpc.Call(&result, "eth_call", req, "latest"); err != nil {
-		logger.Log.Fatal(err)
+		logger.Fatal(err)
 	}
 
 	owner := common.HexToAddress(result)
-	logger.Log.Infof("RPC Result: %s\n", owner.Hex()) // 0x281017b4E914b79371d62518b17693B36c7a221e
+	logger.Infof("RPC Result: %s\n", owner.Hex()) // 0x281017b4E914b79371d62518b17693B36c7a221e
 }
 
 // Reference function testing retrieval of Ethereum transaction and balance.
@@ -71,15 +71,15 @@ func EthTest(eth *ethClient.Client) {
 	ctx := context.Background()
 	tx, pending, _ := eth.TransactionByHash(ctx, common.HexToHash("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266"))
 	if !pending {
-		logger.Log.Info("tx:", tx)
+		logger.Info("tx:", tx)
 	}
 
 	account := common.HexToAddress("0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266")
 	balance, err := eth.BalanceAt(ctx, account, nil)
 	if err != nil {
-		logger.Log.Fatal(err)
+		logger.Fatal(err)
 	}
-	logger.Log.Info("Balance: ", balance) // 25893180161173005034
+	logger.Info("Balance: ", balance) // 25893180161173005034
 }
 
 // Returns Keccak hash of string as bytes.
@@ -97,7 +97,7 @@ func GetNonce(client *ethClient.Client, fromAddress common.Address) uint64 {
 	if err != nil {
 		panic(err)
 	}
-	logger.Log.Info("Nonce: ", nonce)
+	logger.Info("Nonce: ", nonce)
 	return nonce
 }
 
@@ -105,7 +105,7 @@ func GetNonce(client *ethClient.Client, fromAddress common.Address) uint64 {
 func GetGasPrice(client *ethClient.Client) *big.Int {
 	gasPrice, err := client.SuggestGasPrice(context.Background())
 	if err != nil {
-		logger.Log.Fatal(err)
+		logger.Fatal(err)
 	}
 	return gasPrice
 }
