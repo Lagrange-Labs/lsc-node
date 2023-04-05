@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"errors"
 	"fmt"
 	"net"
 	"os"
@@ -18,9 +17,7 @@ func RunServer(cfg *ServerConfig, storage storageInterface) error {
 	ctx := context.Background()
 
 	if len(cfg.GRPCPort) == 0 {
-		errMsg := fmt.Sprintf("invalid TCP port for gRPC server: '%s'", cfg.GRPCPort)
-		logger.WithError(errors.New(errMsg)).Error("Failed to start gRPC server")
-		return errors.New(errMsg)
+		return fmt.Errorf("invalid TCP port for gRPC server: '%s'", cfg.GRPCPort)
 	}
 
 	sequencerService, err := NewSequencerService(storage)

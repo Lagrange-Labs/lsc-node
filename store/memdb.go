@@ -4,11 +4,9 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"errors"
 	"fmt"
 	"time"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/logger"
 	"github.com/Lagrange-Labs/Lagrange-Node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/Lagrange-Node/sequencer/types"
 	"github.com/Lagrange-Labs/Lagrange-Node/utils"
@@ -72,9 +70,7 @@ func (d *MemDB) GetLastBlock(ctx context.Context) (*types.Block, error) {
 // GetBlock returns the block for the given block number.
 func (d *MemDB) GetBlock(ctx context.Context, blockNumber uint64) (*types.Block, error) {
 	if blockNumber >= uint64(len(d.blocks)) {
-		errMsg := fmt.Sprintf("the block %d is not ready", blockNumber)
-		logger.WithError(errors.New(errMsg)).Error("Failed to get block")
-		return nil, errors.New(errMsg)
+		return nil, fmt.Errorf("the block %d is not ready", blockNumber)
 	}
 	return d.blocks[blockNumber], nil
 }
