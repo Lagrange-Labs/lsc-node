@@ -2,7 +2,6 @@ package utils
 
 import (
 	"bufio"
-	"fmt"
 	"os"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 
 	context "context"
 
+	"github.com/Lagrange-Labs/Lagrange-Node/logger"
 	host "github.com/libp2p/go-libp2p/core/host"
 	peer "github.com/libp2p/go-libp2p/core/peer"
 	"golang.org/x/crypto/sha3"
@@ -41,11 +41,11 @@ type DiscoveryNotifee struct {
 // the PubSub system will automatically start interacting with them if they also
 // support PubSub.
 func (n *DiscoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
-	LogMessage(fmt.Sprintf("discovered new peer %s", pi.ID.Pretty()), LOG_INFO)
-	LogMessage("peer.AddrInfo: "+fmt.Sprintf("%v", pi), LOG_INFO)
+	logger.Infof("discovered new peer %s", pi.ID.Pretty())
+	logger.Infof("peer.AddrInfo: %v", pi)
 	err := n.h.Connect(context.Background(), pi)
 	if err != nil {
-		LogMessage(fmt.Sprintf("error connecting to peer %s: %s", pi.ID.Pretty(), err), LOG_ERROR)
+		logger.Errorf("error connecting to peer %s: %s", pi.ID.Pretty(), err)
 	}
 }
 
@@ -63,57 +63,9 @@ func ShortID(p peer.ID) string {
 	return pretty[len(pretty)-8:]
 }
 
-const (
-	InfoColor    = "\033[1;34m%s\033[0m"
-	NoticeColor  = "\033[1;36m%s\033[0m"
-	WarningColor = "\033[1;33m%s\033[0m"
-	ErrorColor   = "\033[1;31m%s\033[0m"
-	DebugColor   = "\033[0;36m%s\033[0m"
-)
-
-const (
-	LOG_INFO    = 1
-	LOG_NOTICE  = 2
-	LOG_WARNING = 3
-	LOG_ERROR   = 4
-	LOG_DEBUG   = 5
-)
-
-func getTimestamp() string {
-	time := time.Now()
-	return time.Format("2006-01-02 15:04:05")
-}
-
-func LogMessage(message string, level int) {
-	// if LOG_LEVEL < level {
-	// 	return
-	// }
-
-	var color string
-	var cat string
-	switch level {
-	case LOG_INFO:
-		color = InfoColor
-		cat = "INFO"
-	case LOG_NOTICE:
-		color = NoticeColor
-		cat = "NOTICE"
-	case LOG_WARNING:
-		color = WarningColor
-		cat = "WARN"
-	case LOG_ERROR:
-		color = ErrorColor
-		cat = "ERROR"
-	case LOG_DEBUG:
-		color = DebugColor
-		cat = "DEBUG"
-	}
-	fmt.Printf("%s %s [ %v ] %v\n", color, cat, getTimestamp(), message)
-}
-
 func Scan(prompt string) string {
 	if prompt != "" {
-		fmt.Println(prompt)
+		logger.Info(prompt)
 	}
 	reader := bufio.NewReader(os.Stdin)
 	input, _ := reader.ReadString('\n')

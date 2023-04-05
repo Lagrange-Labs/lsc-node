@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"os"
 	"os/signal"
 	"runtime"
@@ -10,6 +9,7 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/Lagrange-Labs/Lagrange-Node/config"
+	"github.com/Lagrange-Labs/Lagrange-Node/logger"
 	"github.com/Lagrange-Labs/Lagrange-Node/network"
 	"github.com/Lagrange-Labs/Lagrange-Node/sequencer"
 	"github.com/Lagrange-Labs/Lagrange-Node/store"
@@ -64,7 +64,7 @@ func main() {
 
 	err := app.Run(os.Args)
 	if err != nil {
-		log.Fatal(err)
+		logger.Fatal(err)
 		os.Exit(1)
 	}
 
