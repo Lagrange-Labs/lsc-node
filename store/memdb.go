@@ -7,8 +7,8 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/Lagrange-Node/sequencer/types"
+	synchronizertypes "github.com/Lagrange-Labs/Lagrange-Node/synchronizer/types"
 	"github.com/Lagrange-Labs/Lagrange-Node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/umbracle/go-eth-consensus/bls"
@@ -20,7 +20,7 @@ const KeyLen = 32
 // DB is an in-memory database.
 type MemDB struct {
 	nodes   map[string]sequencertypes.ClientNode
-	blocks  []*types.Block
+	blocks  []*sequencertypes.Block
 	privKey *bls.SecretKey
 	pubKey  string
 }
@@ -33,7 +33,7 @@ func NewMemDB() (*MemDB, error) {
 		panic(err)
 	}
 	pubKeyMsg := priv.GetPublicKey().Serialize()
-	db := &MemDB{nodes: nodes, blocks: []*types.Block{}, privKey: priv, pubKey: common.Bytes2Hex(pubKeyMsg[:])}
+	db := &MemDB{nodes: nodes, blocks: []*sequencertypes.Block{}, privKey: priv, pubKey: common.Bytes2Hex(pubKeyMsg[:])}
 	go db.updateBlock(5 * time.Second)
 	return db, nil
 }
@@ -63,12 +63,12 @@ func (d *MemDB) GetNodeCount(ctx context.Context) (uint16, error) {
 }
 
 // GetLastBlock returns the last block that was submitted to the network.
-func (d *MemDB) GetLastBlock(ctx context.Context) (*types.Block, error) {
+func (d *MemDB) GetLastBlock(ctx context.Context) (*sequencertypes.Block, error) {
 	return d.blocks[len(d.blocks)-1], nil
 }
 
 // GetBlock returns the block for the given block number.
-func (d *MemDB) GetBlock(ctx context.Context, blockNumber uint64) (*types.Block, error) {
+func (d *MemDB) GetBlock(ctx context.Context, blockNumber uint64) (*sequencertypes.Block, error) {
 	if blockNumber >= uint64(len(d.blocks)) {
 		return nil, fmt.Errorf("the block %d is not ready", blockNumber)
 	}
@@ -76,7 +76,7 @@ func (d *MemDB) GetBlock(ctx context.Context, blockNumber uint64) (*types.Block,
 }
 
 // AddBlock adds a new block to the database.
-func (d *MemDB) AddBlock(ctx context.Context, block *types.Block) error {
+func (d *MemDB) AddBlock(ctx context.Context, block *sequencertypes.Block) error {
 	return nil
 }
 
@@ -109,23 +109,23 @@ func (d *MemDB) updateBlock(interval time.Duration) {
 		if blockNumber > 0 {
 			parentHash = d.blocks[len(d.blocks)-1].Header.BlockHash
 		}
-		lastBlock := &types.Block{
-			Delta: &types.BlockDelta{
+		lastBlock := &sequencertypes.Block{
+			Delta: &synchronizertypes.BlockDelta{
 				BlockNumber: blockNumber,
 				StateRoot:   randomHex(32),
 				Chain:       "ethereum",
-				Delta: []*types.DeltaItem{
+				Delta: []*synchronizertypes.DeltaItem{
 					{
 						Address: randomHex(32),
 						Key:     "balance",
-						Value:   &types.DeltaItem_StringValue{StringValue: "100000"},
+						Value:   &synchronizertypes.DeltaItem_StringValue{StringValue: "100000"},
 					},
 					{
 						Address: randomHex(32),
 						Key:     "storage",
-						Value: &types.DeltaItem_StorageValue{
-							StorageValue: &types.StorageItemList{
-								Items: []*types.StorageItem{
+						Value: &synchronizertypes.DeltaItem_StorageValue{
+							StorageValue: &synchronizertypes.StorageItemList{
+								Items: []*synchronizertypes.StorageItem{
 									{
 										Skey:   randomHex(32),
 										Svalue: randomHex(32),
@@ -145,7 +145,7 @@ func (d *MemDB) updateBlock(interval time.Duration) {
 				},
 			},
 			Proof: randomHex(32),
-			Header: &types.BlockHeader{
+			Header: &sequencertypes.BlockHeader{
 				BlockNumber:    blockNumber,
 				ParentHash:     parentHash,
 				ProposerPubKey: d.pubKey,

@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.3.0
 // - protoc             (unknown)
-// source: network.proto
+// source: network/v1/network.proto
 
 package types
 
@@ -185,5 +185,5 @@ var NetworkService_ServiceDesc = grpc.ServiceDesc{
 		},
 	},
 	Streams:  []grpc.StreamDesc{},
-	Metadata: "network.proto",
+	Metadata: "network/v1/network.proto",
 }

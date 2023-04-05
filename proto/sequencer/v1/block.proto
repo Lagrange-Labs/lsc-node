@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package sequencer.v1;
+
+import "synchronizer/v1/delta.proto";
+
+option go_package = "github.com/Lagrange-Labs/Lagrange-Node/sequencer/types";
+
+// BlockHeader is the block header structure
+message BlockHeader {
+    uint64 block_number = 1;
+    string parent_hash = 2;
+    string block_hash = 3;
+    string proposer_pub_key = 4;
+    string proposer_signature = 5;
+}
+
+// Block is the block body structure for zk proofs of the block delta
+message Block {
+    BlockHeader header = 1;
+    synchronizer.v1.BlockDelta delta = 2;
+    string proof = 3;
+    string signature = 4;
+}
