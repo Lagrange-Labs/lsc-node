@@ -44,20 +44,20 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 
 	watcher, err := healthClient.Watch(hctx, &grpc_health_v1.HealthCheckRequest{})
 	if err != nil {
-		logger.Log.Error("Failed to check gRPC health:", err)
+		logger.Error("Failed to check gRPC health:", err)
 		panic(err)
 	}
 
 	for {
 		response, err := watcher.Recv()
 		if err != nil {
-			logger.Log.Info("Failed to get gRPC health response:", err)
+			logger.Info("Failed to get gRPC health response:", err)
 		}
 		if response.Status == grpc_health_v1.HealthCheckResponse_SERVING {
-			logger.Log.Info("gRPC server is healthy")
+			logger.Info("gRPC server is healthy")
 			break
 		} else {
-			logger.Log.Info("gRPC server is not healthy")
+			logger.Info("gRPC server is not healthy")
 		}
 	}
 
@@ -99,10 +99,10 @@ func (c *Client) Start() {
 	}
 
 	if !res.Result {
-		logger.Log.Panicf("failed to join the network: %s", res.Message)
+		logger.Panicf("failed to join the network: %s", res.Message)
 	}
 
-	logger.Log.Infof("joined the network: %v\n", req)
+	logger.Infof("joined the network: %v\n", req)
 
 	for {
 		select {
@@ -112,21 +112,21 @@ func (c *Client) Start() {
 			// TODO logging error
 			res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber}) // TODO track the block number
 			if err != nil {
-				logger.Log.Errorf("failed to get the last block: %v\n", err)
+				logger.Errorf("failed to get the last block: %v\n", err)
 				continue
 			}
 			// TODO proof validation
 
-			logger.Log.Infof("got the current block: %v\n", res.Block)
+			logger.Infof("got the current block: %v\n", res.Block)
 
 			msg, err := proto.Marshal(res.Block)
 			if err != nil {
-				logger.Log.Errorf("failed to marshal the block: %v\n", err)
+				logger.Errorf("failed to marshal the block: %v\n", err)
 				continue
 			}
 			sig, err := c.privateKey.Sign(msg)
 			if err != nil {
-				logger.Log.Errorf("failed to sign the block: %v\n", err)
+				logger.Errorf("failed to sign the block: %v\n", err)
 				continue
 			}
 			sigMsg := sig.Serialize()
@@ -135,16 +135,16 @@ func (c *Client) Start() {
 				Signature:   common.Bytes2Hex(sigMsg[:]),
 			})
 			if err != nil {
-				logger.Log.Errorf("failed to upload signature: %v\n", err)
+				logger.Errorf("failed to upload signature: %v\n", err)
 				continue
 			}
 			if !resS.Result {
-				logger.Log.Infof("failed to upload signature: %s\n", resS.Message)
+				logger.Infof("failed to upload signature: %s\n", resS.Message)
 				continue
 			}
 
 			c.lastBlockNumber += 1
-			logger.Log.Infof("uploaded the signature: %v\n", resS)
+			logger.Infof("uploaded the signature: %v\n", resS)
 		}
 	}
 }

@@ -39,7 +39,7 @@ func NewSequencerService(storage storageInterface) (types.NetworkServiceServer, 
 
 // JoinNetwork is a method to join the attestation network.
 func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetworkRequest) (*types.JoinNetworkResponse, error) {
-	logger.Log.Infof("JoinNetwork request: %v\n", req)
+	logger.Infof("JoinNetwork request: %v\n", req)
 
 	// Verify signature
 	sigMessage := req.Signature
@@ -80,7 +80,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	}
 	s.threshold = count * 2 / 3
 
-	logger.Log.Infof("New node %v joined the network\n", req)
+	logger.Infof("New node %v joined the network\n", req)
 
 	return &types.JoinNetworkResponse{
 		Result:  true,
@@ -90,7 +90,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 
 // GetBlock is a method to get the last block with a proof.
 func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequest) (*types.GetBlockResponse, error) {
-	logger.Log.Infof("GetBlock request: %v\n", req)
+	logger.Infof("GetBlock request: %v\n", req)
 
 	// verify the registered node
 	ip, err := getIPAddress(ctx)
@@ -114,7 +114,7 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 
 // CommitBlock is a method to commit a block.
 func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlockRequest) (*types.CommitBlockResponse, error) {
-	logger.Log.Infof("CommitBlock request: %v\n", req)
+	logger.Infof("CommitBlock request: %v\n", req)
 
 	ip, err := getIPAddress(ctx)
 	if err != nil {
@@ -132,7 +132,7 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 
 	if block.Header.BlockNumber != req.BlockNumber {
 		errMsg := "the proof id is not correct"
-		logger.Log.WithError(errors.New(errMsg)).Error("Failed to commit block")
+		logger.WithError(errors.New(errMsg)).Error("Failed to commit block")
 		return nil, errors.New(errMsg)
 	}
 	pk := new(bls.PublicKey)
@@ -151,7 +151,7 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 		msg, err := proto.Marshal(block)
 		if err != nil {
 			errMsg := fmt.Sprintf("failed to marshal the proof: %v", err)
-			logger.Log.WithError(errors.New(errMsg)).Error("Failed to commit block")
+			logger.WithError(errors.New(errMsg)).Error("Failed to commit block")
 			return nil, errors.New(errMsg)
 		}
 		aggSig := bls.AggregateSignatures(s.signatures)
@@ -162,7 +162,7 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 		if !verified {
 			// TODO punishing mechanism
 
-			logger.Log.Infof("The current proof is verifed\n")
+			logger.Infof("The current proof is verifed\n")
 
 			return &types.CommitBlockResponse{
 				Result:  false,
@@ -187,7 +187,7 @@ func getIPAddress(ctx context.Context) (string, error) {
 	pr, ok := peer.FromContext(ctx)
 	if !ok {
 		errMsg := "failed to get peer from context"
-		logger.Log.WithError(errors.New(errMsg)).Error("Failed to get IP address")
+		logger.WithError(errors.New(errMsg)).Error("Failed to get IP address")
 		return "", errors.New(errMsg)
 	}
 

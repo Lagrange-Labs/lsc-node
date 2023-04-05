@@ -41,11 +41,11 @@ type DiscoveryNotifee struct {
 // the PubSub system will automatically start interacting with them if they also
 // support PubSub.
 func (n *DiscoveryNotifee) HandlePeerFound(pi peer.AddrInfo) {
-	logger.Log.Infof("discovered new peer %s", pi.ID.Pretty())
-	logger.Log.Infof("peer.AddrInfo: %v", pi)
+	logger.Infof("discovered new peer %s", pi.ID.Pretty())
+	logger.Infof("peer.AddrInfo: %v", pi)
 	err := n.h.Connect(context.Background(), pi)
 	if err != nil {
-		logger.Log.Errorf("error connecting to peer %s: %s", pi.ID.Pretty(), err)
+		logger.Errorf("error connecting to peer %s: %s", pi.ID.Pretty(), err)
 	}
 }
 
@@ -65,7 +65,7 @@ func ShortID(p peer.ID) string {
 
 func Scan(prompt string) string {
 	if prompt != "" {
-		logger.Log.Info(prompt)
+		logger.Info(prompt)
 	}
 	reader := bufio.NewReader(os.Stdin)
 	input, _ := reader.ReadString('\n')
