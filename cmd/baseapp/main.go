@@ -1,6 +1,7 @@
 package main
 
 import (
+	"fmt"
 	"os"
 	"os/signal"
 	"runtime"
@@ -143,9 +144,8 @@ func runSequencer(ctx *cli.Context) error {
 
 func versionCmd(*cli.Context) error {
 	w := os.Stdout
-	logger.Info(w)
-	logger.Infof("Version:      %s", "v0.1.0")
-	logger.Infof("Go version:   %s", runtime.Version())
-	logger.Infof("OS/Arch:      %s/%s", runtime.GOOS, runtime.GOARCH)
+	fmt.Fprintf(w, "Version:      %s\n", "v0.1.0")
+	fmt.Fprintf(w, "Go version:   %s\n", runtime.Version())
+	fmt.Fprintf(w, "OS/Arch:      %s/%s\n", runtime.GOOS, runtime.GOARCH)
 	return nil
 }

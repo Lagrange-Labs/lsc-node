@@ -2,7 +2,6 @@ package network
 
 import (
 	context "context"
-	"errors"
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -131,9 +130,7 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 	}
 
 	if block.Header.BlockNumber != req.BlockNumber {
-		errMsg := "the proof id is not correct"
-		logger.WithError(errors.New(errMsg)).Error("Failed to commit block")
-		return nil, errors.New(errMsg)
+		return nil, fmt.Errorf("the proof id is not correct")
 	}
 	pk := new(bls.PublicKey)
 	if err := pk.Deserialize(common.FromHex(node.PublicKey)); err != nil {
@@ -150,9 +147,7 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 		// TODO next generation of the proof
 		msg, err := proto.Marshal(block)
 		if err != nil {
-			errMsg := fmt.Sprintf("failed to marshal the proof: %v", err)
-			logger.WithError(errors.New(errMsg)).Error("Failed to commit block")
-			return nil, errors.New(errMsg)
+			return nil, fmt.Errorf("failed to marshal the proof: %v", err)
 		}
 		aggSig := bls.AggregateSignatures(s.signatures)
 		verified, err := aggSig.FastAggregateVerify(s.publicKeys, msg)
@@ -186,9 +181,7 @@ func getIPAddress(ctx context.Context) (string, error) {
 	// Get the client IP address from the gRPC StreamInfo
 	pr, ok := peer.FromContext(ctx)
 	if !ok {
-		errMsg := "failed to get peer from context"
-		logger.WithError(errors.New(errMsg)).Error("Failed to get IP address")
-		return "", errors.New(errMsg)
+		return "", fmt.Errorf("failed to get peer from context")
 	}
 
 	return pr.Addr.String(), nil

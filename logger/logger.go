@@ -66,7 +66,3 @@ func Panic(args ...interface{}) {
 func Panicf(str string, args ...interface{}) {
 	log.Panicf(str, args...)
 }
-
-func WithError(err error) *logrus.Entry {
-	return log.WithError(err)
-}
