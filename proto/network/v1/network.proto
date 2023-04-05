@@ -2,6 +2,8 @@ syntax = "proto3";
 
 package network.v1;
 
+import "sequencer/v1/block.proto";
+
 option go_package = "github.com/Lagrange-Labs/Lagrange-Node/network/types";
 
 // NetworkService is the service for the attestation network
@@ -12,52 +14,6 @@ service NetworkService {
     rpc GetBlock(GetBlockRequest) returns (GetBlockResponse);
     // CommitBlock is the rpc endpoint for committing the given block with signature at the client node
     rpc CommitBlock(CommitBlockRequest) returns (CommitBlockResponse);
-}
-
-// StorageItem is the item for the storage data
-message StorageItem {
-    string skey = 1;
-    string svalue = 2;
-}
-
-message StorageItemList {
-    repeated StorageItem items = 1;
-}
-
-// DeltaItem is the item for the state change
-message DeltaItem {
-    string address = 1;
-    string key = 2;
-    oneof value {
-        string string_value = 3;
-        StorageItemList storage_value = 4;
-    }
-}
-
-// BlockDelta is the delta data for the given block of the specific chain
-message BlockDelta {
-    uint64 block_number = 1;
-    string state_root = 2;
-    string chain = 3;
-    repeated DeltaItem delta = 4;
-    string delta_hash = 5;
-}
-
-// BlockHeader is the block header structure
-message BlockHeader {
-    uint64 block_number = 1;
-    string parent_hash = 2;
-    string block_hash = 3;
-    string proposer_pub_key = 4;
-    string proposer_signature = 5; // (block_hash)
-}
-
-// Block is the block body structure for zk proofs of the block delta
-message Block {
-    BlockHeader header = 1;
-    BlockDelta delta = 2;
-    string proof = 3;
-    string signature = 4; // aggregated signature of all the validators
 }
 
 // JoinNetworkRequest is the request to join the network
@@ -80,7 +36,7 @@ message GetBlockRequest {
 
 // GetBlockResponse is the response for getting the given block
 message GetBlockResponse {
-    Block block = 1;
+    sequencer.v1.Block block = 1;
 }
 
 // CommitBlockRequest is the request to commit the signature

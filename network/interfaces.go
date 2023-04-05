@@ -3,7 +3,7 @@ package network
 import (
 	"context"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/network/types"
+	"github.com/Lagrange-Labs/Lagrange-Node/sequencer/types"
 	sequencertypes "github.com/Lagrange-Labs/Lagrange-Node/sequencer/types"
 )
 
