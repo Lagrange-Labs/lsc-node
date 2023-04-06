@@ -9,6 +9,7 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
 
+	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
@@ -43,7 +44,7 @@ func NewSequencerService(storage storageInterface) (types.NetworkServiceServer, 
 
 // JoinNetwork is a method to join the attestation network.
 func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetworkRequest) (*types.JoinNetworkResponse, error) {
-	fmt.Printf("JoinNetwork request: %v\n", req)
+	logger.Infof("JoinNetwork request: %v\n", req)
 
 	// Verify signature
 	sigMessage := req.Signature
@@ -76,7 +77,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	}
 	s.threshold = count * 2 / 3
 
-	fmt.Printf("New node %v joined the network\n", req)
+	logger.Infof("New node %v joined the network\n", req)
 
 	return &types.JoinNetworkResponse{
 		Result:  true,
@@ -86,7 +87,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 
 // GetBlock is a method to get the last block with a proof.
 func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequest) (*types.GetBlockResponse, error) {
-	fmt.Printf("GetBlock request: %v\n", req)
+	logger.Infof("GetBlock request: %v\n", req)
 
 	// verify the registered node
 	ip, err := getIPAddress(ctx)
@@ -110,7 +111,7 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 
 // CommitBlock is a method to commit a block.
 func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlockRequest) (*types.CommitBlockResponse, error) {
-	fmt.Printf("CommitBlock request: %v\n", req)
+	logger.Infof("CommitBlock request: %v\n", req)
 
 	ip, err := getIPAddress(ctx)
 	if err != nil {
@@ -158,7 +159,7 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 		if !verified {
 			// TODO punishing mechanism
 
-			fmt.Printf("The current proof is not verifed\n")
+			logger.Error("The current proof is not verifed\n")
 
 			return &types.CommitBlockResponse{
 				Result:  false,
