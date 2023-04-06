@@ -2,7 +2,6 @@ package network
 
 import (
 	"context"
-	"fmt"
 	"strconv"
 	"time"
 
@@ -128,7 +127,7 @@ func (c *Client) Start() {
 			// verify the proposer signature
 			verified, err := utils.VerifySignature(common.FromHex(res.Block.Header.ProposerPubKey), common.FromHex(res.Block.Header.BlockHash), common.FromHex(res.Block.Header.ProposerSignature))
 			if err != nil || !verified {
-				fmt.Printf("failed to verify the proposer signature: %v\n", err)
+				logger.Errorf("failed to verify the proposer signature: %v\n", err)
 				continue
 			}
 
