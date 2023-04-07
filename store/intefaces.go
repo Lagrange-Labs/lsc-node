@@ -3,7 +3,7 @@ package store
 import (
 	"context"
 
-	sequencertypes "github.com/Lagrange-Labs/Lagrange-Node/sequencer/types"
+	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 )
 
 type Storage interface {
