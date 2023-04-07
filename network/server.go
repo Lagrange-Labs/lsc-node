@@ -7,8 +7,8 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/network/types"
-	"github.com/ethereum/go-ethereum/log"
+	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
@@ -80,6 +80,6 @@ func runGRPCServer(ctx context.Context, svc types.NetworkServiceServer, port str
 		}
 	}()
 
-	log.Info("gRPC Server is serving at ", port)
+	logger.Info("gRPC Server is serving at ", port)
 	return server.Serve(listen)
 }
