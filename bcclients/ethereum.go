@@ -6,7 +6,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/logger"
 	common "github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/crypto"

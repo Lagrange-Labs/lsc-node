@@ -9,8 +9,14 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/logger"
-	"github.com/Lagrange-Labs/Lagrange-Node/network/types"
+	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/network/types"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
+)
+
+var (
+	// ErrWrongBlockNumber is returned when the block number is not latest.
+	ErrWrongBlockNumber = fmt.Errorf("the block number is not latest")
 )
 
 type sequencerService struct {
@@ -47,15 +53,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	if err != nil {
 		return nil, err
 	}
-	sig := new(bls.Signature)
-	pub := new(bls.PublicKey)
-	if err := pub.Deserialize(common.FromHex(req.PublicKey)); err != nil {
-		return nil, err
-	}
-	if err := sig.Deserialize(common.FromHex(sigMessage)); err != nil {
-		return nil, err
-	}
-	verified, err := sig.VerifyByte(pub, msg)
+	verified, err := utils.VerifySignature(common.FromHex(req.PublicKey), msg, common.FromHex(sigMessage))
 	if err != nil {
 		return nil, err
 	}
@@ -130,8 +128,12 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 	}
 
 	if block.Header.BlockNumber != req.BlockNumber {
-		return nil, fmt.Errorf("the proof id is not correct")
+		return &types.CommitBlockResponse{
+			Result:  false,
+			Message: fmt.Sprintf("%d", block.Header.BlockNumber),
+		}, ErrWrongBlockNumber
 	}
+
 	pk := new(bls.PublicKey)
 	if err := pk.Deserialize(common.FromHex(node.PublicKey)); err != nil {
 		return nil, err
@@ -157,7 +159,7 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 		if !verified {
 			// TODO punishing mechanism
 
-			logger.Infof("The current proof is verifed\n")
+			logger.Error("The current proof is not verifed\n")
 
 			return &types.CommitBlockResponse{
 				Result:  false,

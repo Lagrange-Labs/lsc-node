@@ -10,10 +10,10 @@ GOBINARY := lagrange-node
 GOCMD := $(GOBASE)/cmd/baseapp/
 SCRIPTS_FOLDER=$(GOBASE)/scripts
 
-LDFLAGS += -X 'github.com/Lagrange-Labs/Lagrange-Node.Version=$(VERSION)'
-LDFLAGS += -X 'github.com/Lagrange-Labs/Lagrange-Node.GitRev=$(GITREV)'
-LDFLAGS += -X 'github.com/Lagrange-Labs/Lagrange-Node.GitBranch=$(GITBRANCH)'
-LDFLAGS += -X 'github.com/Lagrange-Labs/Lagrange-Node.BuildDate=$(DATE)'
+LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.Version=$(VERSION)'
+LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.GitRev=$(GITREV)'
+LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.GitBranch=$(GITBRANCH)'
+LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.BuildDate=$(DATE)'
 
 
 # Building the docker image and the binary
