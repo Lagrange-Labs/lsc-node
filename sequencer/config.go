@@ -5,6 +5,6 @@ type Config struct {
 	EthereumURL string `mapstructure:"EthereumURL"`
 	// StakingSCAddress is the address of the staking smart contract.
 	StakingSCAddress string `mapstructure:"StakingSCAddress"`
-	// StackingCheckInterval is the interval to check the stacking status.
-	StackingCheckInterval uint32 `mapstructure:"StackingCheckInterval"`
+	// StakingCheckInterval is the interval to check the staking status.
+	StakingCheckInterval uint32 `mapstructure:"StakingCheckInterval"`
 }

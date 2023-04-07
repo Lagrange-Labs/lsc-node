@@ -8,7 +8,7 @@ import (
 
 func init() {
 	// Register the migration with the migration manager
-	RegisterMigration("0001_init", up_0001, down_0001)
+	_ = RegisterMigration("0001_init", up_0001, down_0001)
 }
 
 func up_0001(client *mongo.Client) error {
