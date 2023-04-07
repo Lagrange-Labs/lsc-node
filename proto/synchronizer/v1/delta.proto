@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package synchronizer.v1;
 
-option go_package = "github.com/Lagrange-Labs/Lagrange-Node/synchronizer/types";
+option go_package = "github.com/Lagrange-Labs/lagrange-node/synchronizer/types";
 
 // StorageItem is the item for the storage data
 message StorageItem {

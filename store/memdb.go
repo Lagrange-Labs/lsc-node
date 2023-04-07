@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"time"
 
+	"github.com/Lagrange-Labs/lagrange-node/logger"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	synctypes "github.com/Lagrange-Labs/lagrange-node/synchronizer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
@@ -175,6 +176,6 @@ func (d *MemDB) updateBlock(interval time.Duration) {
 		if err := d.AddBlock(context.Background(), nil); err != nil {
 			panic(err)
 		}
-
+		logger.Infof("new block added: %d", len(d.blocks))
 	}
 }

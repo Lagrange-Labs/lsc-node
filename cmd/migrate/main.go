@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/migrations"
+	"github.com/Lagrange-Labs/lagrange-node/migrations"
 	"github.com/urfave/cli/v2"
 )
 

@@ -7,7 +7,7 @@
 package types
 
 import (
-	types "github.com/Lagrange-Labs/Lagrange-Node/sequencer/types"
+	types "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	protoreflect "google.golang.org/protobuf/reflect/protoreflect"
 	protoimpl "google.golang.org/protobuf/runtime/protoimpl"
 	reflect "reflect"

@@ -20,10 +20,11 @@ var (
 )
 
 type sequencerService struct {
-	threshold  uint16
-	storage    storageInterface
-	publicKeys []*bls.PublicKey
-	signatures []*bls.Signature
+	threshold    uint16
+	storage      storageInterface
+	commitStatus map[string]bool
+	publicKeys   []*bls.PublicKey
+	signatures   []*bls.Signature
 	types.UnimplementedNetworkServiceServer
 }
 
@@ -37,8 +38,9 @@ func NewSequencerService(storage storageInterface) (types.NetworkServiceServer, 
 	}
 
 	return &sequencerService{
-		storage:   storage,
-		threshold: count * 2 / 3,
+		storage:      storage,
+		threshold:    count * 2 / 3,
+		commitStatus: map[string]bool{},
 	}, nil
 }
 
@@ -128,11 +130,21 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 	}
 
 	if block.Header.BlockNumber != req.BlockNumber {
+		s.commitStatus[node.StakeAddress] = false
 		return &types.CommitBlockResponse{
 			Result:  false,
-			Message: fmt.Sprintf("%d", block.Header.BlockNumber),
-		}, ErrWrongBlockNumber
+			Message: fmt.Sprintf("The wrong block number: %d", block.Header.BlockNumber),
+		}, nil
 	}
+
+	// check the commit status
+	if s.commitStatus[node.StakeAddress] {
+		return &types.CommitBlockResponse{
+			Result:  false,
+			Message: "Already committed",
+		}, nil
+	}
+	s.commitStatus[node.StakeAddress] = true
 
 	pk := new(bls.PublicKey)
 	if err := pk.Deserialize(common.FromHex(node.PublicKey)); err != nil {
@@ -159,7 +171,7 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 		if !verified {
 			// TODO punishing mechanism
 
-			logger.Error("The current proof is not verifed\n")
+			logger.Errorf("The current proof is not verifed %v %v", s.signatures, s.publicKeys)
 
 			return &types.CommitBlockResponse{
 				Result:  false,
@@ -168,9 +180,11 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 		}
 		s.signatures = []*bls.Signature{}
 		s.publicKeys = []*bls.PublicKey{}
+		s.commitStatus = map[string]bool{}
 		aggSigMsg := aggSig.Serialize()
 		block.Signature = common.Bytes2Hex(aggSigMsg[:])
 		// TODO store the block
+		logger.Info("The current proof is verifed successfully")
 	}
 
 	return &types.CommitBlockResponse{
