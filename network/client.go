@@ -7,7 +7,6 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/umbracle/go-eth-consensus/bls"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -157,7 +156,7 @@ func (c *Client) Start() {
 					// TODO synchronize the history blocks
 					num, err := strconv.ParseUint(resS.Message[24:], 10, 64)
 					if err != nil {
-						log.Error("failed to parse the last block number:", err)
+						logger.Error("failed to parse the last block number:", err)
 						return
 					}
 					c.lastBlockNumber = num
