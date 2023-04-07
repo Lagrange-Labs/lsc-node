@@ -7,9 +7,9 @@ import (
 	"fmt"
 	"time"
 
-	sequencertypes "github.com/Lagrange-Labs/Lagrange-Node/sequencer/types"
-	synchronizertypes "github.com/Lagrange-Labs/Lagrange-Node/synchronizer/types"
-	"github.com/Lagrange-Labs/Lagrange-Node/utils"
+	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	synctypes "github.com/Lagrange-Labs/lagrange-node/synchronizer/types"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/umbracle/go-eth-consensus/bls"
 	"google.golang.org/protobuf/proto"
@@ -34,7 +34,7 @@ func NewMemDB() (*MemDB, error) {
 	}
 	pubKeyMsg := priv.GetPublicKey().Serialize()
 	db := &MemDB{nodes: nodes, blocks: []*sequencertypes.Block{}, privKey: priv, pubKey: common.Bytes2Hex(pubKeyMsg[:])}
-	go db.updateBlock(5 * time.Second)
+	go db.updateBlock(10 * time.Second)
 	return db, nil
 }
 
@@ -77,6 +77,74 @@ func (d *MemDB) GetBlock(ctx context.Context, blockNumber uint64) (*sequencertyp
 
 // AddBlock adds a new block to the database.
 func (d *MemDB) AddBlock(ctx context.Context, block *sequencertypes.Block) error {
+	blockNumber := uint64(len(d.blocks))
+	parentHash := common.Hash{}.Hex()
+	if blockNumber > 0 {
+		parentHash = d.blocks[len(d.blocks)-1].Header.BlockHash
+	}
+	lastBlock := &sequencertypes.Block{
+		Delta: &synctypes.BlockDelta{
+			BlockNumber: blockNumber,
+			StateRoot:   randomHex(32),
+			Chain:       "ethereum",
+			Delta: []*synctypes.DeltaItem{
+				{
+					Address: randomHex(32),
+					Key:     "balance",
+					Value:   &synctypes.DeltaItem_StringValue{StringValue: "100000"},
+				},
+				{
+					Address: randomHex(32),
+					Key:     "storage",
+					Value: &synctypes.DeltaItem_StorageValue{
+						StorageValue: &synctypes.StorageItemList{
+							Items: []*synctypes.StorageItem{
+								{
+									Skey:   randomHex(32),
+									Svalue: randomHex(32),
+								},
+								{
+									Skey:   randomHex(32),
+									Svalue: randomHex(32),
+								},
+								{
+									Skey:   randomHex(32),
+									Svalue: randomHex(32),
+								},
+							},
+						},
+					},
+				},
+			},
+		},
+		Proof: randomHex(32),
+		Header: &sequencertypes.BlockHeader{
+			BlockNumber:    blockNumber,
+			ParentHash:     parentHash,
+			ProposerPubKey: d.pubKey,
+		},
+	}
+	deltaMsg, err := proto.Marshal(lastBlock.Delta)
+	if err != nil {
+		panic(err)
+	}
+	deltaHash := utils.Hash(deltaMsg)
+	lastBlock.Delta.DeltaHash = common.Bytes2Hex(deltaHash)
+	blockMsg, err := proto.Marshal(lastBlock)
+	if err != nil {
+		panic(err)
+	}
+	blockHash := utils.Hash(blockMsg)
+	lastBlock.Header.BlockHash = common.Bytes2Hex(blockHash)
+
+	sig, err := d.privKey.Sign(blockHash)
+	if err != nil {
+		panic(err)
+	}
+	sigMsg := sig.Serialize()
+	lastBlock.Header.ProposerSignature = common.Bytes2Hex(sigMsg[:])
+
+	d.blocks = append(d.blocks, lastBlock)
 	return nil
 }
 
@@ -99,78 +167,14 @@ func randomHex(n int) string {
 }
 
 func (d *MemDB) updateBlock(interval time.Duration) {
-	ticker := time.NewTicker(10 * time.Second)
+	ticker := time.NewTicker(interval)
 	defer ticker.Stop()
 
 	for {
 		<-ticker.C
-		blockNumber := uint64(len(d.blocks))
-		parentHash := common.Hash{}.Hex()
-		if blockNumber > 0 {
-			parentHash = d.blocks[len(d.blocks)-1].Header.BlockHash
-		}
-		lastBlock := &sequencertypes.Block{
-			Delta: &synchronizertypes.BlockDelta{
-				BlockNumber: blockNumber,
-				StateRoot:   randomHex(32),
-				Chain:       "ethereum",
-				Delta: []*synchronizertypes.DeltaItem{
-					{
-						Address: randomHex(32),
-						Key:     "balance",
-						Value:   &synchronizertypes.DeltaItem_StringValue{StringValue: "100000"},
-					},
-					{
-						Address: randomHex(32),
-						Key:     "storage",
-						Value: &synchronizertypes.DeltaItem_StorageValue{
-							StorageValue: &synchronizertypes.StorageItemList{
-								Items: []*synchronizertypes.StorageItem{
-									{
-										Skey:   randomHex(32),
-										Svalue: randomHex(32),
-									},
-									{
-										Skey:   randomHex(32),
-										Svalue: randomHex(32),
-									},
-									{
-										Skey:   randomHex(32),
-										Svalue: randomHex(32),
-									},
-								},
-							},
-						},
-					},
-				},
-			},
-			Proof: randomHex(32),
-			Header: &sequencertypes.BlockHeader{
-				BlockNumber:    blockNumber,
-				ParentHash:     parentHash,
-				ProposerPubKey: d.pubKey,
-			},
-		}
-		deltaMsg, err := proto.Marshal(lastBlock.Delta)
-		if err != nil {
+		if err := d.AddBlock(context.Background(), nil); err != nil {
 			panic(err)
 		}
-		deltaHash := utils.Hash(deltaMsg)
-		lastBlock.Delta.DeltaHash = common.Bytes2Hex(deltaHash)
-		blockMsg, err := proto.Marshal(lastBlock)
-		if err != nil {
-			panic(err)
-		}
-		blockHash := utils.Hash(blockMsg)
-		lastBlock.Header.BlockHash = common.Bytes2Hex(blockHash)
 
-		sig, err := d.privKey.Sign(blockHash)
-		if err != nil {
-			panic(err)
-		}
-		sigMsg := sig.Serialize()
-		lastBlock.Header.ProposerSignature = common.Bytes2Hex(sigMsg[:])
-
-		d.blocks = append(d.blocks, lastBlock)
 	}
 }

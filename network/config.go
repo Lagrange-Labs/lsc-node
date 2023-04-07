@@ -1,7 +1,7 @@
 package network
 
 import (
-	"github.com/Lagrange-Labs/Lagrange-Node/utils"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 // ServerConfig is the configuration for the sequencer server.
