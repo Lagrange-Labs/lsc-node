@@ -8,11 +8,11 @@ import (
 
 	"github.com/urfave/cli/v2"
 
-	"github.com/Lagrange-Labs/Lagrange-Node/config"
-	"github.com/Lagrange-Labs/Lagrange-Node/logger"
-	"github.com/Lagrange-Labs/Lagrange-Node/network"
-	"github.com/Lagrange-Labs/Lagrange-Node/sequencer"
-	"github.com/Lagrange-Labs/Lagrange-Node/store"
+	"github.com/Lagrange-Labs/lagrange-node/config"
+	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/network"
+	"github.com/Lagrange-Labs/lagrange-node/sequencer"
+	"github.com/Lagrange-Labs/lagrange-node/store"
 )
 
 var (

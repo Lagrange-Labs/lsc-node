@@ -3,8 +3,8 @@ package sequencer
 import (
 	context "context"
 
-	networktypes "github.com/Lagrange-Labs/Lagrange-Node/network/types"
-	"github.com/Lagrange-Labs/Lagrange-Node/sequencer/types"
+	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
+	"github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 )
 
 type storageInterface interface {

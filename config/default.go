@@ -2,22 +2,9 @@ package config
 
 // DefaultValues is the default configuration
 const DefaultValues = `
-[Node]
-Port = "8080"
-Nickname = ""
-Room = "rinkeby"
-PeerAddr = ""
-StakingEndpoint = "https://34.229.73.193:8545"
-StakingWS = "wss://mainnet.infura.io/ws/v3/f873861ee0954155b3a560eba6151d96"
-AttestEndpoint = "https://eth-mainnet.gateway.pokt.network/v1/5f3453978e354ab992c4da79,https://mainnet.infura.io/ws/v3/f873861ee0954155b3a560eba6151d96"
-Keystore = ""
-StakerAddress = ""
-LevelDBPath = "./leveldb"
-LogLevel = 5
-
 [Server]
 GRPCPort = "9090"
-PublicKey = "0xd3c6b5a2698e219e9fa9b3d3f4753d0668ecf43189d57c0d14798a68f8a32c9c9be1b020eb68d1010f83eb0c1b44b14c"
+PublicKey = "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4"
 
 [Client]
 GrpcURL = "localhost:9090"
