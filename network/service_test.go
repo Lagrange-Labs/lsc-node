@@ -25,8 +25,9 @@ func newTestService() (*sequencerService, error) {
 	storage.AddBlock(context.Background(), nil) //nolint:errcheck
 
 	return &sequencerService{
-		storage:   storage,
-		threshold: 1,
+		storage:      storage,
+		threshold:    1,
+		commitStatus: map[string]bool{},
 	}, nil
 }
 
