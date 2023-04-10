@@ -3,10 +3,10 @@ package network
 import (
 	"context"
 	"strconv"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/log"
 	"github.com/umbracle/go-eth-consensus/bls"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -148,20 +148,19 @@ func (c *Client) Start() {
 			})
 			if err != nil {
 				logger.Errorf("failed to upload signature: %v\n", err)
-				if err == ErrWrongBlockNumber {
-					num, err := strconv.ParseUint(resS.Message, 10, 64)
-					if err != nil {
-						log.Error("failed to parse the loast block number:", err)
-						return
-					}
-					// TODO synchronize the history blocks
-					c.lastBlockNumber = num
-				}
-
 				continue
 			}
 			if !resS.Result {
 				logger.Infof("failed to upload signature: %s\n", resS.Message)
+				if strings.Contains(resS.Message, "The wrong block number:") {
+					// TODO synchronize the history blocks
+					num, err := strconv.ParseUint(resS.Message[24:], 10, 64)
+					if err != nil {
+						logger.Error("failed to parse the last block number:", err)
+						return
+					}
+					c.lastBlockNumber = num
+				}
 				continue
 			}
 

@@ -37,7 +37,7 @@ func NewSequencer(cfg *Config, storage storageInterface) (*Sequencer, error) {
 	return &Sequencer{
 		stackingSC:      stakingSC,
 		storage:         storage,
-		stakingInterval: cfg.StackingCheckInterval,
+		stakingInterval: cfg.StakingCheckInterval,
 		blockNumber:     blockNumber,
 	}, nil
 }
