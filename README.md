@@ -1,38 +1,102 @@
-# Modmesh
+# Lagrange Node
 
-![Golang](https://img.shields.io/badge/Golang-1.18.6-brightgreen.svg) 
-![System](https://img.shields.io/badge/Debian-11-brightblue.svg)
+This is the Lagrange Node, a node that can be used to run a Lagrange network.
 
-## pre-preparation:
+## Table of Contents
 
-- Download Go with version above 1.18
-- Install [hardhat](https://lagrangelabs.atlassian.net/wiki/spaces/EN/pages/3342337/Engineering+ModMesh+Notes)
+- [Architecture](#architecture)
+- [Installation](#installation)
+- [Usage](#usage)
+- [License](#license)
 
-## Run:
+## Architecture
+
+The Lagrange Node consists of the following components:
+- Sequencer
+- Synchronizer
+- gRPC Sequencer Server
+- gRPC Client Node
+
+Here is the diagram of the architecture:
+<p align="center">
+  <img src="./docs/network.drawio.png"/>
+</p>
+
+## Installation
+
+### Prerequisites
+
+This project is written in Go 1.18. You can download it from [here](https://golang.org/dl/).
+
+### Build
+
+To build the project, run the following command:
+
+```bash
+make build
 ```
-1. make docker-build
-2. make docker-export
-3. make docker-run
 
-OR
+This will create a binary called `lagrange-node` in the `dist` directory.
 
-# Aggregate of the above commands
-make docker-execute-all
+## Usage
+
+- To run the sequencer, run the following command:
+
+    ```bash
+    ./dist/lagrange-node run-sequencer -c <config-file>
+    ```
+
+- To run the gRPC sequencer server, run the following command:
+
+    ```bash
+    ./dist/lagrange-node run-server -c <config-file>
+    ```
+
+- To join a network and run the client node, run the following command:
+
+    ```bash
+    ./dist/lagrange-node run-client -c <config-file>
+    ```
+
+### Migration Tool
+
+The migration tool is used to migrate the database schema. To run the migration tool, run the following command:
+
+```bash
+go run ./cmd/migrate/... up/down -u <database_url> -s <step>
 ```
 
-## References
+### Test & Useful Commands
 
-- Delete before building a new docker instance
+Here are the commands to run the tests:
+
+```bash
+# Run unit-tests
+make test
 ```
-# show all containers
-docker ps --all
-# Remove container
-docker rm -f {container_name}
-# show all images
-docker images -a
-# Remove docker image
-## If there is a name
-docker rmi -f {image_name} 
-## If there is no name
-docker rmi -f {image_id}
+
+```bash
+# Run the local network
+make localnet-start
 ```
+
+```bash
+# Stop the local network
+make stop
+```
+
+```bash
+# Generate the protobuf files
+make proto-gen
+```
+
+```bash
+# Build the docker image
+make docker-build
+```
+
+## License
+
+This project is licensed under the [XXXX](./LICENSE).
+
+[⬆️ Back to Top](#table-of-contents)
