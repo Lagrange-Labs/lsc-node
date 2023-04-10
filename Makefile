@@ -40,15 +40,19 @@ lint:
 	@ go run $(golangci_lint_cmd) run --timeout=10m
 .PHONY:	lint
 
-test:
+test: run-db-mongo
 	go test ./... --timeout=10m
 .PHONY: test
 
+run-db-mongo: stop
+	docker-compose -f docker-compose.yml up -d mongo
+.PHONY: run-db-mongo
+
 # Local testnet
-localnet-start: localnet-stop docker-build
+localnet-start: stop docker-build
 	docker-compose up -d
 
-localnet-stop:
-	docker-compose down
+stop:
+	docker-compose down --remove-orphans
 
-.PHONY: localnet-build-nodes localnet-stop
+.PHONY: localnet-start stop

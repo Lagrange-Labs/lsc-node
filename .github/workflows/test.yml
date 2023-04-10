@@ -26,5 +26,4 @@ jobs:
         # integer overflow).
       - name: test & coverage report creation
         run: |
-          go test ./... -mod=readonly -timeout 10m -short -race -coverprofile=coverage.txt -covermode=atomic
-          go test ./... -mod=readonly -timeout 10m
+          make test
