@@ -75,7 +75,7 @@ func runServer(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
+	logger.Infof("Starting server with config: %v", cfg.Server)
 	storage, err := store.NewStorage(cfg.Store)
 	if err != nil {
 		return err
@@ -98,7 +98,7 @@ func runClient(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
+	logger.Infof("Starting client with config: %v", cfg.Client)
 	client, err := network.NewClient(&cfg.Client)
 	if err != nil {
 		return err
@@ -124,7 +124,7 @@ func runSequencer(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-
+	logger.Infof("Starting sequencer with config: %v", cfg.Sequencer)
 	sequencer, err := sequencer.NewSequencer(&cfg.Sequencer, storage)
 	if err != nil {
 		return err
