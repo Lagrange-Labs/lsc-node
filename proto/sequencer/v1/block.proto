@@ -13,12 +13,23 @@ message BlockHeader {
     string block_hash = 3;
     string proposer_pub_key = 4;
     string proposer_signature = 5;
+    string current_committee = 6;
+    string next_committee = 7;
 }
 
 // Block is the block body structure for zk proofs of the block delta
 message Block {
     BlockHeader header = 1;
-    synchronizer.v1.BlockDelta delta = 2;
-    string proof = 3;
-    string signature = 4;
+    synchronizer.v1.ChainHeader chain_header = 2;
+    repeated string pub_keys = 3;
+    string agg_signature = 4;
+}
+
+// Signature is the block signature from the validator
+message Signature {
+    synchronizer.v1.ChainHeader chain_header = 1;
+    string current_committee = 2;
+    string next_committee = 3;
+    string pub_key = 4;
+    string signature = 5;
 }

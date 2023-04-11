@@ -182,7 +182,7 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 		s.publicKeys = []*bls.PublicKey{}
 		s.commitStatus = map[string]bool{}
 		aggSigMsg := aggSig.Serialize()
-		block.Signature = common.Bytes2Hex(aggSigMsg[:])
+		block.AggSignature = common.Bytes2Hex(aggSigMsg[:])
 		// TODO store the block
 		logger.Info("The current proof is verifed successfully")
 	}

@@ -84,53 +84,17 @@ func (d *MemDB) AddBlock(ctx context.Context, block *sequencertypes.Block) error
 		parentHash = d.blocks[len(d.blocks)-1].Header.BlockHash
 	}
 	lastBlock := &sequencertypes.Block{
-		Delta: &synctypes.BlockDelta{
+		ChainHeader: &synctypes.ChainHeader{
 			BlockNumber: blockNumber,
 			StateRoot:   randomHex(32),
 			Chain:       "ethereum",
-			Delta: []*synctypes.DeltaItem{
-				{
-					Address: randomHex(32),
-					Key:     "balance",
-					Value:   &synctypes.DeltaItem_StringValue{StringValue: "100000"},
-				},
-				{
-					Address: randomHex(32),
-					Key:     "storage",
-					Value: &synctypes.DeltaItem_StorageValue{
-						StorageValue: &synctypes.StorageItemList{
-							Items: []*synctypes.StorageItem{
-								{
-									Skey:   randomHex(32),
-									Svalue: randomHex(32),
-								},
-								{
-									Skey:   randomHex(32),
-									Svalue: randomHex(32),
-								},
-								{
-									Skey:   randomHex(32),
-									Svalue: randomHex(32),
-								},
-							},
-						},
-					},
-				},
-			},
 		},
-		Proof: randomHex(32),
 		Header: &sequencertypes.BlockHeader{
 			BlockNumber:    blockNumber,
 			ParentHash:     parentHash,
 			ProposerPubKey: d.pubKey,
 		},
 	}
-	deltaMsg, err := proto.Marshal(lastBlock.Delta)
-	if err != nil {
-		panic(err)
-	}
-	deltaHash := utils.Hash(deltaMsg)
-	lastBlock.Delta.DeltaHash = common.Bytes2Hex(deltaHash)
 	blockMsg, err := proto.Marshal(lastBlock)
 	if err != nil {
 		panic(err)
