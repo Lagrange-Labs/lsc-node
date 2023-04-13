@@ -2,9 +2,8 @@ package types
 
 // Validator defines a validator state
 type Validator struct {
-	PublicKey    string
-	StakeAddress string
-	VotingPower  int64
+	PublicKey   string
+	VotingPower int64
 }
 
 // ValidatorSet defines a set of validators

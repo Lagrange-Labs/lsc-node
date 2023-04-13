@@ -7,9 +7,18 @@ import (
 
 // RoundState defines the internal consensus state.
 type RoundState struct {
-	Height        int64
+	Height        uint64
 	Validators    *ValidatorSet
 	ProposalBlock *sequencertypes.Block
 
 	CommitSignatures []*networktypes.CommitBlockRequest // to determine slashing
+}
+
+// NewRoundState creates a new round state.
+func NewRoundState(validators *ValidatorSet, proposalBlock *sequencertypes.Block) *RoundState {
+	return &RoundState{
+		Height:        proposalBlock.Header.BlockNumber,
+		Validators:    validators,
+		ProposalBlock: proposalBlock,
+	}
 }
