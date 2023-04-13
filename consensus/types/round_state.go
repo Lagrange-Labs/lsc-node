@@ -11,14 +11,15 @@ type RoundState struct {
 	Validators    *ValidatorSet
 	ProposalBlock *sequencertypes.Block
 
-	CommitSignatures []*networktypes.CommitBlockRequest // to determine slashing
+	CommitSignatures map[string]*networktypes.CommitBlockRequest // to determine slashing
 }
 
 // NewRoundState creates a new round state.
 func NewRoundState(validators *ValidatorSet, proposalBlock *sequencertypes.Block) *RoundState {
 	return &RoundState{
-		Height:        proposalBlock.Header.BlockNumber,
-		Validators:    validators,
-		ProposalBlock: proposalBlock,
+		Height:           proposalBlock.Header.BlockNumber,
+		Validators:       validators,
+		ProposalBlock:    proposalBlock,
+		CommitSignatures: make(map[string]*networktypes.CommitBlockRequest),
 	}
 }

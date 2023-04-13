@@ -43,7 +43,8 @@ message GetBlockResponse {
 message CommitBlockRequest {
     uint64 block_number = 1;
     sequencer.v1.Signature bls_signature = 2;
-    string signature = 3;
+    string pub_key = 3;
+    string signature = 4;
 }
 
 // CommitBlockResponse is the response for uploading the signature

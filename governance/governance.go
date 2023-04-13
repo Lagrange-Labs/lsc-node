@@ -6,11 +6,13 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+// Governance is the module which is responsible for the staking and slashing.
 type Governance struct {
 	stackingSC      *nodestaking.Nodestaking
 	stakingInterval uint32
 }
 
+// NewGovernance creates a new Governance instance.
 func NewGovernance(cfg *Config) (*Governance, error) {
 	client, err := ethclient.Dial(cfg.EthereumURL)
 	if err != nil {

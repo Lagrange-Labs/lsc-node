@@ -19,6 +19,8 @@ type ClientNode struct {
 	IPAddress string
 	// StakeAddress is the ethereum address of the staking.
 	StakeAddress string
+	// VotingPower is the voting power of the node.
+	VotingPower uint64
 	// Status is the status of the node.
 	Status NodeStatus
 }
