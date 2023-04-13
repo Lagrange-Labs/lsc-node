@@ -16,7 +16,11 @@ PullInterval = "2s"
 BackendType = "memdb"
 
 [Sequencer]
+
+[Governance]
 EthereumURL = "https://34.229.73.193:8545"
 StakingSCAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
 StakingCheckInterval = 20
+
+[Consensus]
 `
