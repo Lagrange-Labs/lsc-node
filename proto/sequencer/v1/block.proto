@@ -21,8 +21,9 @@ message BlockHeader {
 message Block {
     BlockHeader header = 1;
     synchronizer.v1.ChainHeader chain_header = 2;
-    repeated string pub_keys = 3;
-    string agg_signature = 4;
+    string proof = 3;
+    repeated string pub_keys = 4;
+    string agg_signature = 5;
 }
 
 // Signature is the block signature from the validator
@@ -30,6 +31,5 @@ message Signature {
     synchronizer.v1.ChainHeader chain_header = 1;
     string current_committee = 2;
     string next_committee = 3;
-    string pub_key = 4;
-    string signature = 5;
+    string signature = 4;
 }
