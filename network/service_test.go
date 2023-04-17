@@ -26,7 +26,7 @@ func newTestService() (*sequencerService, error) {
 
 	return &sequencerService{
 		storage:  storage,
-		chCommit: make(chan *types.CommitBlockRequest),
+		chCommit: make(chan *types.CommitBlockRequest, 10),
 	}, nil
 }
 
@@ -136,16 +136,22 @@ func TestBlockOperation(t *testing.T) {
 	sig, err = priv.Sign(msg)
 	require.NoError(t, err)
 	sigMsg = sig.Serialize()
-	_, err = service.CommitBlock(context.Background(), &types.CommitBlockRequest{BlockNumber: 1, Signature: common.Bytes2Hex(sigMsg[:])})
-	require.Error(t, err)
-	// valid block number
-	block, err = service.GetBlock(peerCtx, &types.GetBlockRequest{BlockNumber: 2})
+	cRes, err := service.CommitBlock(context.Background(), &types.CommitBlockRequest{BlockNumber: 1, Signature: common.Bytes2Hex(sigMsg[:])})
 	require.NoError(t, err)
-	msg, err = proto.Marshal(block.Block)
+	require.False(t, cRes.Result)
+
+	// valid block number
+	require.NoError(t, err)
+	cReq := types.CommitBlockRequest{BlockNumber: 2, PubKey: pub}
+	msg, err = proto.Marshal(&cReq)
 	require.NoError(t, err)
 	sig, err = priv.Sign(msg)
 	require.NoError(t, err)
 	sigMsg = sig.Serialize()
-	_, err = service.CommitBlock(peerCtx, &types.CommitBlockRequest{BlockNumber: 2, PubKey: pub, Signature: common.Bytes2Hex(sigMsg[:])})
+	cReq.Signature = common.Bytes2Hex(sigMsg[:])
+	cRes, err = service.CommitBlock(peerCtx, &cReq)
 	require.NoError(t, err)
+	t.Log(cRes.Message)
+	require.True(t, cRes.Result)
+
 }
