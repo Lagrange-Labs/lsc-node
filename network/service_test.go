@@ -7,9 +7,9 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/store"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/go-eth-consensus/bls"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
 )
@@ -25,25 +25,18 @@ func newTestService() (*sequencerService, error) {
 	storage.AddBlock(context.Background(), nil) //nolint:errcheck
 
 	return &sequencerService{
-		storage:      storage,
-		threshold:    1,
-		commitStatus: map[string]bool{},
+		storage:  storage,
+		chCommit: make(chan *types.CommitBlockRequest),
 	}, nil
 }
 
-func TestBLSSign(t *testing.T) {
-	privKey := "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-	priv := new(bls.SecretKey)
-	err := priv.Unmarshal(common.FromHex(privKey))
-	require.NoError(t, err)
-
-	pub := priv.GetPublicKey().Serialize()
-	t.Log(common.Bytes2Hex(pub[:]))
+func TestBLSSignVerify(t *testing.T) {
+	priv, pub := utils.RandomBlsKey()
 
 	// JoinNetwork request sign
 	req := &types.JoinNetworkRequest{
 		StakeAddress: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-		PublicKey:    "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4",
+		PublicKey:    pub,
 	}
 
 	msg, err := proto.Marshal(req)
@@ -53,6 +46,11 @@ func TestBLSSign(t *testing.T) {
 	require.NoError(t, err)
 	sigMsg := sig.Serialize()
 	t.Log(common.Bytes2Hex(sigMsg[:]))
+
+	// Verify signature
+	verified, err := utils.VerifySignature(common.FromHex(pub), msg, sigMsg[:])
+	require.NoError(t, err)
+	require.True(t, verified)
 }
 
 func TestJoinNetwork(t *testing.T) {
@@ -70,8 +68,8 @@ func TestJoinNetwork(t *testing.T) {
 		valid     bool
 		wantErr   bool
 	}{
-		{"invalid signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4", "", false, true},
-		{"wrong signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4", "a2e3cf2037699b3856c72af280ab8501878495dd81595128df23ba3de0e52fd9126c02b9262b871074f5a34495cd1a1c13cf3d27881ce9a8846463b7d30024c37861e0fa20418c186628f9b6565a116017f988f2d9ae058480fae910a4659bf0", false, true},
+		{"invalid signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4", "", false, false},
+		{"wrong signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4", "a2e3cf2037699b3856c72af280ab8501878495dd81595128df23ba3de0e52fd9126c02b9262b871074f5a34495cd1a1c13cf3d27881ce9a8846463b7d30024c37861e0fa20418c186628f9b6565a116017f988f2d9ae058480fae910a4659bf0", false, false},
 		{"invalid peer ctx", ctx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4", "a2e3cf2037699b3856c72af280ab8501878495dd81595128df23ba3de0e52fd9126c02b9262b871074f5a34495cd1a1c13cf3d27881ce9a8846463b7d30024c37861e0fa20418c186628f9b6565a116017f988f2d9ae058480fae910a4659bf2", false, true},
 		{"valid signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4", "a2e3cf2037699b3856c72af280ab8501878495dd81595128df23ba3de0e52fd9126c02b9262b871074f5a34495cd1a1c13cf3d27881ce9a8846463b7d30024c37861e0fa20418c186628f9b6565a116017f988f2d9ae058480fae910a4659bf2", true, false},
 	}
@@ -100,21 +98,26 @@ func TestBlockOperation(t *testing.T) {
 	service, err := newTestService()
 	require.NoError(t, err)
 
-	privKey := "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-	priv := new(bls.SecretKey)
-	err = priv.Unmarshal(common.FromHex(privKey))
-	require.NoError(t, err)
+	priv, pub := utils.RandomBlsKey()
 
 	// join network
 	peerCtx := peer.NewContext(context.Background(), &peer.Peer{
 		Addr: &net.IPAddr{},
 	})
 
-	res, err := service.JoinNetwork(peerCtx, &types.JoinNetworkRequest{
+	req := &types.JoinNetworkRequest{
 		StakeAddress: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-		PublicKey:    "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4",
-		Signature:    "a2e3cf2037699b3856c72af280ab8501878495dd81595128df23ba3de0e52fd9126c02b9262b871074f5a34495cd1a1c13cf3d27881ce9a8846463b7d30024c37861e0fa20418c186628f9b6565a116017f988f2d9ae058480fae910a4659bf2",
-	})
+		PublicKey:    pub,
+	}
+
+	reqMsg, err := proto.Marshal(req)
+	require.NoError(t, err)
+	sig, err := priv.Sign(reqMsg)
+	require.NoError(t, err)
+	sigMsg := sig.Serialize()
+	req.Signature = common.Bytes2Hex(sigMsg[:])
+
+	res, err := service.JoinNetwork(peerCtx, req)
 
 	require.NoError(t, err)
 	require.True(t, res.Result)
@@ -123,19 +126,19 @@ func TestBlockOperation(t *testing.T) {
 	_, err = service.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: 0})
 	require.Error(t, err)
 
-	block, err := service.GetBlock(peerCtx, &types.GetBlockRequest{BlockNumber: 0})
+	block, err := service.GetBlock(peerCtx, &types.GetBlockRequest{BlockNumber: 1})
 	require.NoError(t, err)
 
 	// commit block
-	// wrong block number
+	// wrong request
 	msg, err := proto.Marshal(block.Block)
 	require.NoError(t, err)
-	sig, err := priv.Sign(msg)
+	sig, err = priv.Sign(msg)
 	require.NoError(t, err)
-	sigMsg := sig.Serialize()
-	_, err = service.CommitBlock(context.Background(), &types.CommitBlockRequest{BlockNumber: 0, Signature: common.Bytes2Hex(sigMsg[:])})
+	sigMsg = sig.Serialize()
+	_, err = service.CommitBlock(context.Background(), &types.CommitBlockRequest{BlockNumber: 1, Signature: common.Bytes2Hex(sigMsg[:])})
 	require.Error(t, err)
-	// last block number
+	// valid block number
 	block, err = service.GetBlock(peerCtx, &types.GetBlockRequest{BlockNumber: 2})
 	require.NoError(t, err)
 	msg, err = proto.Marshal(block.Block)
@@ -143,6 +146,6 @@ func TestBlockOperation(t *testing.T) {
 	sig, err = priv.Sign(msg)
 	require.NoError(t, err)
 	sigMsg = sig.Serialize()
-	_, err = service.CommitBlock(peerCtx, &types.CommitBlockRequest{BlockNumber: 2, Signature: common.Bytes2Hex(sigMsg[:])})
+	_, err = service.CommitBlock(peerCtx, &types.CommitBlockRequest{BlockNumber: 2, PubKey: pub, Signature: common.Bytes2Hex(sigMsg[:])})
 	require.NoError(t, err)
 }
