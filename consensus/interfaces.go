@@ -4,7 +4,10 @@ import (
 	"context"
 
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	"github.com/Lagrange-Labs/lagrange-node/store"
 )
+
+var _ storageInterface = (store.Storage)(nil)
 
 type storageInterface interface {
 	GetLastFinalizedBlockNumber(ctx context.Context) (uint64, error)
