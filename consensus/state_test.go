@@ -36,9 +36,7 @@ func TestState_OnStart(t *testing.T) {
 
 	go func() {
 		defer wg.Done()
-		err := s.OnStart()
-		require.NoError(t, err)
-		t.Log(err)
+		s.OnStart()
 	}()
 
 	time.Sleep(1 * time.Second)

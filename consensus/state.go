@@ -44,15 +44,17 @@ func NewState(cfg *Config, storage storageInterface, chCommit chan *networktypes
 }
 
 // OnStart loads the first unverified block and starts the round.
-func (s *State) OnStart() error {
+func (s *State) OnStart() {
 	lastBlockNumber, err := s.storage.GetLastFinalizedBlockNumber(context.Background())
 	if err != nil {
-		return err
+		logger.Errorf("failed to get the last finalized block number: %v", err)
+		return
 	}
 
 	for {
 		if err := s.startRound(lastBlockNumber); err != nil {
-			return err
+			logger.Errorf("failed to start the round: %v", err)
+			return
 		}
 
 		chBlocked := make(chan bool)
@@ -66,7 +68,8 @@ func (s *State) OnStart() error {
 		isVoted, err := s.processRound(ctx, chBlocked)
 		if err != nil {
 			// TODO handle timeout error, restart the round
-			return err
+			logger.Errorf("failed to process the round: %v", err)
+			return
 		}
 		if !isVoted {
 			logger.Errorf("the current block %v is not finalized", s.ProposalBlock)
@@ -80,7 +83,7 @@ func (s *State) OnStart() error {
 		// check if chStop is triggered
 		select {
 		case <-s.chStop:
-			return nil
+			return
 		default:
 		}
 	}
@@ -193,10 +196,16 @@ func (s *State) processRound(ctx context.Context, chBlocked chan bool) (bool, er
 		case <-t.C:
 			t.Stop()
 			isAfterRoundInterval = true
-			return checkCommit()
+			isFinalized, err := checkCommit()
+			if err != nil || isFinalized {
+				return isFinalized, err
+			}
 		case <-time.After(CheckInterval):
 			if isAfterRoundInterval {
-				return checkCommit()
+				isFinalized, err := checkCommit()
+				if err != nil || isFinalized {
+					return isFinalized, err
+				}
 			}
 		}
 	}

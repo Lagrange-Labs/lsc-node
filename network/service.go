@@ -111,15 +111,10 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 	}
 
 	isVerified, err := utils.VerifySignature(common.FromHex(req.PubKey), reqMsg, common.FromHex(signature))
-	if err != nil {
-		logger.Errorf("Failed to verify the signature: %v", err)
-		return nil, err
-	}
-
-	if !isVerified {
+	if err != nil || !isVerified {
 		return &types.CommitBlockResponse{
 			Result:  false,
-			Message: fmt.Sprintf("Failed to verify the signature"),
+			Message: fmt.Sprintf("Failed to verify the signature: %v", err),
 		}, nil
 	}
 
