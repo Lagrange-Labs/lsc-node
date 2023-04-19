@@ -142,11 +142,13 @@ func (s *State) getNextBlock(ctx context.Context, blockNumber uint64) (*sequence
 		return block, err
 	}
 	// in case the block is not found, wait for it to be added from the sequencer
+	ticker := time.NewTicker(CheckInterval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return nil, ctx.Err()
-		case <-time.After(CheckInterval):
+		case <-ticker.C:
 			block, err := s.storage.GetBlock(context.Background(), blockNumber+1)
 			if err != nil {
 				if err == storetypes.ErrBlockNotFound {
@@ -187,20 +189,21 @@ func (s *State) processRound(ctx context.Context, chBlocked chan bool) (bool, er
 		return false, nil
 	}
 
-	t := time.NewTimer(s.roundInterval)
-
+	timer := time.NewTimer(s.roundInterval)
+	defer timer.Stop()
+	ticker := time.NewTicker(CheckInterval)
+	defer ticker.Stop()
 	for {
 		select {
 		case <-ctx.Done():
 			return false, ctx.Err()
-		case <-t.C:
-			t.Stop()
+		case <-timer.C:
 			isAfterRoundInterval = true
 			isFinalized, err := checkCommit()
 			if err != nil || isFinalized {
 				return isFinalized, err
 			}
-		case <-time.After(CheckInterval):
+		case <-ticker.C:
 			if isAfterRoundInterval {
 				isFinalized, err := checkCommit()
 				if err != nil || isFinalized {
