@@ -4,7 +4,6 @@ package config
 const DefaultValues = `
 [Server]
 GRPCPort = "9090"
-PublicKey = "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4"
 
 [Client]
 GrpcURL = "localhost:9090"
@@ -16,7 +15,14 @@ PullInterval = "2s"
 BackendType = "memdb"
 
 [Sequencer]
+
+[Governance]
 EthereumURL = "https://34.229.73.193:8545"
 StakingSCAddress = "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0"
 StakingCheckInterval = 20
+
+[Consensus]
+ProposerPubKey = "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4"
+RoundInterval = "2s"
+RoundLimit = "30s"
 `

@@ -9,11 +9,15 @@ import (
 	"github.com/urfave/cli/v2"
 
 	"github.com/Lagrange-Labs/lagrange-node/config"
+	"github.com/Lagrange-Labs/lagrange-node/consensus"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network"
+	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 )
+
+const CommitChannelBufferCount = 1000
 
 var (
 	configFileFlag = cli.StringFlag{
@@ -81,7 +85,14 @@ func runServer(ctx *cli.Context) error {
 		return err
 	}
 
-	if err = network.RunServer(&cfg.Server, storage); err != nil {
+	chCommit := make(chan *networktypes.CommitBlockRequest, CommitChannelBufferCount)
+
+	// Start the consensus state.
+	state := consensus.NewState(&cfg.Consensus, storage, chCommit)
+	go state.OnStart()
+
+	// Start the server.
+	if err = network.RunServer(&cfg.Server, storage, chCommit); err != nil {
 		return err
 	}
 

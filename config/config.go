@@ -5,6 +5,8 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Lagrange-Labs/lagrange-node/consensus"
+	"github.com/Lagrange-Labs/lagrange-node/governance"
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/store"
@@ -19,11 +21,13 @@ const (
 )
 
 type Config struct {
-	Node      sequencer.Config
-	Server    network.ServerConfig
-	Client    network.ClientConfig
-	Store     store.Config
-	Sequencer sequencer.Config
+	Node       sequencer.Config
+	Server     network.ServerConfig
+	Client     network.ClientConfig
+	Store      store.Config
+	Sequencer  sequencer.Config
+	Governance governance.Config
+	Consensus  consensus.Config
 }
 
 // Default parses the default configuration values.
