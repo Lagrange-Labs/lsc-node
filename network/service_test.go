@@ -153,5 +153,4 @@ func TestBlockOperation(t *testing.T) {
 	require.NoError(t, err)
 	t.Log(cRes.Message)
 	require.True(t, cRes.Result)
-
 }
