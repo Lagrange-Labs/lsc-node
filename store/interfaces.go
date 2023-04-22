@@ -26,7 +26,7 @@ type Storage interface {
 	// GetLastFinalizedBlockNumber returns the last block number that was finalized.
 	GetLastFinalizedBlockNumber(ctx context.Context) (uint64, error)
 	// GetNodesByStatuses returns the nodes with the given statuses.
-	GetNodesByStatuses(ctx context.Context, statuses []sequencertypes.NodeStatus) ([]*sequencertypes.ClientNode, error)
+	GetNodesByStatuses(ctx context.Context, statuses []sequencertypes.NodeStatus) ([]sequencertypes.ClientNode, error)
 	// UpdateBlock updates the block in the database.
 	UpdateBlock(ctx context.Context, block *sequencertypes.Block) error
 }
