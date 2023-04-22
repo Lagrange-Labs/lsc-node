@@ -3,10 +3,12 @@ package types
 import (
 	"bytes"
 	"fmt"
+	"sync"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/umbracle/go-eth-consensus/bls"
 	"google.golang.org/protobuf/proto"
@@ -20,35 +22,95 @@ type RoundState struct {
 
 	commitSignatures map[string]*networktypes.CommitBlockRequest
 	evidences        []*networktypes.CommitBlockRequest // to determine slashing
+
+	rwMutex   *sync.RWMutex // to protect the round state updates
+	isBlocked bool          // to prevent the block commit
 }
 
-// NewRoundState creates a new round state.
-func NewRoundState(validators *ValidatorSet, proposalBlock *sequencertypes.Block) *RoundState {
+// NewEmptyRoundState creates a new empty round state for rwMutex.
+func NewEmptyRoundState() *RoundState {
 	return &RoundState{
-		Height:           proposalBlock.Header.BlockNumber,
-		Validators:       validators,
-		ProposalBlock:    proposalBlock,
-		commitSignatures: make(map[string]*networktypes.CommitBlockRequest),
+		rwMutex:   &sync.RWMutex{},
+		isBlocked: true,
 	}
+}
+
+// UpdateRoundState updates a new round state.
+func (rs *RoundState) UpdateRoundState(validators *ValidatorSet, proposalBlock *sequencertypes.Block) {
+	rs.rwMutex.Lock()
+	defer rs.rwMutex.Unlock()
+
+	rs.Height = proposalBlock.BlockNumber()
+	rs.Validators = validators
+	rs.ProposalBlock = proposalBlock
+	rs.commitSignatures = make(map[string]*networktypes.CommitBlockRequest)
+	rs.isBlocked = false
 }
 
 // AddCommit adds a commit to the round state.
 func (rs *RoundState) AddCommit(commit *networktypes.CommitBlockRequest) {
+	rs.rwMutex.Lock()
+	defer rs.rwMutex.Unlock()
+
+	if rs.isBlocked {
+		logger.Warnf("the add commit is blocked")
+		return
+	}
+
 	rs.commitSignatures[commit.PubKey] = commit
+}
+
+// BlockCommit blocks adds a commit to the round state.
+func (rs *RoundState) BlockCommit() {
+	rs.rwMutex.Lock()
+	defer rs.rwMutex.Unlock()
+
+	rs.isBlocked = true
+}
+
+// UnblockCommit unblocks adds a commit to the round state.
+func (rs *RoundState) UnblockCommit() {
+	rs.rwMutex.Lock()
+	defer rs.rwMutex.Unlock()
+
+	rs.isBlocked = false
+}
+
+// GetCurrentBlock returns the current proposal block.
+func (rs *RoundState) GetCurrentBlock() *sequencertypes.Block {
+	rs.rwMutex.RLock()
+	defer rs.rwMutex.RUnlock()
+
+	return rs.ProposalBlock
+}
+
+// GetCurrentBlockNumber returns the current block number.
+func (rs *RoundState) GetCurrentBlockNumber() uint64 {
+	rs.rwMutex.RLock()
+	defer rs.rwMutex.RUnlock()
+
+	return rs.ProposalBlock.BlockNumber()
 }
 
 // CheckEnoughVotingPower checks if there is enough voting power to finalize the block.
 func (rs *RoundState) CheckEnoughVotingPower() bool {
+	rs.rwMutex.RLock()
+	defer rs.rwMutex.RUnlock()
+
 	votingPower := uint64(0)
 	for _, signature := range rs.commitSignatures {
 		votingPower += rs.Validators.GetVotingPower(signature.PubKey)
 	}
 
+	logger.Infof("voting power: %v, total voting power: %v", votingPower, rs.Validators.TotalVotingPower)
 	return votingPower*3 > rs.Validators.TotalVotingPower*2
 }
 
 // CheckAggregatedSignature checks if the aggregated signature is valid.
 func (rs *RoundState) CheckAggregatedSignature() ([]*bls.PublicKey, *bls.Signature, error) {
+	rs.rwMutex.Lock()
+	defer rs.rwMutex.Unlock()
+
 	sigMessage, err := proto.Marshal(&sequencertypes.Signature{
 		ChainHeader:      rs.ProposalBlock.ChainHeader,
 		CurrentCommittee: rs.ProposalBlock.Header.CurrentCommittee,
@@ -62,12 +124,12 @@ func (rs *RoundState) CheckAggregatedSignature() ([]*bls.PublicKey, *bls.Signatu
 	pubkeys := make([]*bls.PublicKey, 0)
 	invalid_keys := make([]string, 0)
 	for _, commit := range rs.commitSignatures {
-		pubkey := new(bls.PublicKey)
-		if err := pubkey.Deserialize(common.FromHex(commit.PubKey)); err != nil {
+		pubkey, err := utils.HexToBlsPubKey(commit.PubKey)
+		if err != nil {
 			return nil, nil, err
 		}
-		sig := new(bls.Signature)
-		if err := sig.Deserialize(common.FromHex(commit.BlsSignature.Signature)); err != nil {
+		sig, err := utils.HexToBlsSignature(commit.BlsSignature.Signature)
+		if err != nil {
 			logger.Errorf("failed to deserialize signature %v: %v", commit, err)
 			invalid_keys = append(invalid_keys, commit.PubKey)
 			continue
@@ -115,8 +177,20 @@ func (rs *RoundState) CheckAggregatedSignature() ([]*bls.PublicKey, *bls.Signatu
 	return pubkeys, aggSig, err
 }
 
+// UpdateAggregatedSignature updates the aggregated signature.
+func (rs *RoundState) UpdateAggregatedSignature(pubkeys []string, aggSig string) {
+	rs.rwMutex.Lock()
+	defer rs.rwMutex.Unlock()
+
+	rs.ProposalBlock.PubKeys = pubkeys
+	rs.ProposalBlock.AggSignature = aggSig
+}
+
 // GetEvidences returns the evidences.
 func (rs *RoundState) GetEvidences() []*networktypes.CommitBlockRequest {
+	rs.rwMutex.RLock()
+	defer rs.rwMutex.RUnlock()
+
 	return rs.evidences
 }
 

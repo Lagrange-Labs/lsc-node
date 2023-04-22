@@ -2,6 +2,7 @@ package consensus
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Lagrange-Labs/lagrange-node/consensus/types"
@@ -10,15 +11,17 @@ import (
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/umbracle/go-eth-consensus/bls"
 )
 
 const CheckInterval = 500 * time.Millisecond
 
 // State handles the consensus process.
 type State struct {
-	types.RoundState
+	*types.RoundState
 
-	proposer      *types.Validator
+	proposer      *bls.SecretKey
 	storage       storageInterface
 	roundLimit    time.Duration
 	roundInterval time.Duration
@@ -28,18 +31,22 @@ type State struct {
 }
 
 // NewState returns a new State.
-func NewState(cfg *Config, storage storageInterface, chCommit chan *networktypes.CommitBlockRequest) *State {
+func NewState(cfg *Config, storage storageInterface) *State {
+	privKey, err := utils.HexToBlsPrivKey(cfg.ProposerPrivateKey)
+	if err != nil {
+		logger.Fatalf("failed to parse the proposer private key: %v", err)
+	}
+
 	chStop := make(chan struct{}, 1)
 
 	return &State{
-		proposer: &types.Validator{
-			PublicKey: cfg.ProposerPubKey,
-		},
+		proposer:      privKey,
 		storage:       storage,
 		roundLimit:    time.Duration(cfg.RoundLimit),
 		roundInterval: time.Duration(cfg.RoundInterval),
-		chCommit:      chCommit,
+		chCommit:      make(<-chan *networktypes.CommitBlockRequest, 1000),
 		chStop:        chStop,
+		RoundState:    types.NewEmptyRoundState(),
 	}
 }
 
@@ -52,31 +59,35 @@ func (s *State) OnStart() {
 	}
 
 	for {
+		logger.Infof("start the round for the block number %v", lastBlockNumber+1)
 		if err := s.startRound(lastBlockNumber); err != nil {
 			logger.Errorf("failed to start the round: %v", err)
-			return
+			time.Sleep(s.roundInterval)
+			continue
 		}
 
-		chBlocked := make(chan bool)
-		chDone := make(chan struct{})
-
-		// It starts the receiveRoutine to receive the commit from the gRPC server.
-		go s.receiveRoutine(chBlocked, chDone)
+		logger.Infof("the proposal block %v is ready", s.ProposalBlock)
+		logger.Infof("the validator set %v is set", s.Validators)
 
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.roundLimit))
 		defer cancel()
-		isVoted, err := s.processRound(ctx, chBlocked)
+		isVoted, err := s.processRound(ctx)
 		if err != nil {
 			// TODO handle timeout error, restart the round
 			logger.Errorf("failed to process the round: %v", err)
-			return
+			continue
 		}
 		if !isVoted {
-			logger.Errorf("the current block %v is not finalized", s.ProposalBlock)
+			logger.Errorf("the current block %d is not finalized", s.ProposalBlock.BlockNumber())
 		}
 
-		// close the receiveRoutine
-		chDone <- struct{}{}
+		// store the finalized block
+		if err := s.storage.UpdateBlock(context.Background(), s.ProposalBlock); err != nil {
+			logger.Errorf("failed to update the block %v: %v", s.ProposalBlock, err)
+			continue
+		}
+
+		logger.Infof("the block %d is finalized", s.ProposalBlock.BlockNumber())
 
 		lastBlockNumber++
 
@@ -95,42 +106,37 @@ func (s *State) OnStop() {
 	s.chStop <- struct{}{}
 }
 
-// receiveRoutine receives the commit from the gRPC server.
-func (s *State) receiveRoutine(chBlocked chan bool, chDone chan struct{}) {
-	isBlocked := false
-
-	for {
-		select {
-		case commit := <-s.chCommit:
-			if isBlocked {
-				continue
-			}
-			s.AddCommit(commit)
-		case <-chDone:
-			return
-		case blocked := <-chBlocked:
-			isBlocked = blocked
-		}
-	}
-}
-
 // startRound loads the next block and initializes the round state.
 func (s *State) startRound(blockNumber uint64) error {
 	nodes, err := s.storage.GetNodesByStatuses(context.Background(), []sequencertypes.NodeStatus{sequencertypes.NodeRegistered})
 	if err != nil {
 		return err
 	}
-	validatorSet := types.NewValidatorSet(s.proposer, nodes)
+
+	// TODO how to determince nodes status?
+	if len(nodes) == 0 {
+		return fmt.Errorf("no nodes are registered")
+	}
+
+	pubkey := utils.BlsPubKeyToHex(s.proposer.GetPublicKey())
+	validatorSet := types.NewValidatorSet(&types.Validator{PublicKey: pubkey}, nodes)
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.roundLimit))
 	defer cancel()
 	block, err := s.getNextBlock(ctx, blockNumber)
 	if err != nil {
 		// TODO handle timeout error
+		return fmt.Errorf("getting the block %d is failed: %v", blockNumber, err)
+	}
+	// generate a proposer signature
+	signature, err := s.proposer.Sign(common.FromHex(block.Header.BlockHash))
+	if err != nil {
 		return err
 	}
+	block.Header.ProposerSignature = utils.BlsSignatureToHex(signature)
+	block.Header.ProposerPubKey = pubkey
 
-	s.RoundState = *types.NewRoundState(validatorSet, block)
+	s.UpdateRoundState(validatorSet, block)
 
 	return nil
 }
@@ -163,7 +169,7 @@ func (s *State) getNextBlock(ctx context.Context, blockNumber uint64) (*sequence
 }
 
 // processRound processes the round.
-func (s *State) processRound(ctx context.Context, chBlocked chan bool) (bool, error) {
+func (s *State) processRound(ctx context.Context) (bool, error) {
 	isAfterRoundInterval := false
 	isBlocked := false
 
@@ -174,18 +180,21 @@ func (s *State) processRound(ctx context.Context, chBlocked chan bool) (bool, er
 				// TODO handle error
 				return true, err
 			}
-			chBlocked <- true
 			isBlocked = true
-			s.ProposalBlock.AggSignature = utils.BlsSignatureToHex(aggSignature)
+			s.BlockCommit()
+
+			pubKeys := make([]string, 0)
 			for _, pubkey := range pubkeys {
-				s.ProposalBlock.PubKeys = append(s.ProposalBlock.PubKeys, utils.BlsPubKeyToHex(pubkey))
+				pubKeys = append(pubKeys, utils.BlsPubKeyToHex(pubkey))
 			}
+			s.UpdateAggregatedSignature(pubKeys, utils.BlsSignatureToHex(aggSignature))
 			return true, nil
 		} else if isBlocked {
-			chBlocked <- false
 			isBlocked = false
+			s.UnblockCommit()
 		}
 
+		logger.Warnf("the current block %d doesn't get enough power", s.ProposalBlock.BlockNumber())
 		return false, nil
 	}
 
@@ -198,11 +207,13 @@ func (s *State) processRound(ctx context.Context, chBlocked chan bool) (bool, er
 		case <-ctx.Done():
 			return false, ctx.Err()
 		case <-timer.C:
+			logger.Infof("check the commit after the round interval")
 			isAfterRoundInterval = true
 			isFinalized, err := checkCommit()
 			if err != nil || isFinalized {
 				return isFinalized, err
 			}
+			logger.Warnf("the current block %d is not finalized for the round interval", s.ProposalBlock.BlockNumber())
 		case <-ticker.C:
 			if isAfterRoundInterval {
 				isFinalized, err := checkCommit()

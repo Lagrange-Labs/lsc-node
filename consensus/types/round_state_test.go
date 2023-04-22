@@ -52,7 +52,10 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey) {
 	}
 
 	validatorSet := NewValidatorSet(proposer, nodes)
-	return NewRoundState(validatorSet, pBlock), secKeys
+	rs := NewEmptyRoundState()
+	rs.UpdateRoundState(validatorSet, pBlock)
+
+	return rs, secKeys
 }
 
 func TestCheckVotingPower(t *testing.T) {

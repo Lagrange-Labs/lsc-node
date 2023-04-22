@@ -1,6 +1,9 @@
 package types
 
-import sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+import (
+	"github.com/Lagrange-Labs/lagrange-node/logger"
+	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+)
 
 // Validator defines a validator state.
 type Validator struct {
@@ -29,6 +32,7 @@ func NewValidatorSet(proposer *Validator, nodes []*sequencertypes.ClientNode) *V
 			VotingPower: node.VotingPower,
 		}
 		totalVotingPower += node.VotingPower
+		logger.Infof("validator: %s, voting power: %d", node.PublicKey, node.VotingPower)
 		votingPowerMap[node.PublicKey] = node.VotingPower
 	}
 

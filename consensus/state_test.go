@@ -13,11 +13,11 @@ import (
 )
 
 func createTestState(t *testing.T) (*State, chan *networktypes.CommitBlockRequest) {
-	_, pubKey := utils.RandomBlsKey()
+	priv, _ := utils.RandomBlsKey()
 	cfg := &Config{
-		ProposerPubKey: pubKey,
-		RoundLimit:     utils.TimeDuration(5 * time.Second),
-		RoundInterval:  utils.TimeDuration(2 * time.Second),
+		ProposerPrivateKey: utils.BlsPrivKeyToHex(priv),
+		RoundLimit:         utils.TimeDuration(5 * time.Second),
+		RoundInterval:      utils.TimeDuration(2 * time.Second),
 	}
 
 	memDB, err := store.NewMemDB()
@@ -25,7 +25,7 @@ func createTestState(t *testing.T) (*State, chan *networktypes.CommitBlockReques
 	require.NoError(t, memDB.AddBlock(context.Background(), nil))
 
 	chCommit := make(chan *networktypes.CommitBlockRequest)
-	return NewState(cfg, memDB, chCommit), chCommit
+	return NewState(cfg, memDB), chCommit
 }
 
 func TestState_OnStart(t *testing.T) {
