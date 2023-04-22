@@ -25,8 +25,7 @@ func newTestService() (*sequencerService, error) {
 	storage.AddBlock(context.Background(), nil) //nolint:errcheck
 
 	return &sequencerService{
-		storage:  storage,
-		chCommit: make(chan *types.CommitBlockRequest, 10),
+		storage: storage,
 	}, nil
 }
 
