@@ -124,13 +124,13 @@ func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context) (uint64, error)
 
 // UpdateNode updates the node status in the database.
 func (d *MemDB) UpdateNode(ctx context.Context, node *sequencertypes.ClientNode) error {
-	d.nodes[node.IPAddress] = *node
+	d.nodes[node.PublicKey] = *node
 	return nil
 }
 
 // GetNodesByStatuses returns the nodes with the given statuses.
-func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []sequencertypes.NodeStatus) ([]*sequencertypes.ClientNode, error) {
-	res := make([]*sequencertypes.ClientNode, 0)
+func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []sequencertypes.NodeStatus) ([]sequencertypes.ClientNode, error) {
+	res := make([]sequencertypes.ClientNode, 0)
 	for _, node := range d.nodes {
 		isBelonged := false
 		for _, status := range statuses {
@@ -140,7 +140,7 @@ func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []sequencertype
 			}
 		}
 		if isBelonged {
-			res = append(res, &node)
+			res = append(res, node)
 		}
 	}
 

@@ -40,11 +40,11 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey) {
 
 	secKeys := []*bls.SecretKey{}
 
-	nodes := []*sequencertypes.ClientNode{}
+	nodes := []sequencertypes.ClientNode{}
 	for i := 0; i < 10; i++ {
 		secKey, pubKey := utils.RandomBlsKey()
 		secKeys = append(secKeys, secKey)
-		node := &sequencertypes.ClientNode{
+		node := sequencertypes.ClientNode{
 			PublicKey:   pubKey,
 			VotingPower: 1,
 		}
