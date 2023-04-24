@@ -59,6 +59,13 @@ func (s *State) OnStart() {
 	}
 
 	for {
+		// check if chStop is triggered
+		select {
+		case <-s.chStop:
+			return
+		default:
+		}
+
 		logger.Infof("start the round for the block number %v", lastBlockNumber+1)
 		if err := s.startRound(lastBlockNumber); err != nil {
 			logger.Errorf("failed to start the round: %v", err)
@@ -90,13 +97,6 @@ func (s *State) OnStart() {
 		logger.Infof("the block %d is finalized", s.ProposalBlock.BlockNumber())
 
 		lastBlockNumber++
-
-		// check if chStop is triggered
-		select {
-		case <-s.chStop:
-			return
-		default:
-		}
 	}
 }
 
