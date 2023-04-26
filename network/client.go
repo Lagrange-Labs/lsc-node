@@ -2,8 +2,6 @@ package network
 
 import (
 	"context"
-	"strconv"
-	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -15,6 +13,7 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
+	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -38,7 +37,8 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	}
 	conn, err := grpc.DialContext(ctx, cfg.GrpcURL, opts...)
 	if err != nil {
-		panic(err)
+		cancel()
+		return nil, err
 	}
 
 	healthClient := grpc_health_v1.NewHealthClient(conn)
@@ -48,7 +48,8 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	watcher, err := healthClient.Watch(hctx, &grpc_health_v1.HealthCheckRequest{})
 	if err != nil {
 		logger.Error("Failed to check gRPC health:", err)
-		panic(err)
+		cancel()
+		return nil, err
 	}
 
 	for {
@@ -64,8 +65,8 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 		}
 	}
 
-	priv := new(bls.SecretKey)
-	if err := priv.Unmarshal(common.FromHex(cfg.PrivateKey)); err != nil {
+	priv, err := utils.HexToBlsPrivKey(cfg.PrivateKey)
+	if err != nil {
 		panic(err)
 	}
 
@@ -76,29 +77,31 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 		pullInterval:         time.Duration(cfg.PullInterval),
 		ctx:                  ctx,
 		cancelFunc:           cancel,
+		lastBlockNumber:      1,
 	}, nil
 }
 
 // Start starts the connection loop.
 func (c *Client) Start() {
-	pk := c.privateKey.GetPublicKey().Serialize()
+	pubkey := utils.BlsPubKeyToHex(c.privateKey.GetPublicKey())
 	req := &types.JoinNetworkRequest{
-		PublicKey:    common.Bytes2Hex(pk[:]),
+		PublicKey:    pubkey,
 		StakeAddress: c.stakeAddress,
 	}
 	reqMsg, err := proto.Marshal(req)
 	if err != nil {
-		panic(err)
+		logger.Fatalf("failed to marshal the request: %v\n", err)
 	}
+
 	sig, err := c.privateKey.Sign(reqMsg)
 	if err != nil {
-		panic(err)
+		logger.Fatalf("failed to sign the request: %v\n", err)
 	}
-	sigMsg := sig.Serialize()
-	req.Signature = common.Bytes2Hex(sigMsg[:])
+
+	req.Signature = utils.BlsSignatureToHex(sig)
 	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
 	if err != nil {
-		panic(err)
+		logger.Fatalf("failed to join the network: %v\n", err)
 	}
 
 	if !res.Result {
@@ -112,26 +115,56 @@ func (c *Client) Start() {
 		case <-c.ctx.Done():
 			return
 		case <-time.After(c.pullInterval):
-			// TODO logging error
-			res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber}) // TODO track the block number
+			res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber})
 			if err != nil {
 				logger.Errorf("failed to get the last block: %v\n", err)
 				continue
 			}
-			// TODO proof validation
 
 			logger.Infof("got the current block: %v\n", res.Block)
 
-			// verify the delta hash
-			// verify the block hash
 			// verify the proposer signature
-			verified, err := utils.VerifySignature(common.FromHex(res.Block.Header.ProposerPubKey), common.FromHex(res.Block.Header.BlockHash), common.FromHex(res.Block.Header.ProposerSignature))
+			if len(res.Block.Header.ProposerPubKey) == 0 {
+				logger.Warnf("the block %d is not opened yet", res.Block.BlockNumber())
+				continue
+			}
+
+			// verify the block hash
+			if !res.Block.VerifyBlockHash() {
+				logger.Errorf("failed to verify the block hash")
+				continue
+			}
+
+			verified, err := utils.VerifySignature(common.FromHex(res.Block.Header.ProposerPubKey), common.FromHex(res.Block.Hash()), common.FromHex(res.Block.Header.ProposerSignature))
 			if err != nil || !verified {
 				logger.Errorf("failed to verify the proposer signature: %v\n", err)
 				continue
 			}
+			// TODO proof validation
 
-			msg, err := proto.Marshal(res.Block)
+			// generate the BLS signature
+			blsSignature := &sequencertypes.Signature{
+				ChainHeader:      res.Block.ChainHeader,
+				CurrentCommittee: res.Block.Header.CurrentCommittee,
+				NextCommittee:    res.Block.Header.NextCommittee,
+			}
+			blsSigMsg, err := proto.Marshal(blsSignature)
+			if err != nil {
+				logger.Errorf("failed to marshal the BLS signature: %v\n", err)
+				continue
+			}
+			blsSig, err := c.privateKey.Sign(blsSigMsg)
+			if err != nil {
+				logger.Errorf("failed to sign the BLS signature: %v\n", err)
+			}
+			blsSignature.Signature = utils.BlsSignatureToHex(blsSig)
+
+			req := &types.CommitBlockRequest{
+				BlockNumber:  c.lastBlockNumber,
+				BlsSignature: blsSignature,
+				PubKey:       pubkey,
+			}
+			msg, err := proto.Marshal(req)
 			if err != nil {
 				logger.Errorf("failed to marshal the block: %v\n", err)
 				continue
@@ -141,26 +174,14 @@ func (c *Client) Start() {
 				logger.Errorf("failed to sign the block: %v\n", err)
 				continue
 			}
-			sigMsg := sig.Serialize()
-			resS, err := c.CommitBlock(c.ctx, &types.CommitBlockRequest{
-				BlockNumber: c.lastBlockNumber,
-				Signature:   common.Bytes2Hex(sigMsg[:]),
-			})
+			req.Signature = utils.BlsSignatureToHex(sig)
+			resS, err := c.CommitBlock(c.ctx, req)
 			if err != nil {
 				logger.Errorf("failed to upload signature: %v\n", err)
 				continue
 			}
 			if !resS.Result {
 				logger.Infof("failed to upload signature: %s\n", resS.Message)
-				if strings.Contains(resS.Message, "The wrong block number:") {
-					// TODO synchronize the history blocks
-					num, err := strconv.ParseUint(resS.Message[24:], 10, 64)
-					if err != nil {
-						logger.Error("failed to parse the last block number:", err)
-						return
-					}
-					c.lastBlockNumber = num
-				}
 				continue
 			}
 

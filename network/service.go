@@ -15,21 +15,21 @@ import (
 )
 
 var (
-	// ErrWrongBlockNumber is returned when the block number is not latest.
-	ErrWrongBlockNumber = fmt.Errorf("the block number is not latest")
+	// ErrWrongBlockNumber is returned when the block number is not matched.
+	ErrWrongBlockNumber = fmt.Errorf("the block number is not matched")
 )
 
 type sequencerService struct {
-	storage storageInterface
+	storage   storageInterface
+	consensus consensusInterface
 	types.UnimplementedNetworkServiceServer
-	chCommit chan<- *types.CommitBlockRequest
 }
 
 // NewSequencerService creates the sequencer service.
-func NewSequencerService(storage storageInterface, chCommit chan<- *types.CommitBlockRequest) (types.NetworkServiceServer, error) {
+func NewSequencerService(storage storageInterface, consensus consensusInterface) (types.NetworkServiceServer, error) {
 	return &sequencerService{
-		storage:  storage,
-		chCommit: chCommit,
+		storage:   storage,
+		consensus: consensus,
 	}, nil
 }
 
@@ -87,9 +87,12 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 		return nil, err
 	}
 
-	block, err := s.storage.GetBlock(ctx, req.BlockNumber)
-	if err != nil {
-		return nil, err
+	block := s.consensus.GetCurrentBlock()
+	if block == nil || block.BlockNumber() != req.BlockNumber {
+		block, err := s.storage.GetBlock(ctx, req.BlockNumber)
+		return &types.GetBlockResponse{
+			Block: block,
+		}, err
 	}
 
 	return &types.GetBlockResponse{
@@ -118,8 +121,17 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 		}, nil
 	}
 
+	// check if the block number is matched
+	blockNumber := s.consensus.GetCurrentBlockNumber()
+	if blockNumber != req.BlockNumber {
+		return &types.CommitBlockResponse{
+			Result:  false,
+			Message: fmt.Sprintf("The block number is not matched: %v", blockNumber),
+		}, nil
+	}
+
 	// upload the commit to the consensus layer
-	s.chCommit <- req
+	s.consensus.AddCommit(req)
 
 	return &types.CommitBlockResponse{
 		Result:  true,
