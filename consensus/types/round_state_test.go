@@ -40,11 +40,11 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey) {
 
 	secKeys := []*bls.SecretKey{}
 
-	nodes := []*sequencertypes.ClientNode{}
+	nodes := []sequencertypes.ClientNode{}
 	for i := 0; i < 10; i++ {
 		secKey, pubKey := utils.RandomBlsKey()
 		secKeys = append(secKeys, secKey)
-		node := &sequencertypes.ClientNode{
+		node := sequencertypes.ClientNode{
 			PublicKey:   pubKey,
 			VotingPower: 1,
 		}
@@ -52,7 +52,10 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey) {
 	}
 
 	validatorSet := NewValidatorSet(proposer, nodes)
-	return NewRoundState(validatorSet, pBlock), secKeys
+	rs := NewEmptyRoundState()
+	rs.UpdateRoundState(validatorSet, pBlock)
+
+	return rs, secKeys
 }
 
 func TestCheckVotingPower(t *testing.T) {

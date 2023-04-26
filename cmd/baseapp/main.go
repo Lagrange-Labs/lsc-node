@@ -12,7 +12,6 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network"
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 )
@@ -85,14 +84,12 @@ func runServer(ctx *cli.Context) error {
 		return err
 	}
 
-	chCommit := make(chan *networktypes.CommitBlockRequest, CommitChannelBufferCount)
-
 	// Start the consensus state.
-	state := consensus.NewState(&cfg.Consensus, storage, chCommit)
+	state := consensus.NewState(&cfg.Consensus, storage)
 	go state.OnStart()
 
 	// Start the server.
-	if err = network.RunServer(&cfg.Server, storage, chCommit); err != nil {
+	if err = network.RunServer(&cfg.Server, storage, state); err != nil {
 		return err
 	}
 
