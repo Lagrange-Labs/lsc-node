@@ -19,7 +19,7 @@ The Lagrange Node consists of the following components:
 
 Here is the diagram of the architecture:
 <p align="center">
-  <img src="./docs/network.drawio.png"/>
+  <img src="./docs/highlevelflow.drawio.png"/>
 </p>
 
 ## Installation
