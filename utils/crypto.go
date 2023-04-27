@@ -28,6 +28,13 @@ func VerifySignature(pubKey, message, signature []byte) (bool, error) {
 	return sig.VerifyByte(pub, message)
 }
 
+// HexToBlsPrivKey converts a hex string to a BLS private key.
+func HexToBlsPrivKey(hex string) (*bls.SecretKey, error) {
+	priv := new(bls.SecretKey)
+	err := priv.Unmarshal(common.FromHex(hex))
+	return priv, err
+}
+
 // HexToBlsPubKey converts a hex string to a BLS public key.
 func HexToBlsPubKey(hex string) (*bls.PublicKey, error) {
 	pub := new(bls.PublicKey)
@@ -40,6 +47,12 @@ func HexToBlsSignature(hex string) (*bls.Signature, error) {
 	sig := new(bls.Signature)
 	err := sig.Deserialize(common.FromHex(hex))
 	return sig, err
+}
+
+// BlsPrivKeyToHex converts a BLS private key to a hex string.
+func BlsPrivKeyToHex(priv *bls.SecretKey) string {
+	privMsg, _ := priv.Marshal()
+	return common.Bytes2Hex(privMsg[:])
 }
 
 // BlsPubKeyToHex converts a BLS public key to a hex string.

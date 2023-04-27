@@ -13,14 +13,14 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
-func RunServer(cfg *ServerConfig, storage storageInterface, chCommit chan<- *types.CommitBlockRequest) error {
+func RunServer(cfg *ServerConfig, storage storageInterface, consensus consensusInterface) error {
 	ctx := context.Background()
 
 	if len(cfg.GRPCPort) == 0 {
 		return fmt.Errorf("invalid TCP port for gRPC server: '%s'", cfg.GRPCPort)
 	}
 
-	sequencerService, err := NewSequencerService(storage, chCommit)
+	sequencerService, err := NewSequencerService(storage, consensus)
 	if err != nil {
 		return err
 	}
