@@ -4,15 +4,14 @@ import (
 	"context"
 	"crypto/rand"
 	"encoding/hex"
-	"fmt"
 	"time"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	"github.com/Lagrange-Labs/lagrange-node/store/types"
 	synctypes "github.com/Lagrange-Labs/lagrange-node/synchronizer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/umbracle/go-eth-consensus/bls"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -22,34 +21,34 @@ var _ Storage = (*MemDB)(nil)
 
 // DB is an in-memory database.
 type MemDB struct {
-	nodes   map[string]sequencertypes.ClientNode
-	blocks  []*sequencertypes.Block
-	privKey *bls.SecretKey
-	pubKey  string
+	nodes  map[string]sequencertypes.ClientNode
+	blocks []*sequencertypes.Block
 }
 
 // NewMemDB creates a new in-memory database.
 func NewMemDB() (*MemDB, error) {
 	nodes := make(map[string]sequencertypes.ClientNode, 0)
-	privKey, pubKey := utils.RandomBlsKey()
-	db := &MemDB{nodes: nodes, blocks: []*sequencertypes.Block{}, privKey: privKey, pubKey: pubKey}
+	db := &MemDB{nodes: nodes, blocks: []*sequencertypes.Block{}}
 	go db.updateBlock(10 * time.Second)
 	return db, nil
 }
 
 // AddNode adds a client node to the network.
 func (d *MemDB) AddNode(ctx context.Context, node *sequencertypes.ClientNode) error {
-	d.nodes[node.IPAddress] = *node
+	node.Status = sequencertypes.NodeRegistered
+	node.VotingPower = 1
+	d.nodes[node.PublicKey] = *node
 	return nil
 }
 
 // GetNode returns the node with the given IP address.
 func (d *MemDB) GetNode(ctx context.Context, ip string) (*sequencertypes.ClientNode, error) {
-	node, ok := d.nodes[ip]
-	if !ok {
-		return nil, nil
+	for _, node := range d.nodes {
+		if node.IPAddress == ip {
+			return &node, nil
+		}
 	}
-	return &node, nil
+	return nil, nil
 }
 
 // GetNodeCount returns the number of nodes in the network.
@@ -65,7 +64,7 @@ func (d *MemDB) GetLastBlock(ctx context.Context) (*sequencertypes.Block, error)
 // GetBlock returns the block for the given block number.
 func (d *MemDB) GetBlock(ctx context.Context, blockNumber uint64) (*sequencertypes.Block, error) {
 	if blockNumber > uint64(len(d.blocks)) {
-		return nil, fmt.Errorf("the block %d is not ready", blockNumber)
+		return nil, types.ErrBlockNotFound
 	}
 	return d.blocks[blockNumber-1], nil
 }
@@ -84,24 +83,18 @@ func (d *MemDB) AddBlock(ctx context.Context, block *sequencertypes.Block) error
 			Chain:       "test",
 		},
 		Header: &sequencertypes.BlockHeader{
-			BlockNumber:    blockNumber,
-			ParentHash:     parentHash,
-			ProposerPubKey: d.pubKey,
+			BlockNumber: blockNumber,
+			ParentHash:  parentHash,
 		},
+		Proof: randomHex(64),
 	}
+
 	blockMsg, err := proto.Marshal(lastBlock)
 	if err != nil {
 		panic(err)
 	}
 	blockHash := utils.Hash(blockMsg)
 	lastBlock.Header.BlockHash = common.Bytes2Hex(blockHash)
-
-	sig, err := d.privKey.Sign(blockHash)
-	if err != nil {
-		panic(err)
-	}
-	sigMsg := sig.Serialize()
-	lastBlock.Header.ProposerSignature = common.Bytes2Hex(sigMsg[:])
 
 	d.blocks = append(d.blocks, lastBlock)
 	return nil
@@ -110,7 +103,7 @@ func (d *MemDB) AddBlock(ctx context.Context, block *sequencertypes.Block) error
 // UpdateBlock updates the block in the database.
 func (d *MemDB) UpdateBlock(ctx context.Context, block *sequencertypes.Block) error {
 	for i := 0; i < len(d.blocks); i++ {
-		if d.blocks[i].Header.BlockNumber == block.Header.BlockNumber {
+		if d.blocks[i].BlockNumber() == block.BlockNumber() {
 			d.blocks[i] = block
 		}
 	}
@@ -131,13 +124,13 @@ func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context) (uint64, error)
 
 // UpdateNode updates the node status in the database.
 func (d *MemDB) UpdateNode(ctx context.Context, node *sequencertypes.ClientNode) error {
-	d.nodes[node.IPAddress] = *node
+	d.nodes[node.PublicKey] = *node
 	return nil
 }
 
 // GetNodesByStatuses returns the nodes with the given statuses.
-func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []sequencertypes.NodeStatus) ([]*sequencertypes.ClientNode, error) {
-	res := make([]*sequencertypes.ClientNode, 0)
+func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []sequencertypes.NodeStatus) ([]sequencertypes.ClientNode, error) {
+	res := make([]sequencertypes.ClientNode, 0)
 	for _, node := range d.nodes {
 		isBelonged := false
 		for _, status := range statuses {
@@ -147,7 +140,7 @@ func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []sequencertype
 			}
 		}
 		if isBelonged {
-			res = append(res, &node)
+			res = append(res, node)
 		}
 	}
 

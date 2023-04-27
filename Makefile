@@ -64,3 +64,15 @@ stop:
 	docker-compose down --remove-orphans
 
 .PHONY: localnet-start stop
+
+# Run Components
+run-server:
+	go run ./cmd/baseapp/... run-server
+
+run-client:
+	go run ./cmd/baseapp/... run-client
+
+run-sequencer:
+	go run ./cmd/baseapp/... run-sequencer
+
+.PHONY: run-server run-client run-sequencer
