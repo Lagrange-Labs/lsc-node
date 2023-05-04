@@ -17,22 +17,23 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey) {
 	chainHeader := &synctypes.ChainHeader{
 		Chain:       "test",
 		BlockNumber: 1,
-		StateRoot:   "0xbb345e208bda953c908027a45aa443d6cab6b8d2fd64e83ec52f1008ddeafa58",
+		BlockHash:   utils.RandomHex(32),
+		StateRoot:   utils.RandomHex(32),
 	}
-	_, proposerPubKey := utils.RandomBlsKey()
+	proposerSecKey, proposerPubKey := utils.RandomBlsKey()
 	pBlock := &sequencertypes.Block{
-		Header: &sequencertypes.BlockHeader{
-			BlockNumber:       1,
-			ProposerPubKey:    proposerPubKey,
-			ParentHash:        "0x000000000",
-			BlockHash:         "0x000000000",
-			ProposerSignature: "0x000000000",
-			CurrentCommittee:  "0x0000000",
-			NextCommittee:     "0x0000000",
+		BlockHeader: &sequencertypes.BlockHeader{
+			ProposerPubKey:   proposerPubKey,
+			CurrentCommittee: "0x0000000",
+			NextCommittee:    "0x0000000",
 		},
 		ChainHeader: chainHeader,
-		Proof:       "0x0000000",
 	}
+
+	blsSigMsg, _ := proto.Marshal(pBlock.BlsSignature())
+	proposerSigMsg, _ := proposerSecKey.Sign(blsSigMsg)
+	pBlock.BlockHeader.ProposerSignature = utils.BlsSignatureToHex(proposerSigMsg)
+
 	proposer := &Validator{
 		PublicKey:   proposerPubKey,
 		VotingPower: 0,
@@ -78,21 +79,12 @@ func TestCheckVotingPower(t *testing.T) {
 func TestCheckAggregatedSignature(t *testing.T) {
 	rs, secKeys := createTestRoundState()
 
-	chainHeader := &synctypes.ChainHeader{
-		Chain:       "test",
-		BlockNumber: 1,
-		StateRoot:   "0xbb345e208bda953c908027a45aa443d6cab6b8d2fd64e83ec52f1008ddeafa58",
-	}
-	blsSignature := &sequencertypes.Signature{
-		ChainHeader:      chainHeader,
-		CurrentCommittee: "0x0000000",
-		NextCommittee:    "0x0000000",
-	}
+	blsSignature := rs.ProposalBlock.BlsSignature()
 	signMsg, err := proto.Marshal(blsSignature)
 	require.NoError(t, err)
 
 	// Test 1: valid case
-	for i := 0; i < 10; i++ {
+	for i := 0; i < len(secKeys); i++ {
 		blsSign := *blsSignature //nolint:govet
 		signature, err := secKeys[i].Sign(signMsg)
 		require.NoError(t, err)
@@ -107,7 +99,6 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		require.True(t, verified)
 
 		rs.AddCommit(&networktypes.CommitBlockRequest{
-			BlockNumber:  1,
 			PubKey:       rs.Validators.Validators[i].PublicKey,
 			BlsSignature: &blsSign,
 		})
@@ -118,7 +109,12 @@ func TestCheckAggregatedSignature(t *testing.T) {
 	// Test 2: invalid case
 	wrongSignature := ""
 	rs, secKeys = createTestRoundState()
-	for i := 0; i < 10; i++ {
+
+	blsSignature = rs.ProposalBlock.BlsSignature()
+	signMsg, err = proto.Marshal(blsSignature)
+	require.NoError(t, err)
+
+	for i := 0; i < len(secKeys); i++ {
 		blsSign := *blsSignature //nolint:govet
 		if i == 8 {
 			blsSign.NextCommittee = "0x111" // wrong contents
@@ -127,11 +123,10 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		require.NoError(t, err)
 		signatureMsg := signature.Serialize()
 		blsSign.Signature = common.Bytes2Hex(signatureMsg[:])
-		if i == 8 {
-			wrongSignature = blsSign.Signature
-		}
 		if i == 7 {
 			blsSign.Signature = "0x000" // invalid signature
+		} else if i == 8 {
+			wrongSignature = blsSign.Signature
 		} else if i == 9 {
 			blsSign.Signature = wrongSignature // wrong signature
 		}
@@ -143,7 +138,6 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		require.True(t, verified)
 
 		rs.AddCommit(&networktypes.CommitBlockRequest{
-			BlockNumber:  1,
 			PubKey:       rs.Validators.Validators[i].PublicKey,
 			BlsSignature: &blsSign,
 		})

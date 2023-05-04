@@ -7,6 +7,7 @@ option go_package = "github.com/Lagrange-Labs/lagrange-node/synchronizer/types";
 // ChainHeader is the block header for the given block of the specific chain
 message ChainHeader {
     uint64 block_number = 1;
-    string state_root = 2;
-    string chain = 3;
+    string block_hash = 2;
+    string state_root = 3;
+    string chain = 4;
 }
