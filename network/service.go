@@ -123,7 +123,7 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 
 	// check if the block number is matched
 	blockNumber := s.consensus.GetCurrentBlockNumber()
-	if blockNumber != req.BlockNumber {
+	if blockNumber != req.BlsSignature.BlockNumber() {
 		return &types.CommitBlockResponse{
 			Result:  false,
 			Message: fmt.Sprintf("The block number is not matched: %v", blockNumber),
