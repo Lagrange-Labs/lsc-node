@@ -75,6 +75,10 @@ func (d *MemDB) AddBlock(ctx context.Context, block *sequencertypes.Block) error
 			BlockHash:   utils.RandomHex(32),
 			Chain:       "test",
 		},
+		BlockHeader: &sequencertypes.BlockHeader{
+			CurrentCommittee: utils.RandomHex(32),
+			NextCommittee:    utils.RandomHex(32),
+		},
 	}
 
 	d.blocks = append(d.blocks, lastBlock)
