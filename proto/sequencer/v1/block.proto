@@ -2,32 +2,28 @@ syntax = "proto3";
 
 package sequencer.v1;
 
-import "synchronizer/v1/delta.proto";
+import "synchronizer/v1/header.proto";
 
 option go_package = "github.com/Lagrange-Labs/lagrange-node/sequencer/types";
 
 // BlockHeader is the block header structure
 message BlockHeader {
-    uint64 block_number = 1;
-    string parent_hash = 2;
-    string block_hash = 3;
-    string proposer_pub_key = 4;
-    string proposer_signature = 5;
-    string current_committee = 6;
-    string next_committee = 7;
+    string current_committee = 1;
+    string next_committee = 2;
+    string proposer_pub_key = 3;
+    string proposer_signature = 4;
 }
 
-// Block is the block body structure for zk proofs of the block delta
+// Block is the block body structure
 message Block {
-    BlockHeader header = 1;
+    BlockHeader block_header = 1;
     synchronizer.v1.ChainHeader chain_header = 2;
-    string proof = 3;
-    repeated string pub_keys = 4;
-    string agg_signature = 5;
+    repeated string pub_keys = 3;
+    string agg_signature = 4;
 }
 
-// Signature is the block signature from the validator
-message Signature {
+// BlsSignature is the BLS signature of the given round
+message BlsSignature {
     synchronizer.v1.ChainHeader chain_header = 1;
     string current_committee = 2;
     string next_committee = 3;

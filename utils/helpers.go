@@ -1,6 +1,8 @@
 package utils
 
 import (
+	"crypto/rand"
+	"encoding/hex"
 	"time"
 )
 
@@ -15,4 +17,13 @@ func (d *TimeDuration) UnmarshalText(text []byte) error {
 	}
 	*d = TimeDuration(parsedDuration)
 	return nil
+}
+
+// RandomHex generates a random hex string of length n.
+func RandomHex(n int) string {
+	bytes := make([]byte, n)
+	if _, err := rand.Read(bytes); err != nil {
+		panic(err)
+	}
+	return hex.EncodeToString(bytes)
 }
