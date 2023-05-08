@@ -2,8 +2,6 @@ package store
 
 import (
 	"context"
-	"crypto/rand"
-	"encoding/hex"
 	"time"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
@@ -11,8 +9,6 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/store/types"
 	synctypes "github.com/Lagrange-Labs/lagrange-node/synchronizer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"google.golang.org/protobuf/proto"
 )
 
 const KeyLen = 32
@@ -72,29 +68,18 @@ func (d *MemDB) GetBlock(ctx context.Context, blockNumber uint64) (*sequencertyp
 // AddBlock adds a new block to the database.
 func (d *MemDB) AddBlock(ctx context.Context, block *sequencertypes.Block) error {
 	blockNumber := uint64(len(d.blocks)) + 1
-	parentHash := common.Hash{}.Hex()
-	if blockNumber > 1 {
-		parentHash = d.blocks[len(d.blocks)-1].Header.BlockHash
-	}
 	lastBlock := &sequencertypes.Block{
 		ChainHeader: &synctypes.ChainHeader{
 			BlockNumber: blockNumber,
-			StateRoot:   randomHex(32),
+			StateRoot:   utils.RandomHex(32),
+			BlockHash:   utils.RandomHex(32),
 			Chain:       "test",
 		},
-		Header: &sequencertypes.BlockHeader{
-			BlockNumber: blockNumber,
-			ParentHash:  parentHash,
+		BlockHeader: &sequencertypes.BlockHeader{
+			CurrentCommittee: utils.RandomHex(32),
+			NextCommittee:    utils.RandomHex(32),
 		},
-		Proof: randomHex(64),
 	}
-
-	blockMsg, err := proto.Marshal(lastBlock)
-	if err != nil {
-		panic(err)
-	}
-	blockHash := utils.Hash(blockMsg)
-	lastBlock.Header.BlockHash = common.Bytes2Hex(blockHash)
 
 	d.blocks = append(d.blocks, lastBlock)
 	return nil
@@ -115,7 +100,7 @@ func (d *MemDB) UpdateBlock(ctx context.Context, block *sequencertypes.Block) er
 func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context) (uint64, error) {
 	for i := len(d.blocks) - 1; i >= 0; i-- {
 		if len(d.blocks[i].AggSignature) != 0 {
-			return d.blocks[i].Header.BlockNumber, nil
+			return d.blocks[i].BlockNumber(), nil
 		}
 	}
 
@@ -150,14 +135,6 @@ func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []sequencertype
 // GetLastBlockNumber returns the last block number.
 func (d *MemDB) GetLastBlockNumber(ctx context.Context) (uint64, error) {
 	return uint64(len(d.blocks)), nil
-}
-
-func randomHex(n int) string {
-	bytes := make([]byte, n)
-	if _, err := rand.Read(bytes); err != nil {
-		panic(err)
-	}
-	return hex.EncodeToString(bytes)
 }
 
 func (d *MemDB) updateBlock(interval time.Duration) {

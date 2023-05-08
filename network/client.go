@@ -13,7 +13,6 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -124,35 +123,25 @@ func (c *Client) Start() {
 			logger.Infof("got the current block: %v\n", res.Block)
 
 			// verify the proposer signature
-			if len(res.Block.Header.ProposerPubKey) == 0 {
+			if len(res.Block.ProposerPubKey()) == 0 {
 				logger.Warnf("the block %d is not opened yet", res.Block.BlockNumber())
 				continue
 			}
 
-			// verify the block hash
-			if !res.Block.VerifyBlockHash() {
-				logger.Errorf("failed to verify the block hash")
-				continue
-			}
-
-			verified, err := utils.VerifySignature(common.FromHex(res.Block.Header.ProposerPubKey), common.FromHex(res.Block.Hash()), common.FromHex(res.Block.Header.ProposerSignature))
-			if err != nil || !verified {
-				logger.Errorf("failed to verify the proposer signature: %v\n", err)
-				continue
-			}
-			// TODO proof validation
-
 			// generate the BLS signature
-			blsSignature := &sequencertypes.Signature{
-				ChainHeader:      res.Block.ChainHeader,
-				CurrentCommittee: res.Block.Header.CurrentCommittee,
-				NextCommittee:    res.Block.Header.NextCommittee,
-			}
+			blsSignature := res.Block.BlsSignature()
 			blsSigMsg, err := proto.Marshal(blsSignature)
 			if err != nil {
 				logger.Errorf("failed to marshal the BLS signature: %v\n", err)
 				continue
 			}
+
+			verified, err := utils.VerifySignature(common.FromHex(res.Block.ProposerPubKey()), blsSigMsg, common.FromHex(res.Block.ProposerSignature()))
+			if err != nil || !verified {
+				logger.Errorf("failed to verify the proposer signature: %v\n", err)
+				continue
+			}
+
 			blsSig, err := c.privateKey.Sign(blsSigMsg)
 			if err != nil {
 				logger.Errorf("failed to sign the BLS signature: %v\n", err)
@@ -160,7 +149,6 @@ func (c *Client) Start() {
 			blsSignature.Signature = utils.BlsSignatureToHex(blsSig)
 
 			req := &types.CommitBlockRequest{
-				BlockNumber:  c.lastBlockNumber,
 				BlsSignature: blsSignature,
 				PubKey:       pubkey,
 			}
