@@ -1,11 +1,5 @@
 package types
 
-import (
-	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"google.golang.org/protobuf/proto"
-)
-
 // NodeStatus is the status of a node.
 type NodeStatus string
 
@@ -31,29 +25,55 @@ type ClientNode struct {
 	Status NodeStatus
 }
 
-// Hash returns the hash of the node.
-func (b *Block) Hash() string {
-	return b.Header.BlockHash
+// BlockHash returns the block hash of the chain header.
+func (b *Block) BlockHash() string {
+	return b.ChainHeader.BlockHash
 }
 
-// BlockNumber returns the block number.
+// BlockNumber returns the block number of the chain header.
 func (b *Block) BlockNumber() uint64 {
-	return b.Header.BlockNumber
+	return b.ChainHeader.BlockNumber
 }
 
-// VerifyBlockHash verifies the block hash.
-func (b *Block) VerifyBlockHash() bool {
-	tempBlock := &Block{
-		ChainHeader: b.ChainHeader,
-		Header: &BlockHeader{
-			BlockNumber: b.Header.BlockNumber,
-			ParentHash:  b.Header.ParentHash,
-		},
-		Proof: b.Proof,
+// CurrentCommittee returns the current committee of the block.
+func (b *Block) CurrentCommittee() string {
+	return b.BlockHeader.CurrentCommittee
+}
+
+// NextCommittee returns the next committee of the block.
+func (b *Block) NextCommittee() string {
+	return b.BlockHeader.NextCommittee
+}
+
+// ProposerPubKey returns the proposer public key of the block.
+func (b *Block) ProposerPubKey() string {
+	return b.BlockHeader.ProposerPubKey
+}
+
+// ProposerSignature returns the proposer signature of the block.
+func (b *Block) ProposerSignature() string {
+	return b.BlockHeader.ProposerSignature
+}
+
+// BlsSignature returns the bls signature of the block.
+func (b *Block) BlsSignature() *BlsSignature {
+	return &BlsSignature{
+		ChainHeader:      b.ChainHeader,
+		CurrentCommittee: b.CurrentCommittee(),
+		NextCommittee:    b.NextCommittee(),
 	}
-	blockMsg, err := proto.Marshal(tempBlock)
-	if err != nil {
-		return false
+}
+
+// BlockNumber returns the block number of the bls signature.
+func (b *BlsSignature) BlockNumber() uint64 {
+	return b.ChainHeader.BlockNumber
+}
+
+// Clone returns a clone of the bls signature.
+func (b *BlsSignature) Clone() *BlsSignature {
+	return &BlsSignature{
+		ChainHeader:      b.ChainHeader,
+		CurrentCommittee: b.CurrentCommittee,
+		NextCommittee:    b.NextCommittee,
 	}
-	return b.Hash() == common.Bytes2Hex(utils.Hash(blockMsg))
 }

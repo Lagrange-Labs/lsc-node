@@ -11,8 +11,8 @@ import (
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/umbracle/go-eth-consensus/bls"
+	"google.golang.org/protobuf/proto"
 )
 
 const CheckInterval = 500 * time.Millisecond
@@ -129,12 +129,16 @@ func (s *State) startRound(blockNumber uint64) error {
 		return fmt.Errorf("getting the block %d is failed: %v", blockNumber, err)
 	}
 	// generate a proposer signature
-	signature, err := s.proposer.Sign(common.FromHex(block.Header.BlockHash))
+	blsSigMsg, err := proto.Marshal(block.BlsSignature())
 	if err != nil {
 		return err
 	}
-	block.Header.ProposerSignature = utils.BlsSignatureToHex(signature)
-	block.Header.ProposerPubKey = pubkey
+	signature, err := s.proposer.Sign(blsSigMsg)
+	if err != nil {
+		return err
+	}
+	block.BlockHeader.ProposerSignature = utils.BlsSignatureToHex(signature)
+	block.BlockHeader.ProposerPubKey = pubkey
 
 	s.UpdateRoundState(validatorSet, block)
 

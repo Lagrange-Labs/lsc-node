@@ -97,7 +97,7 @@ func (rs *RoundState) CheckEnoughVotingPower() bool {
 	rs.rwMutex.RLock()
 	defer rs.rwMutex.RUnlock()
 
-	votingPower := uint64(0)
+	votingPower := rs.Validators.GetVotingPower(rs.Validators.Proposer.PublicKey)
 	for _, signature := range rs.commitSignatures {
 		votingPower += rs.Validators.GetVotingPower(signature.PubKey)
 	}
@@ -111,11 +111,8 @@ func (rs *RoundState) CheckAggregatedSignature() ([]*bls.PublicKey, *bls.Signatu
 	rs.rwMutex.Lock()
 	defer rs.rwMutex.Unlock()
 
-	sigMessage, err := proto.Marshal(&sequencertypes.Signature{
-		ChainHeader:      rs.ProposalBlock.ChainHeader,
-		CurrentCommittee: rs.ProposalBlock.Header.CurrentCommittee,
-		NextCommittee:    rs.ProposalBlock.Header.NextCommittee,
-	})
+	blsSignature := rs.ProposalBlock.BlsSignature()
+	sigMessage, err := proto.Marshal(blsSignature)
 	if err != nil {
 		logger.Fatalf("failed to marshal signature message: %v", err)
 		return nil, nil, err
@@ -123,12 +120,27 @@ func (rs *RoundState) CheckAggregatedSignature() ([]*bls.PublicKey, *bls.Signatu
 	signatures := make([]*bls.Signature, 0)
 	pubkeys := make([]*bls.PublicKey, 0)
 	invalid_keys := make([]string, 0)
+
+	// add the proposer signature
+	pubkey, err := utils.HexToBlsPubKey(rs.Validators.Proposer.PublicKey)
+	if err != nil {
+		return nil, nil, err
+	}
+	pubkeys = append(pubkeys, pubkey)
+	sig, err := utils.HexToBlsSignature(rs.ProposalBlock.ProposerSignature())
+	if err != nil {
+		logger.Errorf("failed to deserialize the proposer signature %v: %v", rs.ProposalBlock.ProposerSignature(), err)
+		return nil, nil, err
+	}
+	signatures = append(signatures, sig)
+
+	// aggregate the signatures of client nodes
 	for _, commit := range rs.commitSignatures {
-		pubkey, err := utils.HexToBlsPubKey(commit.PubKey)
+		pubkey, err = utils.HexToBlsPubKey(commit.PubKey)
 		if err != nil {
 			return nil, nil, err
 		}
-		sig, err := utils.HexToBlsSignature(commit.BlsSignature.Signature)
+		sig, err = utils.HexToBlsSignature(commit.BlsSignature.Signature)
 		if err != nil {
 			logger.Errorf("failed to deserialize signature %v: %v", commit, err)
 			invalid_keys = append(invalid_keys, commit.PubKey)
@@ -141,30 +153,27 @@ func (rs *RoundState) CheckAggregatedSignature() ([]*bls.PublicKey, *bls.Signatu
 	verified, err := aggSig.FastAggregateVerify(pubkeys, sigMessage)
 	if err != nil || !verified {
 		// find the invalid signature
-		for i, pubkey := range pubkeys {
-			pubkey_raw := pubkey.Serialize()
-			commit := rs.commitSignatures[common.Bytes2Hex(pubkey_raw[:])]
-			commitMessage, err := proto.Marshal(&sequencertypes.Signature{
-				ChainHeader:      commit.BlsSignature.ChainHeader,
-				CurrentCommittee: commit.BlsSignature.CurrentCommittee,
-				NextCommittee:    commit.BlsSignature.NextCommittee,
-			})
+		// skip the proposer signature
+		for i, pubkey := range pubkeys[1:] {
+			pubkey_raw := utils.BlsPubKeyToHex(pubkey)
+			commit := rs.commitSignatures[pubkey_raw]
+			commitMessage, err := proto.Marshal(commit.BlsSignature.Clone())
 			if err != nil {
 				logger.Fatalf("failed to marshal commit singature message %v: %v", commit, err)
 				return nil, nil, err
 			}
 			if !bytes.Equal(commitMessage, sigMessage) {
 				logger.Errorf("wrong commit message: %v, original: %v", common.Bytes2Hex(commitMessage), common.Bytes2Hex(sigMessage))
-				invalid_keys = append(invalid_keys, common.Bytes2Hex(pubkey_raw[:]))
+				invalid_keys = append(invalid_keys, pubkey_raw)
 				continue
 			}
-			verified, err := signatures[i].VerifyByte(pubkey, commitMessage)
+			verified, err := signatures[i+1].VerifyByte(pubkey, commitMessage) // because the first signature is the proposer signature
 			if err != nil {
 				return nil, nil, err
 			}
 			if !verified {
 				logger.Errorf("invalid signature: %v", commit)
-				invalid_keys = append(invalid_keys, common.Bytes2Hex(pubkey_raw[:]))
+				invalid_keys = append(invalid_keys, pubkey_raw)
 			}
 		}
 		err = ErrInvalidAggregativeSignature
