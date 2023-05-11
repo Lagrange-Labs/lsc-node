@@ -65,6 +65,11 @@ stop:
 
 .PHONY: localnet-start stop
 
+# Usefule Scripts
+scgen: # Generate the go bindings for the smart contracts
+	@ cd scinterface && sh generator.sh
+
+
 # Run Components
 run-server:
 	go run ./cmd/baseapp/... run-server
