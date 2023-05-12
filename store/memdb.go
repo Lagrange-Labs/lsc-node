@@ -7,7 +7,6 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/store/types"
-	synctypes "github.com/Lagrange-Labs/lagrange-node/synchronizer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -69,11 +68,10 @@ func (d *MemDB) GetBlock(ctx context.Context, blockNumber uint64) (*sequencertyp
 func (d *MemDB) AddBlock(ctx context.Context, block *sequencertypes.Block) error {
 	blockNumber := uint64(len(d.blocks)) + 1
 	lastBlock := &sequencertypes.Block{
-		ChainHeader: &synctypes.ChainHeader{
+		ChainHeader: &sequencertypes.ChainHeader{
 			BlockNumber: blockNumber,
-			StateRoot:   utils.RandomHex(32),
 			BlockHash:   utils.RandomHex(32),
-			Chain:       "test",
+			ChainId:     1,
 		},
 		BlockHeader: &sequencertypes.BlockHeader{
 			CurrentCommittee: utils.RandomHex(32),

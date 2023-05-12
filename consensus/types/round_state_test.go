@@ -5,7 +5,6 @@ import (
 
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
-	synctypes "github.com/Lagrange-Labs/lagrange-node/synchronizer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
@@ -14,11 +13,10 @@ import (
 )
 
 func createTestRoundState() (*RoundState, []*bls.SecretKey) {
-	chainHeader := &synctypes.ChainHeader{
-		Chain:       "test",
+	chainHeader := &sequencertypes.ChainHeader{
+		ChainId:     1,
 		BlockNumber: 1,
 		BlockHash:   utils.RandomHex(32),
-		StateRoot:   utils.RandomHex(32),
 	}
 	proposerSecKey, proposerPubKey := utils.RandomBlsKey()
 	pBlock := &sequencertypes.Block{
