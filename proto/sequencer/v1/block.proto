@@ -2,29 +2,35 @@ syntax = "proto3";
 
 package sequencer.v1;
 
-import "synchronizer/v1/header.proto";
-
 option go_package = "github.com/Lagrange-Labs/lagrange-node/sequencer/types";
+
+// ChainHeader is the block header for the given block of the specific chain
+message ChainHeader {
+    uint64 block_number = 1;
+    string block_hash = 2;
+    uint32 chain_id = 3;
+}
 
 // BlockHeader is the block header structure
 message BlockHeader {
-    string current_committee = 1;
-    string next_committee = 2;
-    string proposer_pub_key = 3;
-    string proposer_signature = 4;
+    uint64 epoch_number = 1;
+    string current_committee = 2;
+    string next_committee = 3;
+    string proposer_pub_key = 4;
+    string proposer_signature = 5;
 }
 
 // Block is the block body structure
 message Block {
     BlockHeader block_header = 1;
-    synchronizer.v1.ChainHeader chain_header = 2;
+    ChainHeader chain_header = 2;
     repeated string pub_keys = 3;
     string agg_signature = 4;
 }
 
 // BlsSignature is the BLS signature of the given round
 message BlsSignature {
-    synchronizer.v1.ChainHeader chain_header = 1;
+    ChainHeader chain_header = 1;
     string current_committee = 2;
     string next_committee = 3;
     string signature = 4;

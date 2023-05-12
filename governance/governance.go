@@ -1,15 +1,25 @@
 package governance
 
 import (
-	"github.com/Lagrange-Labs/lagrange-node/governance/nodestaking"
+	"context"
+	"time"
+
+	"github.com/Lagrange-Labs/lagrange-node/scinterface/lagrange"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+const (
+	SyncInterval = 10 * time.Second
+)
+
 // Governance is the module which is responsible for the staking and slashing.
 type Governance struct {
-	stackingSC      *nodestaking.Nodestaking
+	lagrangeSC      *lagrange.Lagrange
 	stakingInterval uint32
+
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewGovernance creates a new Governance instance.
@@ -18,12 +28,28 @@ func NewGovernance(cfg *Config) (*Governance, error) {
 	if err != nil {
 		return nil, err
 	}
-	stakingSC, err := nodestaking.NewNodestaking(common.HexToAddress(cfg.StakingSCAddress), client)
+	lagrangeSC, err := lagrange.NewLagrange(common.HexToAddress(cfg.StakingSCAddress), client)
 	if err != nil {
 		return nil, err
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Governance{
-		stackingSC:      stakingSC,
+		lagrangeSC:      lagrangeSC,
 		stakingInterval: cfg.StakingCheckInterval,
+		ctx:             ctx,
+		cancel:          cancel,
 	}, nil
+}
+
+// Start starts the governance process.
+func (g *Governance) Start() error {
+	for {
+		select {
+		case <-g.ctx.Done():
+			return nil
+		case <-time.After(SyncInterval):
+
+		}
+	}
 }
