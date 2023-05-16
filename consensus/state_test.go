@@ -7,7 +7,7 @@ import (
 	"time"
 
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
-	"github.com/Lagrange-Labs/lagrange-node/store"
+	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/stretchr/testify/require"
 )
@@ -20,12 +20,12 @@ func createTestState(t *testing.T) (*State, chan *networktypes.CommitBlockReques
 		RoundInterval:      utils.TimeDuration(2 * time.Second),
 	}
 
-	memDB, err := store.NewMemDB()
+	memDB, err := memdb.NewMemDB()
 	require.NoError(t, err)
 	require.NoError(t, memDB.AddBlock(context.Background(), nil))
 
 	chCommit := make(chan *networktypes.CommitBlockRequest)
-	return NewState(cfg, memDB), chCommit
+	return NewState(cfg, memDB, 1), chCommit
 }
 
 func TestState_OnStart(t *testing.T) {

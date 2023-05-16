@@ -6,7 +6,7 @@ import (
 	"testing"
 
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
-	"github.com/Lagrange-Labs/lagrange-node/store"
+	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
@@ -15,7 +15,7 @@ import (
 )
 
 func newTestService() (*sequencerService, error) {
-	storage, err := store.NewMemDB()
+	storage, err := memdb.NewMemDB()
 	if err != nil {
 		return nil, err
 	}

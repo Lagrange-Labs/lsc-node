@@ -1,4 +1,4 @@
-package store
+package types
 
 import (
 	"context"
@@ -22,9 +22,9 @@ type Storage interface {
 	// UpdateNode updates the node status in the database.
 	UpdateNode(ctx context.Context, node *sequencertypes.ClientNode) error
 	// GetLastBlockNumber returns the last block number that was submitted to the network.
-	GetLastBlockNumber(ctx context.Context) (uint64, error)
+	GetLastBlockNumber(ctx context.Context, chainID int32) (uint64, error)
 	// GetLastFinalizedBlockNumber returns the last block number that was finalized.
-	GetLastFinalizedBlockNumber(ctx context.Context) (uint64, error)
+	GetLastFinalizedBlockNumber(ctx context.Context, chainID int32) (uint64, error)
 	// GetNodesByStatuses returns the nodes with the given statuses.
 	GetNodesByStatuses(ctx context.Context, statuses []sequencertypes.NodeStatus) ([]sequencertypes.ClientNode, error)
 	// UpdateBlock updates the block in the database.
