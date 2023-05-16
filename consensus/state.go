@@ -25,13 +25,14 @@ type State struct {
 	storage       storageInterface
 	roundLimit    time.Duration
 	roundInterval time.Duration
+	chainID       int32
 
 	chCommit <-chan *networktypes.CommitBlockRequest
 	chStop   chan struct{}
 }
 
 // NewState returns a new State.
-func NewState(cfg *Config, storage storageInterface) *State {
+func NewState(cfg *Config, storage storageInterface, chainID int32) *State {
 	privKey, err := utils.HexToBlsPrivKey(cfg.ProposerPrivateKey)
 	if err != nil {
 		logger.Fatalf("failed to parse the proposer private key: %v", err)
@@ -45,6 +46,7 @@ func NewState(cfg *Config, storage storageInterface) *State {
 		roundLimit:    time.Duration(cfg.RoundLimit),
 		roundInterval: time.Duration(cfg.RoundInterval),
 		chCommit:      make(<-chan *networktypes.CommitBlockRequest, 1000),
+		chainID:       chainID,
 		chStop:        chStop,
 		RoundState:    types.NewEmptyRoundState(),
 	}
@@ -52,7 +54,7 @@ func NewState(cfg *Config, storage storageInterface) *State {
 
 // OnStart loads the first unverified block and starts the round.
 func (s *State) OnStart() {
-	lastBlockNumber, err := s.storage.GetLastFinalizedBlockNumber(context.Background())
+	lastBlockNumber, err := s.storage.GetLastFinalizedBlockNumber(context.Background(), s.chainID)
 	if err != nil {
 		logger.Errorf("failed to get the last finalized block number: %v", err)
 		return

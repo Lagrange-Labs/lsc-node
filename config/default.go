@@ -12,9 +12,12 @@ StakeAddress = "0x742d35Cc6634C0532925a3b844Bc454e4438f44e"
 PullInterval = "2s"
 
 [Store]
-BackendType = "memdb"
+BackendType = "mongodb"
+DBPath = "mongodb://localhost:27017"
 
 [Sequencer]
+Chain = "arbitrum"
+FromBlockNumber = 1
 
 [Governance]
 EthereumURL = "https://34.229.73.193:8545"
