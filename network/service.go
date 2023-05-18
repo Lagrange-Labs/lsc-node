@@ -10,7 +10,6 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -57,7 +56,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 		return nil, err
 	}
 	if err := s.storage.AddNode(ctx,
-		&sequencertypes.ClientNode{
+		&types.ClientNode{
 			StakeAddress: req.StakeAddress,
 			PublicKey:    req.PublicKey,
 			IPAddress:    ip,
