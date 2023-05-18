@@ -6,17 +6,18 @@ const DefaultValues = `
 GRPCPort = "9090"
 
 [Client]
-GrpcURL = "localhost:9090"
+GrpcURL = "127.0.0.1:9090"
 PrivateKey = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
 StakeAddress = "0x6E654b122377EA7f592bf3FD5bcdE9e8c1B1cEb9"
 PullInterval = "2s"
 
 [Store]
 BackendType = "mongodb"
-DBPath = "mongodb://localhost:27017"
+DBPath = "mongodb://127.0.0.1:27017"
 
 [Sequencer]
 Chain = "arbitrum"
+RPCURL = "http://127.0.0.1:8545"
 FromBlockNumber = 1
 
 [Governance]
