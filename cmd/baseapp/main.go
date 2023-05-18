@@ -84,8 +84,18 @@ func runServer(ctx *cli.Context) error {
 		return err
 	}
 
+	// Get the chain ID.
+	rpcClient, err := sequencer.CreateRPCClient(cfg.Sequencer.Chain)
+	if err != nil {
+		return err
+	}
+	chainID, err := rpcClient.GetChainID()
+	if err != nil {
+		return err
+	}
+
 	// Start the consensus state.
-	state := consensus.NewState(&cfg.Consensus, storage)
+	state := consensus.NewState(&cfg.Consensus, storage, chainID)
 	go state.OnStart()
 
 	// Start the server.
@@ -142,7 +152,7 @@ func runSequencer(ctx *cli.Context) error {
 		return err
 	}
 
-	// Wait for an in interrupt.
+	// Wait for an interrupt.
 	ch := make(chan os.Signal, 1)
 	signal.Notify(ch, os.Interrupt)
 	<-ch

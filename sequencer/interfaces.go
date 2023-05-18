@@ -7,7 +7,6 @@ import (
 )
 
 type storageInterface interface {
-	GetLastBlockNumber(ctx context.Context) (uint64, error)
+	GetLastBlockNumber(ctx context.Context, chainID int32) (uint64, error)
 	AddBlock(ctx context.Context, block *types.Block) error
-	UpdateNode(ctx context.Context, node *types.ClientNode) error
 }

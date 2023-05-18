@@ -1,4 +1,4 @@
-package store
+package memdb
 
 import (
 	"context"
@@ -12,7 +12,7 @@ import (
 
 const KeyLen = 32
 
-var _ Storage = (*MemDB)(nil)
+var _ types.Storage = (*MemDB)(nil)
 
 // DB is an in-memory database.
 type MemDB struct {
@@ -95,7 +95,7 @@ func (d *MemDB) UpdateBlock(ctx context.Context, block *sequencertypes.Block) er
 }
 
 // GetLastFinalizedBlockNumber returns the last finalized block number.
-func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context) (uint64, error) {
+func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID int32) (uint64, error) {
 	for i := len(d.blocks) - 1; i >= 0; i-- {
 		if len(d.blocks[i].AggSignature) != 0 {
 			return d.blocks[i].BlockNumber(), nil
@@ -131,7 +131,7 @@ func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []sequencertype
 }
 
 // GetLastBlockNumber returns the last block number.
-func (d *MemDB) GetLastBlockNumber(ctx context.Context) (uint64, error) {
+func (d *MemDB) GetLastBlockNumber(ctx context.Context, chainID int32) (uint64, error) {
 	return uint64(len(d.blocks)), nil
 }
 
