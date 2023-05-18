@@ -4,6 +4,7 @@ import (
 	"context"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -26,8 +27,12 @@ func NewEvmClient(rpcURL string) (*EvmClient, error) {
 }
 
 // GetBlockHashByNumber returns the block hash by the given block number.
-func (c *EvmClient) GetBlockHashByNumber(blockNumber int64) (string, error) {
-	header, err := c.ethClient.HeaderByNumber(context.Background(), big.NewInt(blockNumber))
+func (c *EvmClient) GetBlockHashByNumber(blockNumber uint64) (string, error) {
+	header, err := c.ethClient.HeaderByNumber(context.Background(), big.NewInt(int64(blockNumber)))
+	if err == ethereum.NotFound {
+		return "", ErrBlockNotFound
+	}
+
 	return header.Hash().Hex(), err
 }
 

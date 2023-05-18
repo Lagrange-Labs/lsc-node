@@ -2,35 +2,107 @@ package sequencer
 
 import (
 	"context"
+	"os"
+	"time"
+
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
+	"github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+)
+
+const (
+	// SyncInterval is the interval between two block syncs after fully synced.
+	SyncInterval = 1 * time.Second
 )
 
 // Sequencer is the main component of the lagrange node.
-// - It is responsible for generating new proofs.
-// - It is responsible for stacking and slashing.
+// - It is responsible for fetching block headers from the blockchain.
 type Sequencer struct {
-	storage storageInterface
+	storage         storageInterface
+	rpcClient       rpcclient.RpcClient
+	chainID         uint32
+	lastBlockNumber uint64
 
-	blockNumber uint64
+	ctx    context.Context
+	cancel context.CancelFunc
+}
+
+// CreateRPCClient creates a new rpc client.
+func CreateRPCClient(chain string) (rpcclient.RpcClient, error) {
+	switch chain {
+	case "arbitrum":
+		return rpcclient.NewEvmClient(os.Getenv("ARBITRUM_NODE_URL"))
+	case "optimism":
+		return rpcclient.NewEvmClient(os.Getenv("OPTIMISM_NODE_URL"))
+	default:
+		return nil, nil
+	}
 }
 
 // NewSequencer creates a new sequencer instance.
 func NewSequencer(cfg *Config, storage storageInterface) (*Sequencer, error) {
-	blockNumber, err := storage.GetLastBlockNumber(context.Background())
+	rpcClient, err := CreateRPCClient(cfg.Chain)
 	if err != nil {
 		return nil, err
 	}
 
+	chainID, err := rpcClient.GetChainID()
+	if err != nil {
+		return nil, err
+	}
+
+	blockNumber, err := storage.GetLastBlockNumber(context.Background(), chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	if cfg.FromBlockNumber > blockNumber {
+		blockNumber = cfg.FromBlockNumber - 1
+	}
+
+	ctx, cancel := context.WithCancel(context.Background())
 	return &Sequencer{
-		storage:     storage,
-		blockNumber: blockNumber,
+		storage:         storage,
+		rpcClient:       rpcClient,
+		lastBlockNumber: blockNumber,
+		chainID:         uint32(chainID),
+		ctx:             ctx,
+		cancel:          cancel,
 	}, nil
 }
 
 // Start starts the sequencer.
 func (s *Sequencer) Start() error {
 	for {
-		// TODO generate new proof
-		break
+		select {
+		case <-s.ctx.Done():
+			return nil
+		default:
+			lastBlockNumber := s.lastBlockNumber + 1
+			blockHash, err := s.rpcClient.GetBlockHashByNumber(lastBlockNumber)
+			if err != nil {
+				if err == rpcclient.ErrBlockNotFound {
+					time.Sleep(SyncInterval)
+					continue
+				}
+				return err
+			}
+			if err := s.storage.AddBlock(s.ctx, &types.Block{
+				ChainHeader: &types.ChainHeader{
+					BlockNumber: lastBlockNumber,
+					BlockHash:   blockHash,
+					ChainId:     s.chainID,
+				},
+			}); err != nil {
+				return err
+			}
+
+			s.lastBlockNumber = lastBlockNumber
+			time.Sleep(100 * time.Millisecond)
+		}
 	}
-	return nil
+}
+
+// Stop stops the sequencer.
+func (s *Sequencer) Stop() {
+	s.cancel()
 }
