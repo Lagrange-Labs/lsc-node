@@ -52,6 +52,10 @@ run-db-mongo: stop
 	docker-compose -f docker-compose.yml up -d mongo
 .PHONY: run-db-mongo
 
+run-lagrange-sc:stop
+	docker-compose -f docker-compose.yml up -d lagrangesc
+.PHONY: run-lagrange-sc
+
 benchmark: 
 	go test -run=NOTEST -timeout=30m -benchmem  -bench=. ./...
 .PHONY: benchmark
@@ -65,10 +69,14 @@ stop:
 
 .PHONY: localnet-start stop
 
-# Usefule Scripts
+# Useful and Test Scripts
 scgen: # Generate the go bindings for the smart contracts
 	@ cd scinterface && sh generator.sh
 
+register-operator: # Register an operator
+	go run ./testutil/registerops/
+
+.PHONY: scgen register-operator
 
 # Run Components
 run-server:

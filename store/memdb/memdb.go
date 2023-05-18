@@ -4,7 +4,9 @@ import (
 	"context"
 	"time"
 
+	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
+	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
@@ -16,39 +18,35 @@ var _ types.Storage = (*MemDB)(nil)
 
 // DB is an in-memory database.
 type MemDB struct {
-	nodes  map[string]sequencertypes.ClientNode
-	blocks []*sequencertypes.Block
+	nodes     map[string]networktypes.ClientNode
+	blocks    []*sequencertypes.Block
+	evidences []*contypes.Evidence
 }
 
 // NewMemDB creates a new in-memory database.
 func NewMemDB() (*MemDB, error) {
-	nodes := make(map[string]sequencertypes.ClientNode, 0)
+	nodes := make(map[string]networktypes.ClientNode, 0)
 	db := &MemDB{nodes: nodes, blocks: []*sequencertypes.Block{}}
 	go db.updateBlock(10 * time.Second)
 	return db, nil
 }
 
 // AddNode adds a client node to the network.
-func (d *MemDB) AddNode(ctx context.Context, node *sequencertypes.ClientNode) error {
-	node.Status = sequencertypes.NodeRegistered
+func (d *MemDB) AddNode(ctx context.Context, node *networktypes.ClientNode) error {
+	node.Status = networktypes.NodeRegistered
 	node.VotingPower = 1
 	d.nodes[node.PublicKey] = *node
 	return nil
 }
 
 // GetNode returns the node with the given IP address.
-func (d *MemDB) GetNode(ctx context.Context, ip string) (*sequencertypes.ClientNode, error) {
+func (d *MemDB) GetNode(ctx context.Context, ip string) (*networktypes.ClientNode, error) {
 	for _, node := range d.nodes {
 		if node.IPAddress == ip {
 			return &node, nil
 		}
 	}
 	return nil, nil
-}
-
-// GetNodeCount returns the number of nodes in the network.
-func (d *MemDB) GetNodeCount(ctx context.Context) (uint16, error) {
-	return uint16(len(d.nodes)), nil
 }
 
 // GetLastBlock returns the last block that was submitted to the network.
@@ -106,14 +104,14 @@ func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID int32) 
 }
 
 // UpdateNode updates the node status in the database.
-func (d *MemDB) UpdateNode(ctx context.Context, node *sequencertypes.ClientNode) error {
+func (d *MemDB) UpdateNode(ctx context.Context, node *networktypes.ClientNode) error {
 	d.nodes[node.PublicKey] = *node
 	return nil
 }
 
 // GetNodesByStatuses returns the nodes with the given statuses.
-func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []sequencertypes.NodeStatus) ([]sequencertypes.ClientNode, error) {
-	res := make([]sequencertypes.ClientNode, 0)
+func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus) ([]networktypes.ClientNode, error) {
+	res := make([]networktypes.ClientNode, 0)
 	for _, node := range d.nodes {
 		isBelonged := false
 		for _, status := range statuses {
@@ -146,4 +144,31 @@ func (d *MemDB) updateBlock(interval time.Duration) {
 		}
 		logger.Infof("new block added: %d", len(d.blocks))
 	}
+}
+
+// AddEvidences adds the given evidences to the database.
+func (d *MemDB) AddEvidences(ctx context.Context, evidences []*contypes.Evidence) error {
+	d.evidences = append(d.evidences, evidences...)
+	return nil
+}
+
+// UpdateEvidence updates the given evidence in the database.
+func (d *MemDB) UpdateEvidence(ctx context.Context, evidence *contypes.Evidence) error {
+	for i := 0; i < len(d.evidences); i++ {
+		if d.evidences[i].BlockHash == evidence.BlockHash && d.evidences[i].Operator == evidence.Operator {
+			d.evidences[i].Status = true
+		}
+	}
+	return nil
+}
+
+// GetEvidences returns the pending evidences.
+func (d *MemDB) GetEvidences(ctx context.Context) ([]*contypes.Evidence, error) {
+	evidences := make([]*contypes.Evidence, 0)
+	for _, evidence := range d.evidences {
+		if !evidence.Status {
+			evidences = append(evidences, evidence)
+		}
+	}
+	return evidences, nil
 }
