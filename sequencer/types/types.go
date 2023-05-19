@@ -30,6 +30,11 @@ func (b *Block) ProposerSignature() string {
 	return b.BlockHeader.ProposerSignature
 }
 
+// EpochNumber returns the epoch number of the block.
+func (b *Block) EpochNumber() uint64 {
+	return b.BlockHeader.EpochNumber
+}
+
 // BlsSignature returns the bls signature of the block.
 func (b *Block) BlsSignature() *BlsSignature {
 	return &BlsSignature{

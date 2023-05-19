@@ -92,6 +92,14 @@ func (rs *RoundState) GetCurrentBlockNumber() uint64 {
 	return rs.ProposalBlock.BlockNumber()
 }
 
+// GetCurrentEpochNumber returns the current epoch number.
+func (rs *RoundState) GetCurrentEpochNumber() uint64 {
+	rs.rwMutex.RLock()
+	defer rs.rwMutex.RUnlock()
+
+	return rs.ProposalBlock.EpochNumber()
+}
+
 // CheckEnoughVotingPower checks if there is enough voting power to finalize the block.
 func (rs *RoundState) CheckEnoughVotingPower() bool {
 	rs.rwMutex.RLock()

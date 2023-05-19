@@ -7,6 +7,7 @@ import (
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/lagrange"
+	"github.com/Lagrange-Labs/lagrange-node/testutil"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -26,7 +27,7 @@ type Governance struct {
 }
 
 // NewGovernance creates a new Governance instance.
-func NewGovernance(cfg *Config, storage storageInterface, auth *bind.TransactOpts) (*Governance, error) {
+func NewGovernance(cfg *Config, storage storageInterface) (*Governance, error) {
 	client, err := ethclient.Dial(cfg.EthereumURL)
 	if err != nil {
 		return nil, err
@@ -36,6 +37,10 @@ func NewGovernance(cfg *Config, storage storageInterface, auth *bind.TransactOpt
 		return nil, err
 	}
 
+	auth, err := testutil.GetSigner(context.Background(), client, cfg.PrivateKey)
+	if err != nil {
+		return nil, err
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Governance{
 		stakingInterval:  time.Duration(cfg.StakingCheckInterval),

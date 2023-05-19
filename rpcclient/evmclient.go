@@ -14,6 +14,18 @@ type EvmClient struct {
 
 var _ RpcClient = (*EvmClient)(nil)
 
+// CreateRPCClient creates a new rpc client.
+func CreateRPCClient(chain, rpcURL string) (RpcClient, error) {
+	switch chain {
+	case "arbitrum":
+		return NewEvmClient(rpcURL)
+	case "optimism":
+		return NewEvmClient(rpcURL)
+	default:
+		return nil, nil
+	}
+}
+
 // NewEvmClient creates a new EvmClient instance.
 func NewEvmClient(rpcURL string) (*EvmClient, error) {
 	client, err := ethclient.Dial(rpcURL)
