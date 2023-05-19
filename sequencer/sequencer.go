@@ -25,21 +25,9 @@ type Sequencer struct {
 	cancel context.CancelFunc
 }
 
-// CreateRPCClient creates a new rpc client.
-func CreateRPCClient(chain, rpcURL string) (rpcclient.RpcClient, error) {
-	switch chain {
-	case "arbitrum":
-		return rpcclient.NewEvmClient(rpcURL)
-	case "optimism":
-		return rpcclient.NewEvmClient(rpcURL)
-	default:
-		return nil, nil
-	}
-}
-
 // NewSequencer creates a new sequencer instance.
 func NewSequencer(cfg *Config, storage storageInterface) (*Sequencer, error) {
-	rpcClient, err := CreateRPCClient(cfg.Chain, cfg.RPCURL)
+	rpcClient, err := rpcclient.CreateRPCClient(cfg.Chain, cfg.RPCURL)
 	if err != nil {
 		return nil, err
 	}

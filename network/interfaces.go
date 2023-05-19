@@ -16,5 +16,6 @@ type storageInterface interface {
 type consensusInterface interface {
 	GetCurrentBlock() *sequencertypes.Block
 	GetCurrentBlockNumber() uint64
+	GetCurrentEpochNumber() uint64
 	AddCommit(commit *types.CommitBlockRequest)
 }

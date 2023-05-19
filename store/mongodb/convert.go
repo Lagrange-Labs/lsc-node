@@ -59,22 +59,26 @@ func ConvertMongoToBlock(m bson.M) *sequencertypes.Block {
 	block := &sequencertypes.Block{}
 	if chainHeader, ok := m["chain_header"]; ok {
 		mChainHeader := chainHeader.(bson.M)
+		block.ChainHeader = &sequencertypes.ChainHeader{}
 		block.ChainHeader.BlockHash = mChainHeader["block_hash"].(string)
-		block.ChainHeader.BlockNumber = mChainHeader["block_number"].(uint64)
-		block.ChainHeader.ChainId = mChainHeader["chain_id"].(uint32)
+		block.ChainHeader.BlockNumber = uint64(mChainHeader["block_number"].(int64))
+		block.ChainHeader.ChainId = uint32(mChainHeader["chain_id"].(int64))
 	}
 
 	if blockHeader, ok := m["block_header"]; ok {
 		mBlockHeader := blockHeader.(bson.M)
-		block.BlockHeader.EpochNumber = mBlockHeader["epoch_number"].(uint64)
+		block.BlockHeader = &sequencertypes.BlockHeader{}
+		block.BlockHeader.EpochNumber = uint64(mBlockHeader["epoch_number"].(int64))
 		block.BlockHeader.CurrentCommittee = mBlockHeader["current_committee"].(string)
 		block.BlockHeader.NextCommittee = mBlockHeader["next_committee"].(string)
 		block.BlockHeader.ProposerPubKey = mBlockHeader["proposer_pub_key"].(string)
 		block.BlockHeader.ProposerSignature = mBlockHeader["proposer_signature"].(string)
 	}
 
-	block.PubKeys = m["pub_keys"].([]string)
 	block.AggSignature = m["agg_signature"].(string)
+	if len(block.AggSignature) > 0 {
+		block.PubKeys = m["pub_keys"].([]string)
+	}
 
 	return block
 }

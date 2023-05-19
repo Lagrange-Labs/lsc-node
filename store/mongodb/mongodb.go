@@ -45,10 +45,11 @@ func (db *MongoDB) AddNode(ctx context.Context, node *networktypes.ClientNode) e
 	if err != nil && err != mongo.ErrNoDocuments {
 		return err
 	}
-	if err == mongo.ErrNoDocuments {
-		node.Status = networktypes.NodeJoined
-	} else if node.Status == networktypes.NodeStacked {
+
+	if node.Status == networktypes.NodeStacked {
 		node.Status = networktypes.NodeRegistered
+	} else {
+		node.Status = networktypes.NodeJoined
 	}
 	_, err = collection.UpdateOne(ctx, bson.M{"stake_address": node.StakeAddress}, bson.M{"$set": node}, options.Update().SetUpsert(true))
 	return err
@@ -130,7 +131,7 @@ func (db *MongoDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID int3
 	collection := db.client.Database("state").Collection("blocks")
 	sortOptions := options.FindOne().SetSort(bson.D{{"chain_header.block_number", -1}}) //nolint:govet
 	block := bson.M{}
-	err := collection.FindOne(ctx, bson.M{"agg_signature": bson.M{"$ne": nil}}, sortOptions).Decode(&block)
+	err := collection.FindOne(ctx, bson.M{"pub_keys": bson.M{"$ne": nil}}, sortOptions).Decode(&block)
 	if err == mongo.ErrNoDocuments {
 		return 0, nil
 	}

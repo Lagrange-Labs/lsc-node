@@ -10,8 +10,10 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/config"
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
+	"github.com/Lagrange-Labs/lagrange-node/governance"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network"
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 )
@@ -85,7 +87,7 @@ func runServer(ctx *cli.Context) error {
 	}
 
 	// Get the chain ID.
-	rpcClient, err := sequencer.CreateRPCClient(cfg.Sequencer.Chain, cfg.Sequencer.RPCURL)
+	rpcClient, err := rpcclient.CreateRPCClient(cfg.Sequencer.Chain, cfg.Sequencer.RPCURL)
 	if err != nil {
 		return err
 	}
@@ -147,6 +149,12 @@ func runSequencer(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create sequencer: %w", err)
 	}
+
+	governance, err := governance.NewGovernance(&cfg.Governance, storage)
+	if err != nil {
+		return fmt.Errorf("failed to create governance: %w", err)
+	}
+	go governance.Start()
 
 	if err := sequencer.Start(); err != nil {
 		return fmt.Errorf("failed to start sequencer: %w", err)
