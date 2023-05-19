@@ -2,6 +2,7 @@ package governance
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
@@ -54,18 +55,18 @@ func NewGovernance(cfg *Config, storage storageInterface) (*Governance, error) {
 }
 
 // Start starts the governance process.
-func (g *Governance) Start() error {
+func (g *Governance) Start() {
 	for {
 		select {
 		case <-g.ctx.Done():
-			return nil
+			return
 		case <-time.After(g.evidenceInterval):
 			if err := g.uploadEvidences(); err != nil {
-				return err
+				panic(fmt.Errorf("failed to upload evidences: %w", err))
 			}
 		case <-time.After(g.stakingInterval):
 			if err := g.updateNodeStatus(); err != nil {
-				return err
+				panic(fmt.Errorf("failed to update node status: %w", err))
 			}
 		}
 	}
