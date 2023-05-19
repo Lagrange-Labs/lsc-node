@@ -81,6 +81,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	if err != nil {
 		panic(err)
 	}
+	stakeAddress := crypto.PubkeyToAddress(ecdsaPriv.PublicKey).Hex()
 
 	rpcClient, err := rpcclient.CreateRPCClient(cfg.Chain, cfg.RPCEndpoint)
 	if err != nil {
@@ -95,7 +96,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 		NetworkServiceClient: types.NewNetworkServiceClient(conn),
 		blsPrivateKey:        blsPriv,
 		ecdsaPrivateKey:      ecdsaPriv,
-		stakeAddress:         cfg.StakeAddress,
+		stakeAddress:         stakeAddress,
 		pullInterval:         time.Duration(cfg.PullInterval),
 		rpcClient:            rpcClient,
 		chainID:              chainID,

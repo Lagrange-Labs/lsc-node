@@ -6,6 +6,7 @@ import (
 	"time"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/lagrange"
 	"github.com/Lagrange-Labs/lagrange-node/testutil"
@@ -100,15 +101,19 @@ func (g *Governance) updateNodeStatus() error {
 		if err != nil {
 			return err
 		}
+		node.VotingPower = uint64(sNode.Amount.Int64())
+		if node.VotingPower == 0 {
+			logger.Errorf("node %s has 0 voting power", node.StakeAddress)
+			continue
+		}
+
 		if sNode.Slashed {
 			node.Status = networktypes.NodeSlashed
-			node.VotingPower = uint64(sNode.Amount.Int64())
 			if err := g.storage.UpdateNode(g.ctx, &node); err != nil {
 				return err
 			}
 		} else {
 			node.Status = networktypes.NodeRegistered
-			node.VotingPower = uint64(sNode.Amount.Int64())
 			if err := g.storage.UpdateNode(g.ctx, &node); err != nil {
 				return err
 			}

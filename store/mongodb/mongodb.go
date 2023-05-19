@@ -46,8 +46,9 @@ func (db *MongoDB) AddNode(ctx context.Context, node *networktypes.ClientNode) e
 		return err
 	}
 
-	if node.Status == networktypes.NodeStacked {
+	if tNode.Status == networktypes.NodeStaked {
 		node.Status = networktypes.NodeRegistered
+		node.VotingPower = tNode.VotingPower
 	} else {
 		node.Status = networktypes.NodeJoined
 	}
