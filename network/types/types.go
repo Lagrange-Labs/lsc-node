@@ -4,9 +4,9 @@ package types
 type NodeStatus string
 
 const (
-	NodeStacked    = NodeStatus("stacked")
-	NodeUnstacking = NodeStatus("unstacking")
-	NodeUnstacked  = NodeStatus("unstacked")
+	NodeStaked     = NodeStatus("staked")
+	NodeUnstaking  = NodeStatus("unstaking")
+	NodeUnstaked   = NodeStatus("unstaked")
 	NodeSlashed    = NodeStatus("slashed")
 	NodeJoined     = NodeStatus("joined")
 	NodeRegistered = NodeStatus("registered")

@@ -7,6 +7,7 @@ import (
 
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"go.mongodb.org/mongo-driver/bson"
+	"go.mongodb.org/mongo-driver/bson/primitive"
 )
 
 // ConvertProtobufToMongo converts a protobuf object to a mongo object.
@@ -77,7 +78,10 @@ func ConvertMongoToBlock(m bson.M) *sequencertypes.Block {
 
 	block.AggSignature = m["agg_signature"].(string)
 	if len(block.AggSignature) > 0 {
-		block.PubKeys = m["pub_keys"].([]string)
+		block.PubKeys = make([]string, 0)
+		for _, pubKey := range m["pub_keys"].(primitive.A) {
+			block.PubKeys = append(block.PubKeys, pubKey.(string))
+		}
 	}
 
 	return block

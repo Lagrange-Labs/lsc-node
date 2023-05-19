@@ -83,7 +83,7 @@ func (s *State) OnStart() {
 		isVoted, err := s.processRound(ctx)
 		if err != nil {
 			logger.Errorf("failed to process the round: %v", err)
-			break
+			continue
 		}
 		if !isVoted {
 			logger.Errorf("the current block %d is not finalized", s.ProposalBlock.BlockNumber())
