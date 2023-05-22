@@ -14,6 +14,18 @@ type EvmClient struct {
 
 var _ RpcClient = (*EvmClient)(nil)
 
+// CreateRPCClient creates a new rpc client.
+func CreateRPCClient(chain, rpcURL string) (RpcClient, error) {
+	switch chain {
+	case "arbitrum":
+		return NewEvmClient(rpcURL)
+	case "optimism":
+		return NewEvmClient(rpcURL)
+	default:
+		return nil, nil
+	}
+}
+
 // NewEvmClient creates a new EvmClient instance.
 func NewEvmClient(rpcURL string) (*EvmClient, error) {
 	client, err := ethclient.Dial(rpcURL)
@@ -39,5 +51,8 @@ func (c *EvmClient) GetBlockHashByNumber(blockNumber uint64) (string, error) {
 // GetChainID returns the chain ID.
 func (c *EvmClient) GetChainID() (int32, error) {
 	chainID, err := c.ethClient.ChainID(context.Background())
+	if err != nil {
+		return 0, err
+	}
 	return int32(chainID.Int64()), err
 }

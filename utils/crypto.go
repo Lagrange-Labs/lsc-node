@@ -2,6 +2,7 @@ package utils
 
 import (
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/umbracle/go-eth-consensus/bls"
 	"golang.org/x/crypto/sha3"
 )
@@ -13,6 +14,12 @@ func Hash(data ...[]byte) []byte {
 		hash.Write(d[:]) //nolint:errcheck,gosec
 	}
 	return hash.Sum(nil)
+}
+
+// VerifyECDSASignature verifies the ecdsa signature of the given data.
+func VerifyECDSASignature(message, signature []byte) (bool, error) {
+	pubKey, err := crypto.Ecrecover(message, signature)
+	return crypto.VerifySignature(pubKey, message, signature[:len(signature)-1]), err
 }
 
 // VerifySignature verifies the signature of the given data.

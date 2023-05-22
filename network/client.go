@@ -2,29 +2,38 @@ package network
 
 import (
 	"context"
+	"crypto/ecdsa"
+	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/umbracle/go-eth-consensus/bls"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/proto"
 
+	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 // Client is a gRPC client to join the network
 type Client struct {
 	types.NetworkServiceClient
-	ctx             context.Context
-	cancelFunc      context.CancelFunc
-	privateKey      *bls.SecretKey
+	rpcClient       rpcclient.RpcClient
+	chainID         int32
+	blsPrivateKey   *bls.SecretKey
+	ecdsaPrivateKey *ecdsa.PrivateKey
 	stakeAddress    string
 	lastBlockNumber uint64
 	pullInterval    time.Duration
+
+	ctx        context.Context
+	cancelFunc context.CancelFunc
 }
 
 // NewClient creates a new client.
@@ -64,25 +73,43 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 		}
 	}
 
-	priv, err := utils.HexToBlsPrivKey(cfg.PrivateKey)
+	blsPriv, err := utils.HexToBlsPrivKey(cfg.BLSPrivateKey)
+	if err != nil {
+		panic(err)
+	}
+	ecdsaPriv, err := crypto.HexToECDSA(strings.TrimPrefix(cfg.ECDSAPrivateKey, "0x"))
+	if err != nil {
+		panic(err)
+	}
+	stakeAddress := crypto.PubkeyToAddress(ecdsaPriv.PublicKey).Hex()
+
+	rpcClient, err := rpcclient.CreateRPCClient(cfg.Chain, cfg.RPCEndpoint)
+	if err != nil {
+		panic(err)
+	}
+	chainID, err := rpcClient.GetChainID()
 	if err != nil {
 		panic(err)
 	}
 
 	return &Client{
 		NetworkServiceClient: types.NewNetworkServiceClient(conn),
-		privateKey:           priv,
-		stakeAddress:         cfg.StakeAddress,
+		blsPrivateKey:        blsPriv,
+		ecdsaPrivateKey:      ecdsaPriv,
+		stakeAddress:         stakeAddress,
 		pullInterval:         time.Duration(cfg.PullInterval),
-		ctx:                  ctx,
-		cancelFunc:           cancel,
+		rpcClient:            rpcClient,
+		chainID:              chainID,
 		lastBlockNumber:      1,
+
+		ctx:        ctx,
+		cancelFunc: cancel,
 	}, nil
 }
 
 // Start starts the connection loop.
 func (c *Client) Start() {
-	pubkey := utils.BlsPubKeyToHex(c.privateKey.GetPublicKey())
+	pubkey := utils.BlsPubKeyToHex(c.blsPrivateKey.GetPublicKey())
 	req := &types.JoinNetworkRequest{
 		PublicKey:    pubkey,
 		StakeAddress: c.stakeAddress,
@@ -92,7 +119,7 @@ func (c *Client) Start() {
 		logger.Fatalf("failed to marshal the request: %v\n", err)
 	}
 
-	sig, err := c.privateKey.Sign(reqMsg)
+	sig, err := c.blsPrivateKey.Sign(reqMsg)
 	if err != nil {
 		logger.Fatalf("failed to sign the request: %v\n", err)
 	}
@@ -114,13 +141,23 @@ func (c *Client) Start() {
 		case <-c.ctx.Done():
 			return
 		case <-time.After(c.pullInterval):
-			res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber})
+			res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber, ChainId: c.chainID})
 			if err != nil {
 				logger.Errorf("failed to get the last block: %v\n", err)
 				continue
 			}
+			if res.CurrentBlockNumber == 0 {
+				logger.Warnf("the current block is not ready\n")
+				continue
+			}
 
 			logger.Infof("got the current block: %v\n", res.Block)
+			if res.CurrentBlockNumber != c.lastBlockNumber {
+				// TODO determine how to handle the sync
+				logger.Warnf("the current block number %d is not equal to the last block number %d\n", res.CurrentBlockNumber, c.lastBlockNumber)
+				c.lastBlockNumber = res.CurrentBlockNumber
+				continue
+			}
 
 			// verify the proposer signature
 			if len(res.Block.ProposerPubKey()) == 0 {
@@ -135,14 +172,25 @@ func (c *Client) Start() {
 				logger.Errorf("failed to marshal the BLS signature: %v\n", err)
 				continue
 			}
-
+			// verify the proposer signature
 			verified, err := utils.VerifySignature(common.FromHex(res.Block.ProposerPubKey()), blsSigMsg, common.FromHex(res.Block.ProposerSignature()))
 			if err != nil || !verified {
 				logger.Errorf("failed to verify the proposer signature: %v\n", err)
 				continue
 			}
+			// verify if the block hash is correct
+			blockHash := res.Block.BlockHash()
+			rBlockHash, err := c.rpcClient.GetBlockHashByNumber(c.lastBlockNumber)
+			if err != nil {
+				logger.Errorf("failed to get the block hash by number: %v\n", err)
+				continue
+			}
+			if blockHash != rBlockHash {
+				logger.Errorf("the block hash %s is not equal to the rpc block hash %s", blockHash, rBlockHash)
+				continue
+			}
 
-			blsSig, err := c.privateKey.Sign(blsSigMsg)
+			blsSig, err := c.blsPrivateKey.Sign(blsSigMsg)
 			if err != nil {
 				logger.Errorf("failed to sign the BLS signature: %v\n", err)
 			}
@@ -150,19 +198,16 @@ func (c *Client) Start() {
 
 			req := &types.CommitBlockRequest{
 				BlsSignature: blsSignature,
+				EpochNumber:  res.Block.EpochNumber(),
 				PubKey:       pubkey,
 			}
-			msg, err := proto.Marshal(req)
+			msg := contypes.GetCommitRequestHash(req)
+			sig, err := crypto.Sign(msg, c.ecdsaPrivateKey)
 			if err != nil {
-				logger.Errorf("failed to marshal the block: %v\n", err)
+				logger.Errorf("failed to ecdsa sign the block: %v\n", err)
 				continue
 			}
-			sig, err := c.privateKey.Sign(msg)
-			if err != nil {
-				logger.Errorf("failed to sign the block: %v\n", err)
-				continue
-			}
-			req.Signature = utils.BlsSignatureToHex(sig)
+			req.Signature = common.Bytes2Hex(sig)
 			resS, err := c.CommitBlock(c.ctx, req)
 			if err != nil {
 				logger.Errorf("failed to upload signature: %v\n", err)

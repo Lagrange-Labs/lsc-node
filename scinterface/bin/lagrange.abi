@@ -79,12 +79,6 @@
             {
                 "indexed": false,
                 "internalType": "bytes32",
-                "name": "stateRoot",
-                "type": "bytes32"
-            },
-            {
-                "indexed": false,
-                "internalType": "bytes32",
                 "name": "currentCommitteeRoot",
                 "type": "bytes32"
             },
@@ -98,6 +92,12 @@
                 "indexed": false,
                 "internalType": "uint256",
                 "name": "blockNumber",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "uint256",
+                "name": "epochNumber",
                 "type": "uint256"
             },
             {
@@ -319,21 +319,6 @@
                         "internalType": "bytes32",
                         "name": "correctBlockHash",
                         "type": "bytes32"
-                    },
-                    {
-                        "internalType": "bytes32",
-                        "name": "stateRoot",
-                        "type": "bytes32"
-                    },
-                    {
-                        "internalType": "bytes32",
-                        "name": "correctStateRoot",
-                        "type": "bytes32"
-                    },
-                    {
-                        "internalType": "bytes32[]",
-                        "name": "prooves",
-                        "type": "bytes32[]"
                     },
                     {
                         "internalType": "bytes32",

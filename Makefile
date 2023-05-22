@@ -44,13 +44,17 @@ lint:
 	@ $$(go env GOPATH)/bin/golangci-lint run --timeout=10m
 .PHONY:	lint install-linter
 
-test: run-db-mongo
+test: stop run-db-mongo run-lagrange-sc
 	go test ./... --timeout=10m
 .PHONY: test
 
-run-db-mongo: stop
+run-db-mongo:
 	docker-compose -f docker-compose.yml up -d mongo
 .PHONY: run-db-mongo
+
+run-lagrange-sc:
+	docker-compose -f docker-compose.yml up -d lagrangesc
+.PHONY: run-lagrange-sc
 
 benchmark: 
 	go test -run=NOTEST -timeout=30m -benchmem  -bench=. ./...
@@ -58,17 +62,32 @@ benchmark:
 
 # Local testnet
 localnet-start: stop docker-build
-	docker-compose up -d
+	docker-compose -f docker-compose.yml up -d mongo
+	docker-compose -f docker-compose.yml up -d lagrangesc
+	sleep 3
+	go run ./testutil/registerops/
+	sleep 1
+	docker-compose -f docker-compose.yml up -d simserver
+	docker-compose -f docker-compose.yml up -d simsequencer
+	sleep 3
+	docker-compose -f docker-compose.yml up -d simnode0
+	docker-compose -f docker-compose.yml up -d simnode1
+	docker-compose -f docker-compose.yml up -d simnode2
+
 
 stop:
 	docker-compose down --remove-orphans
 
 .PHONY: localnet-start stop
 
-# Usefule Scripts
+# Useful and Test Scripts
 scgen: # Generate the go bindings for the smart contracts
 	@ cd scinterface && sh generator.sh
 
+register-operator: # Register an operator
+	go run ./testutil/registerops/
+
+.PHONY: scgen register-operator
 
 # Run Components
 run-server:

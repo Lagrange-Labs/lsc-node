@@ -16,10 +16,14 @@ type ServerConfig struct {
 type ClientConfig struct {
 	// GrpcURL is the URL of the gRPC server
 	GrpcURL string `mapstructure:"GrpcURL"`
-	// PrivateKey is the private key of the client node
-	PrivateKey string `mapstructure:"PrivateKey"`
-	// StakeAddress is the ethereum address of the staking
-	StakeAddress string `mapstructure:"StakeAddress"`
+	// Chain is the chain name of the blockchain
+	Chain string `mapstructure:"Chain"`
+	// RPCEndpoint is the endpoint of the blockchain node
+	RPCEndpoint string `mapstructure:"RPCEndpoint"`
+	// BLSPrivateKey is the private key of the client node
+	BLSPrivateKey string `mapstructure:"BLSPrivateKey"`
+	// ECDSAPrivateKey is the private key of the client node
+	ECDSAPrivateKey string `mapstructure:"ECDSAPrivateKey"`
 	// PullInterval is the interval to pull the latest proof
 	PullInterval utils.TimeDuration `mapstructure:"PullInterval"`
 }

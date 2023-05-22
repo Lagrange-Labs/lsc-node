@@ -2,7 +2,6 @@ package sequencer
 
 import (
 	"context"
-	"os"
 	"time"
 
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
@@ -26,21 +25,9 @@ type Sequencer struct {
 	cancel context.CancelFunc
 }
 
-// CreateRPCClient creates a new rpc client.
-func CreateRPCClient(chain string) (rpcclient.RpcClient, error) {
-	switch chain {
-	case "arbitrum":
-		return rpcclient.NewEvmClient(os.Getenv("ARBITRUM_NODE_URL"))
-	case "optimism":
-		return rpcclient.NewEvmClient(os.Getenv("OPTIMISM_NODE_URL"))
-	default:
-		return nil, nil
-	}
-}
-
 // NewSequencer creates a new sequencer instance.
 func NewSequencer(cfg *Config, storage storageInterface) (*Sequencer, error) {
-	rpcClient, err := CreateRPCClient(cfg.Chain)
+	rpcClient, err := rpcclient.CreateRPCClient(cfg.Chain, cfg.RPCURL)
 	if err != nil {
 		return nil, err
 	}

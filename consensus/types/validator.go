@@ -2,7 +2,7 @@ package types
 
 import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 )
 
 // Validator defines a validator state.
@@ -21,7 +21,7 @@ type ValidatorSet struct {
 }
 
 // NewValidatorSet creates a new validator set.
-func NewValidatorSet(proposer *Validator, nodes []sequencertypes.ClientNode) *ValidatorSet {
+func NewValidatorSet(proposer *Validator, nodes []networktypes.ClientNode) *ValidatorSet {
 	validators := make([]*Validator, len(nodes))
 	totalVotingPower := uint64(0)
 	votingPowerMap := make(map[string]uint64)

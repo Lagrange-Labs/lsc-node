@@ -92,6 +92,14 @@ func (rs *RoundState) GetCurrentBlockNumber() uint64 {
 	return rs.ProposalBlock.BlockNumber()
 }
 
+// GetCurrentEpochNumber returns the current epoch number.
+func (rs *RoundState) GetCurrentEpochNumber() uint64 {
+	rs.rwMutex.RLock()
+	defer rs.rwMutex.RUnlock()
+
+	return rs.ProposalBlock.EpochNumber()
+}
+
 // CheckEnoughVotingPower checks if there is enough voting power to finalize the block.
 func (rs *RoundState) CheckEnoughVotingPower() bool {
 	rs.rwMutex.RLock()
@@ -149,6 +157,7 @@ func (rs *RoundState) CheckAggregatedSignature() ([]*bls.PublicKey, *bls.Signatu
 		signatures = append(signatures, sig)
 		pubkeys = append(pubkeys, pubkey)
 	}
+
 	aggSig := bls.AggregateSignatures(signatures)
 	verified, err := aggSig.FastAggregateVerify(pubkeys, sigMessage)
 	if err != nil || !verified {
@@ -196,11 +205,19 @@ func (rs *RoundState) UpdateAggregatedSignature(pubkeys []string, aggSig string)
 }
 
 // GetEvidences returns the evidences.
-func (rs *RoundState) GetEvidences() []*networktypes.CommitBlockRequest {
+func (rs *RoundState) GetEvidences() ([]*Evidence, error) {
 	rs.rwMutex.RLock()
 	defer rs.rwMutex.RUnlock()
+	var evidences []*Evidence
 
-	return rs.evidences
+	for _, req := range rs.evidences {
+		evidence, err := GetEvidence(req, rs.ProposalBlock.BlockHash(), rs.ProposalBlock.CurrentCommittee(), rs.ProposalBlock.NextCommittee())
+		if err != nil {
+			return nil, err
+		}
+		evidences = append(evidences, evidence)
+	}
+	return evidences, nil
 }
 
 var (
