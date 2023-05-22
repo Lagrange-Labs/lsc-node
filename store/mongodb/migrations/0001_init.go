@@ -16,6 +16,7 @@ func up_0001(client *mongo.Client) error {
 	// create blocks, nodes collections
 	_ = db.Collection("blocks")
 	_ = db.Collection("nodes")
+	_ = db.Collection("evidences")
 	return nil
 }
 
@@ -24,5 +25,6 @@ func down_0001(client *mongo.Client) error {
 	// drop blocks, nodes collections
 	_ = db.Collection("blocks").Drop(context.Background())
 	_ = db.Collection("nodes").Drop(context.Background())
+	_ = db.Collection("evidences").Drop(context.Background())
 	return nil
 }

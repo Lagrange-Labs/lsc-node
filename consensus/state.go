@@ -82,7 +82,6 @@ func (s *State) OnStart() {
 		defer cancel()
 		isVoted, err := s.processRound(ctx)
 		if err != nil {
-			// TODO handle timeout error, restart the round
 			logger.Errorf("failed to process the round: %v", err)
 			continue
 		}
@@ -90,6 +89,18 @@ func (s *State) OnStart() {
 			logger.Errorf("the current block %d is not finalized", s.ProposalBlock.BlockNumber())
 		}
 
+		// store the evidences
+		evidences, err := s.GetEvidences()
+		if err != nil {
+			logger.Errorf("failed to get the evidences: %v", err)
+			continue
+		}
+		if len(evidences) > 0 {
+			if err := s.storage.AddEvidences(ctx, evidences); err != nil {
+				logger.Errorf("failed to add the evidences: %v", err)
+				continue
+			}
+		}
 		// store the finalized block
 		if err := s.storage.UpdateBlock(context.Background(), s.ProposalBlock); err != nil {
 			logger.Errorf("failed to update the block %v: %v", s.ProposalBlock, err)
@@ -110,7 +121,7 @@ func (s *State) OnStop() {
 
 // startRound loads the next block and initializes the round state.
 func (s *State) startRound(blockNumber uint64) error {
-	nodes, err := s.storage.GetNodesByStatuses(context.Background(), []sequencertypes.NodeStatus{sequencertypes.NodeRegistered})
+	nodes, err := s.storage.GetNodesByStatuses(context.Background(), []networktypes.NodeStatus{networktypes.NodeRegistered})
 	if err != nil {
 		return err
 	}
@@ -151,6 +162,10 @@ func (s *State) startRound(blockNumber uint64) error {
 func (s *State) getNextBlock(ctx context.Context, blockNumber uint64) (*sequencertypes.Block, error) {
 	block, err := s.storage.GetBlock(ctx, blockNumber+1)
 	if err == nil || err != storetypes.ErrBlockNotFound {
+		// TODO determine the current committee root and the next committee root
+		block.BlockHeader = &sequencertypes.BlockHeader{}
+		block.BlockHeader.CurrentCommittee = utils.RandomHex(32)
+		block.BlockHeader.NextCommittee = utils.RandomHex(32)
 		return block, err
 	}
 	// in case the block is not found, wait for it to be added from the sequencer
@@ -168,7 +183,10 @@ func (s *State) getNextBlock(ctx context.Context, blockNumber uint64) (*sequence
 				}
 				return nil, err
 			}
-
+			// TODO determine the current committee root and the next committee root
+			block.BlockHeader = &sequencertypes.BlockHeader{}
+			block.BlockHeader.CurrentCommittee = utils.RandomHex(32)
+			block.BlockHeader.NextCommittee = utils.RandomHex(32)
 			return block, nil
 		}
 	}
@@ -183,8 +201,11 @@ func (s *State) processRound(ctx context.Context) (bool, error) {
 		if s.CheckEnoughVotingPower() {
 			pubkeys, aggSignature, err := s.CheckAggregatedSignature()
 			if err != nil {
-				// TODO handle error
-				return true, err
+				if err == types.ErrInvalidAggregativeSignature {
+					logger.Warnf("the aggregated signature is invalid")
+					return false, nil
+				}
+				return false, err
 			}
 			isBlocked = true
 			s.BlockCommit()
@@ -200,7 +221,6 @@ func (s *State) processRound(ctx context.Context) (bool, error) {
 			s.UnblockCommit()
 		}
 
-		logger.Warnf("the current block %d doesn't get enough power", s.ProposalBlock.BlockNumber())
 		return false, nil
 	}
 

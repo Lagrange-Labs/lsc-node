@@ -32,19 +32,21 @@ message JoinNetworkResponse {
 // GetBlockRequest is the request to get the given block 
 message GetBlockRequest {
     uint64 block_number = 1;
-    string chain = 2;
+    int32 chain_id = 2;
 }
 
 // GetBlockResponse is the response for getting the given block
 message GetBlockResponse {
     sequencer.v1.Block block = 1;
+    uint64 current_block_number = 2;
 }
 
 // CommitBlockRequest is the request to commit the signature
 message CommitBlockRequest {
     sequencer.v1.BlsSignature bls_signature = 1;
-    string pub_key = 2;
-    string signature = 3;
+    uint64 epoch_number = 2;
+    string pub_key = 3;
+    string signature = 4;
 }
 
 // CommitBlockResponse is the response for uploading the signature

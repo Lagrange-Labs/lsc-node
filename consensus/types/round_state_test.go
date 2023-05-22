@@ -22,8 +22,8 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey) {
 	pBlock := &sequencertypes.Block{
 		BlockHeader: &sequencertypes.BlockHeader{
 			ProposerPubKey:   proposerPubKey,
-			CurrentCommittee: "0x0000000",
-			NextCommittee:    "0x0000000",
+			CurrentCommittee: utils.RandomHex(32),
+			NextCommittee:    utils.RandomHex(32),
 		},
 		ChainHeader: chainHeader,
 	}
@@ -39,11 +39,11 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey) {
 
 	secKeys := []*bls.SecretKey{}
 
-	nodes := []sequencertypes.ClientNode{}
+	nodes := []networktypes.ClientNode{}
 	for i := 0; i < 10; i++ {
 		secKey, pubKey := utils.RandomBlsKey()
 		secKeys = append(secKeys, secKey)
-		node := sequencertypes.ClientNode{
+		node := networktypes.ClientNode{
 			PublicKey:   pubKey,
 			VotingPower: 1,
 		}
@@ -142,5 +142,5 @@ func TestCheckAggregatedSignature(t *testing.T) {
 	}
 	_, _, err = rs.CheckAggregatedSignature()
 	require.Error(t, err)
-	require.Len(t, rs.GetEvidences(), 3)
+	require.Len(t, rs.evidences, 3)
 }

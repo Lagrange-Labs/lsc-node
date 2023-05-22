@@ -3,14 +3,15 @@ package network
 import (
 	context "context"
 	"fmt"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
 
+	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -57,7 +58,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 		return nil, err
 	}
 	if err := s.storage.AddNode(ctx,
-		&sequencertypes.ClientNode{
+		&types.ClientNode{
 			StakeAddress: req.StakeAddress,
 			PublicKey:    req.PublicKey,
 			IPAddress:    ip,
@@ -89,14 +90,20 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 
 	block := s.consensus.GetCurrentBlock()
 	if block == nil || block.BlockNumber() != req.BlockNumber {
-		block, err := s.storage.GetBlock(ctx, req.BlockNumber)
+		sBlock, err := s.storage.GetBlock(ctx, req.BlockNumber)
+		currentBlockNumber := uint64(0)
+		if block != nil {
+			currentBlockNumber = s.consensus.GetCurrentBlockNumber()
+		}
 		return &types.GetBlockResponse{
-			Block: block,
+			Block:              sBlock,
+			CurrentBlockNumber: currentBlockNumber,
 		}, err
 	}
 
 	return &types.GetBlockResponse{
-		Block: block,
+		Block:              block,
+		CurrentBlockNumber: s.consensus.GetCurrentBlockNumber(),
 	}, nil
 }
 
@@ -106,14 +113,8 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 
 	// verify the peer signature
 	signature := req.Signature
-	req.Signature = ""
-	reqMsg, err := proto.Marshal(req)
-	if err != nil {
-		logger.Errorf("Failed to marshal the request: %v", err)
-		return nil, err
-	}
-
-	isVerified, err := utils.VerifySignature(common.FromHex(req.PubKey), reqMsg, common.FromHex(signature))
+	reqHash := contypes.GetCommitRequestHash(req)
+	isVerified, err := utils.VerifyECDSASignature(reqHash, common.FromHex(signature))
 	if err != nil || !isVerified {
 		return &types.CommitBlockResponse{
 			Result:  false,
@@ -127,6 +128,15 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 		return &types.CommitBlockResponse{
 			Result:  false,
 			Message: fmt.Sprintf("The block number is not matched: %v", blockNumber),
+		}, nil
+	}
+
+	// check if the epoch number is matched
+	epochNumber := s.consensus.GetCurrentEpochNumber()
+	if epochNumber != req.EpochNumber {
+		return &types.CommitBlockResponse{
+			Result:  false,
+			Message: fmt.Sprintf("The epoch number is not matched: %v", epochNumber),
 		}, nil
 	}
 
@@ -146,5 +156,5 @@ func getIPAddress(ctx context.Context) (string, error) {
 		return "", fmt.Errorf("failed to get peer from context")
 	}
 
-	return pr.Addr.String(), nil
+	return strings.Split(pr.Addr.String(), ":")[0], nil
 }

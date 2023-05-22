@@ -1,30 +1,5 @@
 package types
 
-// NodeStatus is the status of a node.
-type NodeStatus string
-
-const (
-	NodeStacked    = NodeStatus("stacked")
-	NodeUnstacking = NodeStatus("unstacking")
-	NodeUnstacked  = NodeStatus("unstacked")
-	NodeSlashed    = NodeStatus("slashed")
-	NodeRegistered = NodeStatus("registered")
-)
-
-// ClientNode is a struct to store the information of a node.
-type ClientNode struct {
-	// PublicKey is the bls public key of the node.
-	PublicKey string
-	// IPAddress is the IP address of the client node.
-	IPAddress string
-	// StakeAddress is the ethereum address of the staking.
-	StakeAddress string
-	// VotingPower is the voting power of the node.
-	VotingPower uint64
-	// Status is the status of the node.
-	Status NodeStatus
-}
-
 // BlockHash returns the block hash of the chain header.
 func (b *Block) BlockHash() string {
 	return b.ChainHeader.BlockHash
@@ -53,6 +28,11 @@ func (b *Block) ProposerPubKey() string {
 // ProposerSignature returns the proposer signature of the block.
 func (b *Block) ProposerSignature() string {
 	return b.BlockHeader.ProposerSignature
+}
+
+// EpochNumber returns the epoch number of the block.
+func (b *Block) EpochNumber() uint64 {
+	return b.BlockHeader.EpochNumber
 }
 
 // BlsSignature returns the bls signature of the block.
