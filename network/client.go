@@ -201,6 +201,7 @@ func (c *Client) Start() {
 				EpochNumber:  res.Block.EpochNumber(),
 				PubKey:       pubkey,
 			}
+			// generate the ECDSA signature
 			msg := contypes.GetCommitRequestHash(req)
 			sig, err := crypto.Sign(msg, c.ecdsaPrivateKey)
 			if err != nil {
