@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	constypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
@@ -40,7 +40,7 @@ func createTestGovernance(t *testing.T) (storetypes.Storage, *Governance, *ethcl
 	}
 	client, err := ethclient.Dial(govCfg.EthereumURL)
 	require.NoError(t, err)
-	auth, err := testutil.GetSigner(context.Background(), client, privateKEy)
+	auth, err := utils.GetSigner(context.Background(), client, privateKEy)
 	require.NoError(t, err)
 	gov, err := NewGovernance(&govCfg, storage)
 	require.NoError(t, err)
@@ -60,9 +60,9 @@ func TestUpdateNodeStatus(t *testing.T) {
 	require.NoError(t, storage.AddNode(context.Background(), &clientNode))
 	// update the node status
 	time.Sleep(time.Second * 3)
-	require.NoError(t, gov.updateNodeStatus())
+	require.NoError(t, gov.updateNodeStatuses())
 	// check the node status
-	node, err := storage.GetNode(context.Background(), clientNode.IPAddress)
+	node, err := storage.GetNodeByStakeAddr(context.Background(), clientNode.StakeAddress)
 	require.NoError(t, err)
 	require.Equal(t, auth.From.Hex(), node.StakeAddress)
 	require.Equal(t, networktypes.NodeRegistered, node.Status)
@@ -74,7 +74,7 @@ func TestUploadEvidence(t *testing.T) {
 	// add the evidence to the storage
 	blockHash := common.HexToHash(utils.RandomHex(32))
 	committeeRoot := common.HexToHash(utils.RandomHex(32))
-	evidence := &constypes.Evidence{
+	evidence := &contypes.Evidence{
 		Operator:                    auth.From.Hex(),
 		BlockHash:                   blockHash,
 		CorrectBlockHash:            blockHash,
@@ -88,7 +88,7 @@ func TestUploadEvidence(t *testing.T) {
 		CommitSignature:             common.FromHex(utils.RandomHex(32)),
 		ChainID:                     1,
 	}
-	require.NoError(t, storage.AddEvidences(context.Background(), []*constypes.Evidence{evidence}))
+	require.NoError(t, storage.AddEvidences(context.Background(), []*contypes.Evidence{evidence}))
 	// check the evidence status
 	evidences, err := storage.GetEvidences(context.Background())
 	require.NoError(t, err)
@@ -99,5 +99,4 @@ func TestUploadEvidence(t *testing.T) {
 	evidences, err = storage.GetEvidences(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 0, len(evidences))
-
 }

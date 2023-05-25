@@ -11,8 +11,8 @@ import (
 type Storage interface {
 	// AddNode adds a new node to the database.
 	AddNode(ctx context.Context, node *networktypes.ClientNode) error
-	// GetNode returns the node for the given IP address.
-	GetNode(ctx context.Context, ip string) (*networktypes.ClientNode, error)
+	// GetNodeByStakeAddr returns the node for the given stake address.
+	GetNodeByStakeAddr(ctx context.Context, stakeAddress string) (*networktypes.ClientNode, error)
 	// GetLastBlock returns the last block that was submitted to the network.
 	GetLastBlock(ctx context.Context) (*sequencertypes.Block, error)
 	// GetBlock returns the block for the given block number.

@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"crypto/ecdsa"
+	"fmt"
 	"strings"
 	"time"
 
@@ -27,6 +28,7 @@ type Client struct {
 	rpcClient       rpcclient.RpcClient
 	chainID         int32
 	blsPrivateKey   *bls.SecretKey
+	blsPublicKey    string
 	ecdsaPrivateKey *ecdsa.PrivateKey
 	stakeAddress    string
 	lastBlockNumber uint64
@@ -77,6 +79,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	if err != nil {
 		panic(err)
 	}
+	pubkey := utils.BlsPubKeyToHex(blsPriv.GetPublicKey())
 	ecdsaPriv, err := crypto.HexToECDSA(strings.TrimPrefix(cfg.ECDSAPrivateKey, "0x"))
 	if err != nil {
 		panic(err)
@@ -95,6 +98,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	return &Client{
 		NetworkServiceClient: types.NewNetworkServiceClient(conn),
 		blsPrivateKey:        blsPriv,
+		blsPublicKey:         pubkey,
 		ecdsaPrivateKey:      ecdsaPriv,
 		stakeAddress:         stakeAddress,
 		pullInterval:         time.Duration(cfg.PullInterval),
@@ -107,41 +111,26 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	}, nil
 }
 
+// GetStakeAddress returns the stake address.
+func (c *Client) GetStakeAddress() string {
+	return c.stakeAddress
+}
+
 // Start starts the connection loop.
 func (c *Client) Start() {
-	pubkey := utils.BlsPubKeyToHex(c.blsPrivateKey.GetPublicKey())
-	req := &types.JoinNetworkRequest{
-		PublicKey:    pubkey,
-		StakeAddress: c.stakeAddress,
-	}
-	reqMsg, err := proto.Marshal(req)
+	err := c.TryJoinNetwork()
 	if err != nil {
-		logger.Fatalf("failed to marshal the request: %v\n", err)
+		panic(fmt.Errorf("failed to join the network: %v", err))
 	}
 
-	sig, err := c.blsPrivateKey.Sign(reqMsg)
-	if err != nil {
-		logger.Fatalf("failed to sign the request: %v\n", err)
-	}
-
-	req.Signature = utils.BlsSignatureToHex(sig)
-	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
-	if err != nil {
-		logger.Fatalf("failed to join the network: %v\n", err)
-	}
-
-	if !res.Result {
-		logger.Panicf("failed to join the network: %s", res.Message)
-	}
-
-	logger.Infof("joined the network: %v\n", req)
+	logger.Infof("joined the network: %v\n", c.stakeAddress)
 
 	for {
 		select {
 		case <-c.ctx.Done():
 			return
 		case <-time.After(c.pullInterval):
-			res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber, ChainId: c.chainID})
+			res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber, ChainId: c.chainID, StakeAddress: c.stakeAddress})
 			if err != nil {
 				logger.Errorf("failed to get the last block: %v\n", err)
 				continue
@@ -199,7 +188,7 @@ func (c *Client) Start() {
 			req := &types.CommitBlockRequest{
 				BlsSignature: blsSignature,
 				EpochNumber:  res.Block.EpochNumber(),
-				PubKey:       pubkey,
+				PubKey:       c.blsPublicKey,
 			}
 			// generate the ECDSA signature
 			msg := contypes.GetCommitRequestHash(req)
@@ -223,6 +212,37 @@ func (c *Client) Start() {
 			logger.Infof("uploaded the signature: %v\n", resS)
 		}
 	}
+}
+
+// TryJoinNetwork tries to join the network.
+func (c *Client) TryJoinNetwork() error {
+	req := &types.JoinNetworkRequest{
+		PublicKey:    c.blsPublicKey,
+		StakeAddress: c.stakeAddress,
+	}
+	reqMsg, err := proto.Marshal(req)
+	if err != nil {
+		return err
+	}
+	sig, err := c.blsPrivateKey.Sign(reqMsg)
+	if err != nil {
+		return err
+	}
+	req.Signature = utils.BlsSignatureToHex(sig)
+	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
+	if err != nil {
+		return err
+	}
+	if !res.Result {
+		return fmt.Errorf("failed to join the network: %s", res.Message)
+	}
+	return nil
+}
+
+// TryGetBlock tries to get the block from the network.
+func (c *Client) TryGetBlock() error {
+
+	return nil
 }
 
 // Stop function stops the client node.
