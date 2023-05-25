@@ -1,8 +1,13 @@
 package utils
 
 import (
+	"context"
+	"strings"
+
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/umbracle/go-eth-consensus/bls"
 	"golang.org/x/crypto/sha3"
 )
@@ -17,9 +22,14 @@ func Hash(data ...[]byte) []byte {
 }
 
 // VerifyECDSASignature verifies the ecdsa signature of the given data.
-func VerifyECDSASignature(message, signature []byte) (bool, error) {
-	pubKey, err := crypto.Ecrecover(message, signature)
-	return crypto.VerifySignature(pubKey, message, signature[:len(signature)-1]), err
+func VerifyECDSASignature(message, signature []byte) (bool, string, error) {
+	publicKey, err := crypto.SigToPub(message, signature)
+	if err != nil {
+		return false, "", err
+	}
+	pubKey := crypto.FromECDSAPub(publicKey)
+	addr := crypto.PubkeyToAddress(*publicKey)
+	return crypto.VerifySignature(pubKey, message, signature[:len(signature)-1]), common.Bytes2Hex(addr[:]), nil
 }
 
 // VerifySignature verifies the signature of the given data.
@@ -80,4 +90,17 @@ func RandomBlsKey() (secKey *bls.SecretKey, pubKey string) {
 	publicKey := secretKey.GetPublicKey()
 	pKey_raw := publicKey.Serialize()
 	return secretKey, common.Bytes2Hex(pKey_raw[:])
+}
+
+// GetSigner returns a transaction signer.
+func GetSigner(ctx context.Context, c *ethclient.Client, accHexPrivateKey string) (*bind.TransactOpts, error) {
+	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(accHexPrivateKey, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	chainID, err := c.NetworkID(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return bind.NewKeyedTransactorWithChainID(privateKey, chainID)
 }

@@ -33,6 +33,7 @@ message JoinNetworkResponse {
 message GetBlockRequest {
     uint64 block_number = 1;
     int32 chain_id = 2;
+    string stake_address = 3;
 }
 
 // GetBlockResponse is the response for getting the given block

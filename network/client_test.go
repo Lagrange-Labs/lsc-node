@@ -35,7 +35,8 @@ func TestECDSASignVerify(t *testing.T) {
 	sig, err := crypto.Sign(reqMsg, privateKey)
 	require.NoError(t, err)
 	// verify the signature
-	isVerified, err := utils.VerifyECDSASignature(reqMsg, sig)
+	isVerified, addr, err := utils.VerifyECDSASignature(reqMsg, sig)
 	require.NoError(t, err)
 	require.True(t, isVerified)
+	require.Equal(t, addr, "516d6c27c23ced21bf7930e2a01f0bca9a141a0d")
 }
