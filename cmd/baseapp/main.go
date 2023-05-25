@@ -154,7 +154,7 @@ func runSequencer(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create governance: %w", err)
 	}
-	go governance.Start()
+	governance.Start()
 
 	if err := sequencer.Start(); err != nil {
 		return fmt.Errorf("failed to start sequencer: %w", err)
