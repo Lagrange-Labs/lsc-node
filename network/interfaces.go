@@ -9,7 +9,7 @@ import (
 
 type storageInterface interface {
 	AddNode(ctx context.Context, node *types.ClientNode) error
-	GetNode(ctx context.Context, ip string) (*types.ClientNode, error)
+	GetNodeByStakeAddr(ctx context.Context, stakeAddress string) (*types.ClientNode, error)
 	GetBlock(ctx context.Context, blockNumber uint64) (*sequencertypes.Block, error)
 }
 
