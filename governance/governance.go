@@ -9,7 +9,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/lagrange"
-	"github.com/Lagrange-Labs/lagrange-node/testutil"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
@@ -39,7 +39,7 @@ func NewGovernance(cfg *Config, storage storageInterface) (*Governance, error) {
 		return nil, err
 	}
 
-	auth, err := testutil.GetSigner(context.Background(), client, cfg.PrivateKey)
+	auth, err := utils.GetSigner(context.Background(), client, cfg.PrivateKey)
 	if err != nil {
 		return nil, err
 	}
@@ -57,20 +57,28 @@ func NewGovernance(cfg *Config, storage storageInterface) (*Governance, error) {
 
 // Start starts the governance process.
 func (g *Governance) Start() {
+	ticker := time.NewTicker(g.stakingInterval)
 	for {
 		select {
 		case <-g.ctx.Done():
 			return
 		case <-time.After(g.evidenceInterval):
-			if err := g.uploadEvidences(); err != nil {
-				panic(fmt.Errorf("failed to upload evidences: %w", err))
-			}
-		case <-time.After(g.stakingInterval):
-			if err := g.updateNodeStatus(); err != nil {
+			go func() {
+				if err := g.uploadEvidences(); err != nil {
+					panic(fmt.Errorf("failed to upload evidences: %w", err))
+				}
+			}()
+		case <-ticker.C:
+			if err := g.updateNodeStatuses(); err != nil {
 				panic(fmt.Errorf("failed to update node status: %w", err))
 			}
 		}
 	}
+}
+
+// Stop stops the governance process.
+func (g *Governance) Stop() {
+	g.cancel()
 }
 
 func (g *Governance) uploadEvidences() error {
@@ -91,8 +99,9 @@ func (g *Governance) uploadEvidences() error {
 	return nil
 }
 
-func (g *Governance) updateNodeStatus() error {
+func (g *Governance) updateNodeStatuses() error {
 	nodes, err := g.storage.GetNodesByStatuses(g.ctx, []networktypes.NodeStatus{networktypes.NodeJoined})
+	logger.Infof("updating nodes %v", nodes)
 	if err != nil {
 		return err
 	}
@@ -101,6 +110,7 @@ func (g *Governance) updateNodeStatus() error {
 		if err != nil {
 			return err
 		}
+		logger.Infof("node found %v", sNode)
 		node.VotingPower = uint64(sNode.Amount.Int64())
 		if node.VotingPower == 0 {
 			logger.Errorf("node %s has 0 voting power", node.StakeAddress)

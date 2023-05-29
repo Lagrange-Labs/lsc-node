@@ -81,7 +81,7 @@ func runServer(ctx *cli.Context) error {
 		return err
 	}
 	logger.Infof("Starting server with config: %v", cfg.Server)
-	storage, err := store.NewStorage(cfg.Store)
+	storage, err := store.NewStorage(&cfg.Store)
 	if err != nil {
 		return err
 	}
@@ -140,7 +140,7 @@ func runSequencer(ctx *cli.Context) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	storage, err := store.NewStorage(cfg.Store)
+	storage, err := store.NewStorage(&cfg.Store)
 	if err != nil {
 		return fmt.Errorf("failed to create storage: %w", err)
 	}
@@ -154,7 +154,7 @@ func runSequencer(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create governance: %w", err)
 	}
-	go governance.Start()
+	governance.Start()
 
 	if err := sequencer.Start(); err != nil {
 		return fmt.Errorf("failed to start sequencer: %w", err)

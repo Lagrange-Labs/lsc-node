@@ -5,6 +5,7 @@ import (
 	"fmt"
 
 	"github.com/Lagrange-Labs/lagrange-node/testutil"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
@@ -26,7 +27,7 @@ func main() {
 	}
 
 	for _, privateKey := range PrivateKeys {
-		auth, err := testutil.GetSigner(context.Background(), client, privateKey)
+		auth, err := utils.GetSigner(context.Background(), client, privateKey)
 		if err != nil {
 			panic(fmt.Errorf("failed to get signer: %v", err))
 		}
