@@ -10,7 +10,7 @@ require (
 	github.com/spf13/viper v1.15.0
 	github.com/stretchr/testify v1.8.3
 	github.com/umbracle/go-eth-consensus v0.1.3-0.20230304221055-e39ee9cb4167
-	github.com/urfave/cli/v2 v2.25.3
+	github.com/urfave/cli/v2 v2.25.4
 	go.mongodb.org/mongo-driver v1.11.6
 	golang.org/x/crypto v0.9.0
 	google.golang.org/grpc v1.55.0
