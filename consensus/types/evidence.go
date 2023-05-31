@@ -48,12 +48,12 @@ func GetLagrangeServiceEvidence(e *Evidence) lagrange.LagrangeServiceEvidence {
 
 // GetCommitRequestHash returns the hash of the commit block request.
 func GetCommitRequestHash(req *networktypes.CommitBlockRequest) []byte {
-	var buf common.Hash
+	var blockNumberBuf, epochNumberBuf common.Hash
 	blockHash := common.FromHex(req.BlsSignature.ChainHeader.BlockHash)[:]
 	currentCommitteeRoot := common.FromHex(req.BlsSignature.CurrentCommittee)[:]
 	nextCommitteeRoot := common.FromHex(req.BlsSignature.NextCommittee)[:]
-	blockNumber := big.NewInt(int64(req.BlsSignature.ChainHeader.BlockNumber)).FillBytes(buf[:])
-	epochNumber := big.NewInt(int64(req.EpochNumber)).FillBytes(buf[:])
+	blockNumber := big.NewInt(int64(req.BlsSignature.ChainHeader.BlockNumber)).FillBytes(blockNumberBuf[:])
+	epochNumber := big.NewInt(int64(req.EpochNumber)).FillBytes(epochNumberBuf[:])
 	blockSignature := common.FromHex(req.BlsSignature.Signature)[:]
 	chainID := make([]byte, 4)
 	binary.BigEndian.PutUint32(chainID, req.BlsSignature.ChainHeader.ChainId)
@@ -79,7 +79,10 @@ func GetEvidence(req *networktypes.CommitBlockRequest, correctBlockHash, correct
 	if err != nil {
 		return nil, err
 	}
-
+	// convert the signature to the legacy format which be able to be verified in Solidity
+	if signature[64] == 0 || signature[64] == 1 {
+		signature[64] += 27
+	}
 	addr := crypto.PubkeyToAddress(*pubKey).Hex()
 	return &Evidence{
 		Operator:                    addr,
@@ -92,7 +95,7 @@ func GetEvidence(req *networktypes.CommitBlockRequest, correctBlockHash, correct
 		BlockNumber:                 req.BlsSignature.ChainHeader.BlockNumber,
 		EpochNumber:                 req.EpochNumber,
 		BlockSignature:              common.FromHex(req.BlsSignature.Signature),
-		CommitSignature:             common.FromHex(req.Signature),
+		CommitSignature:             signature,
 		ChainID:                     req.BlsSignature.ChainHeader.ChainId,
 	}, nil
 }
