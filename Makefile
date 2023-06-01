@@ -33,7 +33,7 @@ proto-gen:
 
 
 # Linting, Teseting, Benchmarking
-golangci_lint_cmd=github.com/golangci/golangci-lint/cmd/golangci-lint@v1.50.1
+golangci_lint_cmd=github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.2
 
 install-linter:
 	@echo "--> Installing linter"
@@ -61,7 +61,7 @@ benchmark:
 .PHONY: benchmark
 
 # Local testnet
-localnet-start: stop docker-build
+localnet-start: stop 
 	docker-compose -f docker-compose.yml up -d mongo
 	docker-compose -f docker-compose.yml up -d lagrangesc
 	sleep 3
