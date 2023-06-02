@@ -16,8 +16,9 @@ message BlockHeader {
     uint64 epoch_number = 1;
     string current_committee = 2;
     string next_committee = 3;
-    string proposer_pub_key = 4;
-    string proposer_signature = 5;
+    uint64 total_voting_power = 4;
+    string proposer_pub_key = 5;
+    string proposer_signature = 6;
 }
 
 // Block is the block body structure
@@ -33,5 +34,6 @@ message BlsSignature {
     ChainHeader chain_header = 1;
     string current_committee = 2;
     string next_committee = 3;
-    string signature = 4;
+    uint64 total_voting_power = 4;
+    string signature = 5;
 }

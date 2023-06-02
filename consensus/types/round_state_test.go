@@ -22,6 +22,7 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey) {
 	pBlock := &sequencertypes.Block{
 		BlockHeader: &sequencertypes.BlockHeader{
 			ProposerPubKey:   proposerPubKey,
+			TotalVotingPower: 10,
 			CurrentCommittee: utils.RandomHex(32),
 			NextCommittee:    utils.RandomHex(32),
 		},
@@ -83,7 +84,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 
 	// Test 1: valid case
 	for i := 0; i < len(secKeys); i++ {
-		blsSign := *blsSignature //nolint:govet
+		blsSign := blsSignature.Clone()
 		signature, err := secKeys[i].Sign(signMsg)
 		require.NoError(t, err)
 		signatureMsg := signature.Serialize()
@@ -98,7 +99,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 
 		rs.AddCommit(&networktypes.CommitBlockRequest{
 			PubKey:       rs.Validators.Validators[i].PublicKey,
-			BlsSignature: &blsSign,
+			BlsSignature: blsSign,
 		})
 	}
 	_, _, err = rs.CheckAggregatedSignature()

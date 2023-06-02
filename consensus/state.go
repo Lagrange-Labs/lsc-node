@@ -12,7 +12,6 @@ import (
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/umbracle/go-eth-consensus/bls"
-	"google.golang.org/protobuf/proto"
 )
 
 const CheckInterval = 500 * time.Millisecond
@@ -141,12 +140,18 @@ func (s *State) startRound(blockNumber uint64) error {
 		// TODO handle timeout error
 		return fmt.Errorf("getting the block %d is failed: %v", blockNumber, err)
 	}
-	// generate a proposer signature
-	blsSigMsg, err := proto.Marshal(block.BlsSignature())
-	if err != nil {
-		return err
+
+	// TODO determine the current committee root and the next committee root, epoch number, total voting power
+	block.BlockHeader.CurrentCommittee = utils.RandomHex(32)
+	block.BlockHeader.NextCommittee = utils.RandomHex(32)
+	block.BlockHeader.EpochNumber = 1
+	for _, node := range nodes {
+		block.BlockHeader.TotalVotingPower += node.VotingPower
 	}
-	signature, err := s.proposer.Sign(blsSigMsg)
+
+	// generate a proposer signature
+	blsSigHash := block.BlsSignature().Hash()
+	signature, err := s.proposer.Sign(blsSigHash)
 	if err != nil {
 		return err
 	}
