@@ -19,6 +19,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
+	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -130,86 +131,19 @@ func (c *Client) Start() {
 		case <-c.ctx.Done():
 			return
 		case <-time.After(c.pullInterval):
-			res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber, ChainId: c.chainID, StakeAddress: c.stakeAddress})
+			block, err := c.TryGetBlock()
 			if err != nil {
-				logger.Errorf("failed to get the last block: %v\n", err)
-				continue
-			}
-			if res.CurrentBlockNumber == 0 {
-				logger.Warnf("the current block is not ready\n")
+				logger.Errorf("failed to get the current block: %v\n", err)
 				continue
 			}
 
-			logger.Infof("got the current block: %v\n", res.Block)
-			if res.CurrentBlockNumber != c.lastBlockNumber {
-				// TODO determine how to handle the sync
-				logger.Warnf("the current block number %d is not equal to the last block number %d\n", res.CurrentBlockNumber, c.lastBlockNumber)
-				c.lastBlockNumber = res.CurrentBlockNumber
-				continue
-			}
-
-			// verify the proposer signature
-			if len(res.Block.ProposerPubKey()) == 0 {
-				logger.Warnf("the block %d is not opened yet", res.Block.BlockNumber())
-				continue
-			}
-
-			// generate the BLS signature
-			blsSignature := res.Block.BlsSignature()
-			blsSigMsg, err := proto.Marshal(blsSignature)
-			if err != nil {
-				logger.Errorf("failed to marshal the BLS signature: %v\n", err)
-				continue
-			}
-			// verify the proposer signature
-			verified, err := utils.VerifySignature(common.FromHex(res.Block.ProposerPubKey()), blsSigMsg, common.FromHex(res.Block.ProposerSignature()))
-			if err != nil || !verified {
-				logger.Errorf("failed to verify the proposer signature: %v\n", err)
-				continue
-			}
-			// verify if the block hash is correct
-			blockHash := res.Block.BlockHash()
-			rBlockHash, err := c.rpcClient.GetBlockHashByNumber(c.lastBlockNumber)
-			if err != nil {
-				logger.Errorf("failed to get the block hash by number: %v\n", err)
-				continue
-			}
-			if blockHash != rBlockHash {
-				logger.Errorf("the block hash %s is not equal to the rpc block hash %s", blockHash, rBlockHash)
-				continue
-			}
-
-			blsSig, err := c.blsPrivateKey.Sign(blsSigMsg)
-			if err != nil {
-				logger.Errorf("failed to sign the BLS signature: %v\n", err)
-			}
-			blsSignature.Signature = utils.BlsSignatureToHex(blsSig)
-
-			req := &types.CommitBlockRequest{
-				BlsSignature: blsSignature,
-				EpochNumber:  res.Block.EpochNumber(),
-				PubKey:       c.blsPublicKey,
-			}
-			// generate the ECDSA signature
-			msg := contypes.GetCommitRequestHash(req)
-			sig, err := crypto.Sign(msg, c.ecdsaPrivateKey)
-			if err != nil {
-				logger.Errorf("failed to ecdsa sign the block: %v\n", err)
-				continue
-			}
-			req.Signature = common.Bytes2Hex(sig)
-			resS, err := c.CommitBlock(c.ctx, req)
-			if err != nil {
-				logger.Errorf("failed to upload signature: %v\n", err)
-				continue
-			}
-			if !resS.Result {
-				logger.Infof("failed to upload signature: %s\n", resS.Message)
+			if err := c.TryCommitBlock(block); err != nil {
+				logger.Errorf("failed to commit the block: %v\n", err)
 				continue
 			}
 
 			c.lastBlockNumber += 1
-			logger.Infof("uploaded the signature: %v\n", resS)
+			logger.Info("uploaded the signature")
 		}
 	}
 }
@@ -240,7 +174,75 @@ func (c *Client) TryJoinNetwork() error {
 }
 
 // TryGetBlock tries to get the block from the network.
-func (c *Client) TryGetBlock() error {
+func (c *Client) TryGetBlock() (*sequencertypes.Block, error) {
+	res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber, ChainId: c.chainID, StakeAddress: c.stakeAddress})
+	if err != nil {
+		return nil, err
+	}
+	if res.CurrentBlockNumber == 0 {
+		return res.Block, ErrBlockNotReady
+	}
+
+	logger.Infof("get the current block: %v\n", res.Block)
+	if res.CurrentBlockNumber != c.lastBlockNumber {
+		c.lastBlockNumber = res.CurrentBlockNumber
+		return nil, fmt.Errorf("the current block number %d is not equal to the last block number %d", res.CurrentBlockNumber, c.lastBlockNumber)
+	}
+
+	// verify the proposer signature
+	if len(res.Block.ProposerPubKey()) == 0 {
+		return nil, fmt.Errorf("the block %d proposer key is empty", res.Block.BlockNumber())
+	}
+	blsSigHash := res.Block.BlsSignature().Hash()
+	if err != nil {
+		return nil, fmt.Errorf("failed to marshal the BLS signature: %v", err)
+	}
+	// verify the proposer signature
+	verified, err := utils.VerifySignature(common.FromHex(res.Block.ProposerPubKey()), blsSigHash, common.FromHex(res.Block.ProposerSignature()))
+	if err != nil || !verified {
+		return nil, fmt.Errorf("failed to verify the proposer signature: %v", err)
+	}
+	// verify if the block hash is correct
+	blockHash := res.Block.BlockHash()
+	rBlockHash, err := c.rpcClient.GetBlockHashByNumber(c.lastBlockNumber)
+	if err != nil {
+		return nil, fmt.Errorf("failed to fetch the block hash by number: %v", err)
+	}
+	if blockHash != rBlockHash {
+		return nil, fmt.Errorf("the block hash %s is not equal to the rpc block hash %s", blockHash, rBlockHash)
+	}
+	// TODO verify the committee root with the current epoch number
+	return res.Block, nil
+}
+
+// TryCommitBlock tries to commit the signature to the network.
+func (c *Client) TryCommitBlock(block *sequencertypes.Block) error {
+	blsSignature := block.BlsSignature()
+	blsSig, err := c.blsPrivateKey.Sign(blsSignature.Hash())
+	if err != nil {
+		return fmt.Errorf("failed to sign the BLS signature: %v", err)
+	}
+	blsSignature.Signature = utils.BlsSignatureToHex(blsSig)
+
+	req := &types.CommitBlockRequest{
+		BlsSignature: blsSignature,
+		EpochNumber:  block.EpochNumber(),
+		PubKey:       c.blsPublicKey,
+	}
+	// generate the ECDSA signature
+	msg := contypes.GetCommitRequestHash(req)
+	sig, err := crypto.Sign(msg, c.ecdsaPrivateKey)
+	if err != nil {
+		return fmt.Errorf("failed to ecdsa sign the block: %v", err)
+	}
+	req.Signature = common.Bytes2Hex(sig)
+	resS, err := c.CommitBlock(c.ctx, req)
+	if err != nil {
+		return fmt.Errorf("failed to upload signature: %v", err)
+	}
+	if !resS.Result {
+		return fmt.Errorf("failed to upload signature with message : %s", resS.Message)
+	}
 
 	return nil
 }
@@ -249,3 +251,7 @@ func (c *Client) TryGetBlock() error {
 func (c *Client) Stop() {
 	c.cancelFunc()
 }
+
+var (
+	ErrBlockNotReady = fmt.Errorf("the block is not ready")
+)

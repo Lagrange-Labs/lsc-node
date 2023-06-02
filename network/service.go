@@ -130,7 +130,7 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 	if err != nil {
 		return nil, err
 	}
-	node, err := s.storage.GetNodeByStakeAddr(ctx, addr)
+	node, err := s.storage.GetNodeByStakeAddr(ctx, addr.Hex())
 	if err != nil {
 		return nil, err
 	}

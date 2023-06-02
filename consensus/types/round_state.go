@@ -20,6 +20,7 @@ type RoundState struct {
 	Validators    *ValidatorSet
 	ProposalBlock *sequencertypes.Block
 
+	totalVotingPower uint64
 	commitSignatures map[string]*networktypes.CommitBlockRequest
 	evidences        []*networktypes.CommitBlockRequest // to determine slashing
 
@@ -44,6 +45,7 @@ func (rs *RoundState) UpdateRoundState(validators *ValidatorSet, proposalBlock *
 	rs.Validators = validators
 	rs.ProposalBlock = proposalBlock
 	rs.commitSignatures = make(map[string]*networktypes.CommitBlockRequest)
+	rs.totalVotingPower = proposalBlock.TotalVotingPower()
 	rs.isBlocked = false
 }
 
@@ -110,8 +112,8 @@ func (rs *RoundState) CheckEnoughVotingPower() bool {
 		votingPower += rs.Validators.GetVotingPower(signature.PubKey)
 	}
 
-	logger.Infof("voting power: %v, total voting power: %v", votingPower, rs.Validators.TotalVotingPower)
-	return votingPower*3 > rs.Validators.TotalVotingPower*2
+	logger.Infof("voting power: %v, total voting power: %v", votingPower, rs.totalVotingPower)
+	return votingPower*3 > rs.totalVotingPower*2
 }
 
 // CheckAggregatedSignature checks if the aggregated signature is valid.
