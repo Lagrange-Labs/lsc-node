@@ -7,12 +7,14 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
+	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/testutil"
 	"github.com/Lagrange-Labs/lagrange-node/testutil/operations"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
 
@@ -54,26 +56,46 @@ func (suite *ClientTestSuite) TearDownSuite() {
 	suite.client.Stop()
 }
 
-func (suite *ClientTestSuite) Test_Join_Network() {
-	go suite.client.Start()
-	time.Sleep(1 * time.Second)
+func (suite *ClientTestSuite) Test_Client_Start() {
+	var (
+		block *sequencertypes.Block
+		err   error
+	)
 
-	stakeAddress := suite.client.GetStakeAddress()
-	node, err := suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress)
-	suite.Require().NoError(err)
-	suite.Require().Equal(networktypes.NodeJoined, node.Status)
+	suite.T().Run("Test_Join_Network", func(t *testing.T) {
+		require.NoError(t, suite.client.TryJoinNetwork())
 
-	auth, err := utils.GetSigner(context.Background(), suite.ethClient, suite.cfg.ECDSAPrivateKey)
-	suite.Require().NoError(err)
-	err = testutil.RegisterOperator(suite.ethClient, auth, common.HexToAddress(stakeAddr), common.HexToAddress(slasherAddr))
-	suite.Require().NoError(err)
-	suite.manager.RunSequencer()
-	time.Sleep(5 * time.Second)
+		stakeAddress := suite.client.GetStakeAddress()
+		node, err := suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress)
+		require.NoError(t, err)
+		require.Equal(t, networktypes.NodeJoined, node.Status)
 
-	node, err = suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress)
-	suite.Require().NoError(err)
-	suite.Require().Equal(networktypes.NodeRegistered, node.Status)
-	suite.client.Stop()
+		auth, err := utils.GetSigner(context.Background(), suite.ethClient, suite.cfg.ECDSAPrivateKey)
+		require.NoError(t, err)
+		err = testutil.RegisterOperator(suite.ethClient, auth, common.HexToAddress(stakeAddr), common.HexToAddress(slasherAddr))
+		require.NoError(t, err)
+		suite.manager.RunSequencer()
+		time.Sleep(3 * time.Second)
+
+		node, err = suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress)
+		require.NoError(t, err)
+		require.Equal(t, networktypes.NodeRegistered, node.Status)
+	})
+
+	suite.T().Run("Test_Get_Block", func(t *testing.T) {
+		block, err = suite.client.TryGetBlock()
+		if err == network.ErrBlockNotReady {
+			time.Sleep(3 * time.Second)
+			block, err = suite.client.TryGetBlock()
+		}
+		require.NoError(t, err)
+		require.NotNil(t, block)
+	})
+
+	suite.T().Run("Test_Commit_Block", func(t *testing.T) {
+		err = suite.client.TryCommitBlock(block)
+		require.NoError(t, err)
+	})
 }
 
 func TestClientTestSuite(t *testing.T) {
