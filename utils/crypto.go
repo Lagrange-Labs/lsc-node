@@ -22,14 +22,14 @@ func Hash(data ...[]byte) []byte {
 }
 
 // VerifyECDSASignature verifies the ecdsa signature of the given data.
-func VerifyECDSASignature(message, signature []byte) (bool, string, error) {
+func VerifyECDSASignature(message, signature []byte) (bool, common.Address, error) {
 	publicKey, err := crypto.SigToPub(message, signature)
 	if err != nil {
-		return false, "", err
+		return false, common.Address{}, err
 	}
 	pubKey := crypto.FromECDSAPub(publicKey)
 	addr := crypto.PubkeyToAddress(*publicKey)
-	return crypto.VerifySignature(pubKey, message, signature[:len(signature)-1]), common.Bytes2Hex(addr[:]), nil
+	return crypto.VerifySignature(pubKey, message, signature[:len(signature)-1]), common.BytesToAddress(addr[:]), nil
 }
 
 // VerifySignature verifies the signature of the given data.
