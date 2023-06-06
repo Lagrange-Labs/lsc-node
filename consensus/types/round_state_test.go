@@ -9,7 +9,6 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 	"github.com/umbracle/go-eth-consensus/bls"
-	"google.golang.org/protobuf/proto"
 )
 
 func createTestRoundState() (*RoundState, []*bls.SecretKey) {
@@ -25,12 +24,13 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey) {
 			TotalVotingPower: 10,
 			CurrentCommittee: utils.RandomHex(32),
 			NextCommittee:    utils.RandomHex(32),
+			EpochNumber:      1,
 		},
 		ChainHeader: chainHeader,
 	}
 
-	blsSigMsg, _ := proto.Marshal(pBlock.BlsSignature())
-	proposerSigMsg, _ := proposerSecKey.Sign(blsSigMsg)
+	blsSigHash := pBlock.BlsSignature().Hash()
+	proposerSigMsg, _ := proposerSecKey.Sign(blsSigHash)
 	pBlock.BlockHeader.ProposerSignature = utils.BlsSignatureToHex(proposerSigMsg)
 
 	proposer := &Validator{
@@ -79,13 +79,12 @@ func TestCheckAggregatedSignature(t *testing.T) {
 	rs, secKeys := createTestRoundState()
 
 	blsSignature := rs.ProposalBlock.BlsSignature()
-	signMsg, err := proto.Marshal(blsSignature)
-	require.NoError(t, err)
+	sigHash := blsSignature.Hash()
 
 	// Test 1: valid case
 	for i := 0; i < len(secKeys); i++ {
 		blsSign := blsSignature.Clone()
-		signature, err := secKeys[i].Sign(signMsg)
+		signature, err := secKeys[i].Sign(sigHash)
 		require.NoError(t, err)
 		signatureMsg := signature.Serialize()
 		blsSign.Signature = common.Bytes2Hex(signatureMsg[:])
@@ -93,7 +92,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		pubKey := new(bls.PublicKey)
 		require.NoError(t, pubKey.Deserialize(common.FromHex(rs.Validators.Validators[i].PublicKey)))
 
-		verified, err := signature.VerifyByte(pubKey, signMsg)
+		verified, err := signature.VerifyByte(pubKey, sigHash)
 		require.NoError(t, err)
 		require.True(t, verified)
 
@@ -102,7 +101,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 			BlsSignature: blsSign,
 		})
 	}
-	_, _, err = rs.CheckAggregatedSignature()
+	_, _, err := rs.CheckAggregatedSignature()
 	require.NoError(t, err)
 
 	// Test 2: invalid case
@@ -110,15 +109,14 @@ func TestCheckAggregatedSignature(t *testing.T) {
 	rs, secKeys = createTestRoundState()
 
 	blsSignature = rs.ProposalBlock.BlsSignature()
-	signMsg, err = proto.Marshal(blsSignature)
-	require.NoError(t, err)
+	sigHash = blsSignature.Hash()
 
 	for i := 0; i < len(secKeys); i++ {
 		blsSign := *blsSignature //nolint:govet
 		if i == 8 {
 			blsSign.NextCommittee = "0x111" // wrong contents
 		}
-		signature, err := secKeys[i].Sign(signMsg)
+		signature, err := secKeys[i].Sign(sigHash)
 		require.NoError(t, err)
 		signatureMsg := signature.Serialize()
 		blsSign.Signature = common.Bytes2Hex(signatureMsg[:])
@@ -132,7 +130,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		pubKey := new(bls.PublicKey)
 		require.NoError(t, pubKey.Deserialize(common.FromHex(rs.Validators.Validators[i].PublicKey)))
 
-		verified, err := signature.VerifyByte(pubKey, signMsg)
+		verified, err := signature.VerifyByte(pubKey, sigHash)
 		require.NoError(t, err)
 		require.True(t, verified)
 

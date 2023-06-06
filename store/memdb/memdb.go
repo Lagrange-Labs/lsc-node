@@ -50,12 +50,12 @@ func (d *MemDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string) (*n
 }
 
 // GetLastBlock returns the last block that was submitted to the network.
-func (d *MemDB) GetLastBlock(ctx context.Context) (*sequencertypes.Block, error) {
+func (d *MemDB) GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*sequencertypes.Block, error) {
 	return d.blocks[len(d.blocks)-1], nil
 }
 
 // GetBlock returns the block for the given block number.
-func (d *MemDB) GetBlock(ctx context.Context, blockNumber uint64) (*sequencertypes.Block, error) {
+func (d *MemDB) GetBlock(ctx context.Context, chainID uint32, blockNumber uint64) (*sequencertypes.Block, error) {
 	if blockNumber > uint64(len(d.blocks)) {
 		return nil, types.ErrBlockNotFound
 	}
@@ -93,7 +93,7 @@ func (d *MemDB) UpdateBlock(ctx context.Context, block *sequencertypes.Block) er
 }
 
 // GetLastFinalizedBlockNumber returns the last finalized block number.
-func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID int32) (uint64, error) {
+func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, error) {
 	for i := len(d.blocks) - 1; i >= 0; i-- {
 		if len(d.blocks[i].AggSignature) != 0 {
 			return d.blocks[i].BlockNumber(), nil
@@ -129,7 +129,7 @@ func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []networktypes.
 }
 
 // GetLastBlockNumber returns the last block number.
-func (d *MemDB) GetLastBlockNumber(ctx context.Context, chainID int32) (uint64, error) {
+func (d *MemDB) GetLastBlockNumber(ctx context.Context, chainID uint32) (uint64, error) {
 	return uint64(len(d.blocks)), nil
 }
 
