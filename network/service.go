@@ -83,9 +83,12 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 	if err != nil {
 		return nil, err
 	}
-	_, err = s.storage.GetNode(ctx, ip)
+	node, err := s.storage.GetNodeByStakeAddr(ctx, req.StakeAddress)
 	if err != nil {
 		return nil, err
+	}
+	if node.IPAddress != ip {
+		logger.Warnf("The IP address is not matched: %v, %v\n", node.IPAddress, ip)
 	}
 
 	block := s.consensus.GetCurrentBlock()
@@ -114,12 +117,25 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 	// verify the peer signature
 	signature := req.Signature
 	reqHash := contypes.GetCommitRequestHash(req)
-	isVerified, err := utils.VerifyECDSASignature(reqHash, common.FromHex(signature))
+	isVerified, addr, err := utils.VerifyECDSASignature(reqHash, common.FromHex(signature))
 	if err != nil || !isVerified {
 		return &types.CommitBlockResponse{
 			Result:  false,
 			Message: fmt.Sprintf("Failed to verify the signature: %v", err),
 		}, nil
+	}
+
+	// verify the registered node
+	ip, err := getIPAddress(ctx)
+	if err != nil {
+		return nil, err
+	}
+	node, err := s.storage.GetNodeByStakeAddr(ctx, addr)
+	if err != nil {
+		return nil, err
+	}
+	if node.IPAddress != ip {
+		logger.Warnf("The IP address is not matched: %v, %v\n", node.IPAddress, ip)
 	}
 
 	// check if the block number is matched

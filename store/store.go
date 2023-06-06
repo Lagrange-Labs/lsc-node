@@ -7,7 +7,7 @@ import (
 )
 
 // NewStorage returns a new database based on the given configuration.
-func NewStorage(cfg Config) (types.Storage, error) {
+func NewStorage(cfg *Config) (types.Storage, error) {
 	if cfg.BackendType == "memdb" {
 		return memdb.NewMemDB()
 	} else if cfg.BackendType == "mongodb" {
