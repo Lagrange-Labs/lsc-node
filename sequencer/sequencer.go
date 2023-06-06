@@ -57,6 +57,11 @@ func NewSequencer(cfg *Config, storage storageInterface) (*Sequencer, error) {
 	}, nil
 }
 
+// GetChainID returns the chain ID.
+func (s *Sequencer) GetChainID() uint32 {
+	return s.chainID
+}
+
 // Start starts the sequencer.
 func (s *Sequencer) Start() error {
 	for {

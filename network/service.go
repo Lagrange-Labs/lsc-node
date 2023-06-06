@@ -24,13 +24,16 @@ type sequencerService struct {
 	storage   storageInterface
 	consensus consensusInterface
 	types.UnimplementedNetworkServiceServer
+
+	chainID uint32
 }
 
 // NewSequencerService creates the sequencer service.
-func NewSequencerService(storage storageInterface, consensus consensusInterface) (types.NetworkServiceServer, error) {
+func NewSequencerService(storage storageInterface, consensus consensusInterface, chainID uint32) (types.NetworkServiceServer, error) {
 	return &sequencerService{
 		storage:   storage,
 		consensus: consensus,
+		chainID:   chainID,
 	}, nil
 }
 
@@ -93,7 +96,7 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 
 	block := s.consensus.GetCurrentBlock()
 	if block == nil || block.BlockNumber() != req.BlockNumber {
-		sBlock, err := s.storage.GetBlock(ctx, req.BlockNumber)
+		sBlock, err := s.storage.GetBlock(ctx, s.chainID, req.BlockNumber)
 		currentBlockNumber := uint64(0)
 		if block != nil {
 			currentBlockNumber = s.consensus.GetCurrentBlockNumber()
