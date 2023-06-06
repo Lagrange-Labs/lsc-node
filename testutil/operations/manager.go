@@ -95,7 +95,7 @@ func (m *Manager) RunClients() {
 	// client1
 	clientCfg1 := m.cfg.Client
 	clientCfg1.BLSPrivateKey = "0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f654a"
-	clientCfg1.ECDSAPrivateKey = "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
+	clientCfg1.ECDSAPrivateKey = "0x220ecb0a36b61b15a3af292c4520a528395edc51c8d41db30c74382a4af4328d"
 	m.RegisterOperator(clientCfg1.ECDSAPrivateKey)
 	m.RunClient(&clientCfg1)
 	// client2
