@@ -6,7 +6,7 @@ require (
 	github.com/ethereum/go-ethereum v1.11.5
 	github.com/hermeznetwork/tracerr v0.3.2
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/sirupsen/logrus v1.9.2
+	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.16.0
 	github.com/stretchr/testify v1.8.4
 	github.com/umbracle/go-eth-consensus v0.1.3-0.20230304221055-e39ee9cb4167
