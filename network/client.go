@@ -27,7 +27,7 @@ import (
 type Client struct {
 	types.NetworkServiceClient
 	rpcClient       rpcclient.RpcClient
-	chainID         int32
+	chainID         uint32
 	blsPrivateKey   *bls.SecretKey
 	blsPublicKey    string
 	ecdsaPrivateKey *ecdsa.PrivateKey

@@ -101,7 +101,7 @@ func runServer(ctx *cli.Context) error {
 	go state.OnStart()
 
 	// Start the server.
-	if err = network.RunServer(&cfg.Server, storage, state); err != nil {
+	if err = network.RunServer(&cfg.Server, storage, state, chainID); err != nil {
 		return err
 	}
 

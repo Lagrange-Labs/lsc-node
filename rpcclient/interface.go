@@ -9,5 +9,5 @@ var (
 
 type RpcClient interface {
 	GetBlockHashByNumber(blockNumber uint64) (string, error)
-	GetChainID() (int32, error)
+	GetChainID() (uint32, error)
 }

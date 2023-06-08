@@ -66,6 +66,9 @@ func TestUpdateNodeStatus(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, auth.From.Hex(), node.StakeAddress)
 	require.Equal(t, networktypes.NodeRegistered, node.Status)
+	// update the node status
+	clientNode.Status = networktypes.NodeSlashed
+	require.NoError(t, storage.UpdateNode(context.Background(), &clientNode))
 }
 
 func TestUploadEvidence(t *testing.T) {
