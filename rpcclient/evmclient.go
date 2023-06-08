@@ -49,10 +49,10 @@ func (c *EvmClient) GetBlockHashByNumber(blockNumber uint64) (string, error) {
 }
 
 // GetChainID returns the chain ID.
-func (c *EvmClient) GetChainID() (int32, error) {
+func (c *EvmClient) GetChainID() (uint32, error) {
 	chainID, err := c.ethClient.ChainID(context.Background())
 	if err != nil {
 		return 0, err
 	}
-	return int32(chainID.Int64()), err
+	return uint32(chainID.Int64()), err
 }

@@ -11,7 +11,6 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/umbracle/go-eth-consensus/bls"
-	"google.golang.org/protobuf/proto"
 )
 
 // RoundState defines the internal consensus state.
@@ -122,11 +121,7 @@ func (rs *RoundState) CheckAggregatedSignature() ([]*bls.PublicKey, *bls.Signatu
 	defer rs.rwMutex.Unlock()
 
 	blsSignature := rs.ProposalBlock.BlsSignature()
-	sigMessage, err := proto.Marshal(blsSignature)
-	if err != nil {
-		logger.Fatalf("failed to marshal signature message: %v", err)
-		return nil, nil, err
-	}
+	sigHash := blsSignature.Hash()
 	signatures := make([]*bls.Signature, 0)
 	pubkeys := make([]*bls.PublicKey, 0)
 	invalid_keys := make([]string, 0)
@@ -161,24 +156,20 @@ func (rs *RoundState) CheckAggregatedSignature() ([]*bls.PublicKey, *bls.Signatu
 	}
 
 	aggSig := bls.AggregateSignatures(signatures)
-	verified, err := aggSig.FastAggregateVerify(pubkeys, sigMessage)
+	verified, err := aggSig.FastAggregateVerify(pubkeys, sigHash)
 	if err != nil || !verified {
 		// find the invalid signature
 		// skip the proposer signature
 		for i, pubkey := range pubkeys[1:] {
 			pubkey_raw := utils.BlsPubKeyToHex(pubkey)
 			commit := rs.commitSignatures[pubkey_raw]
-			commitMessage, err := proto.Marshal(commit.BlsSignature.Clone())
-			if err != nil {
-				logger.Fatalf("failed to marshal commit singature message %v: %v", commit, err)
-				return nil, nil, err
-			}
-			if !bytes.Equal(commitMessage, sigMessage) {
-				logger.Errorf("wrong commit message: %v, original: %v", common.Bytes2Hex(commitMessage), common.Bytes2Hex(sigMessage))
+			commitHash := commit.BlsSignature.Hash()
+			if !bytes.Equal(commitHash, sigHash) {
+				logger.Errorf("wrong commit message: %v, original: %v", common.Bytes2Hex(commitHash), common.Bytes2Hex(sigHash))
 				invalid_keys = append(invalid_keys, pubkey_raw)
 				continue
 			}
-			verified, err := signatures[i+1].VerifyByte(pubkey, commitMessage) // because the first signature is the proposer signature
+			verified, err := signatures[i+1].VerifyByte(pubkey, commitHash) // because the first signature is the proposer signature
 			if err != nil {
 				return nil, nil, err
 			}

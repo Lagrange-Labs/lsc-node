@@ -24,14 +24,14 @@ type State struct {
 	storage       storageInterface
 	roundLimit    time.Duration
 	roundInterval time.Duration
-	chainID       int32
+	chainID       uint32
 
 	chCommit <-chan *networktypes.CommitBlockRequest
 	chStop   chan struct{}
 }
 
 // NewState returns a new State.
-func NewState(cfg *Config, storage storageInterface, chainID int32) *State {
+func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 	privKey, err := utils.HexToBlsPrivKey(cfg.ProposerPrivateKey)
 	if err != nil {
 		logger.Fatalf("failed to parse the proposer private key: %v", err)
@@ -165,7 +165,7 @@ func (s *State) startRound(blockNumber uint64) error {
 
 // getNextBlock returns the next block from the storage.
 func (s *State) getNextBlock(ctx context.Context, blockNumber uint64) (*sequencertypes.Block, error) {
-	block, err := s.storage.GetBlock(ctx, blockNumber+1)
+	block, err := s.storage.GetBlock(ctx, uint32(s.chainID), blockNumber+1)
 	if err == nil || err != storetypes.ErrBlockNotFound {
 		// TODO determine the current committee root and the next committee root
 		block.BlockHeader = &sequencertypes.BlockHeader{}
@@ -181,7 +181,7 @@ func (s *State) getNextBlock(ctx context.Context, blockNumber uint64) (*sequence
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		case <-ticker.C:
-			block, err := s.storage.GetBlock(context.Background(), blockNumber+1)
+			block, err := s.storage.GetBlock(context.Background(), s.chainID, blockNumber+1)
 			if err != nil {
 				if err == storetypes.ErrBlockNotFound {
 					continue

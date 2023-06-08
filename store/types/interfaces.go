@@ -14,17 +14,17 @@ type Storage interface {
 	// GetNodeByStakeAddr returns the node for the given stake address.
 	GetNodeByStakeAddr(ctx context.Context, stakeAddress string) (*networktypes.ClientNode, error)
 	// GetLastBlock returns the last block that was submitted to the network.
-	GetLastBlock(ctx context.Context) (*sequencertypes.Block, error)
+	GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*sequencertypes.Block, error)
 	// GetBlock returns the block for the given block number.
-	GetBlock(ctx context.Context, blockNumber uint64) (*sequencertypes.Block, error)
+	GetBlock(ctx context.Context, chainID uint32, blockNumber uint64) (*sequencertypes.Block, error)
 	// AddBlock adds a new block to the database.
 	AddBlock(ctx context.Context, block *sequencertypes.Block) error
 	// UpdateNode updates the node status in the database.
 	UpdateNode(ctx context.Context, node *networktypes.ClientNode) error
 	// GetLastBlockNumber returns the last block number that was submitted to the network.
-	GetLastBlockNumber(ctx context.Context, chainID int32) (uint64, error)
+	GetLastBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
 	// GetLastFinalizedBlockNumber returns the last block number that was finalized.
-	GetLastFinalizedBlockNumber(ctx context.Context, chainID int32) (uint64, error)
+	GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
 	// GetNodesByStatuses returns the nodes with the given statuses.
 	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus) ([]networktypes.ClientNode, error)
 	// UpdateBlock updates the block in the database.

@@ -1,4 +1,4 @@
-package client
+package integration
 
 import (
 	"context"
@@ -8,28 +8,19 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
-	"github.com/Lagrange-Labs/lagrange-node/testutil"
 	"github.com/Lagrange-Labs/lagrange-node/testutil/operations"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
-)
-
-const (
-	stakeAddr   = "0x98f07aB2d35638B79582b250C01444cEce0E517A"
-	slasherAddr = "0x6Bf0fF4eBa00E3668c0241bb1C622CDBFE55bbE0"
 )
 
 type ClientTestSuite struct {
 	suite.Suite
 
-	cfg       network.ClientConfig
-	client    *network.Client
-	ethClient *ethclient.Client
-	manager   *operations.Manager
+	cfg     network.ClientConfig
+	client  *network.Client
+	manager *operations.Manager
 }
 
 func (suite *ClientTestSuite) SetupTest() {
@@ -47,8 +38,6 @@ func (suite *ClientTestSuite) SetupTest() {
 	suite.manager.RunServer()
 	time.Sleep(1 * time.Second)
 	suite.client, err = network.NewClient(&suite.cfg)
-	suite.Require().NoError(err)
-	suite.ethClient, err = ethclient.Dial(suite.cfg.RPCEndpoint)
 	suite.Require().NoError(err)
 }
 
@@ -70,10 +59,7 @@ func (suite *ClientTestSuite) Test_Client_Start() {
 		require.NoError(t, err)
 		require.Equal(t, networktypes.NodeJoined, node.Status)
 
-		auth, err := utils.GetSigner(context.Background(), suite.ethClient, suite.cfg.ECDSAPrivateKey)
-		require.NoError(t, err)
-		err = testutil.RegisterOperator(suite.ethClient, auth, common.HexToAddress(stakeAddr), common.HexToAddress(slasherAddr))
-		require.NoError(t, err)
+		suite.manager.RegisterOperator(suite.cfg.ECDSAPrivateKey)
 		suite.manager.RunSequencer()
 		time.Sleep(3 * time.Second)
 
