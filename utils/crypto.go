@@ -2,12 +2,14 @@ package utils
 
 import (
 	"context"
+	"fmt"
 	"strings"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/iden3/go-iden3-crypto/poseidon"
 	"github.com/umbracle/go-eth-consensus/bls"
 	"golang.org/x/crypto/sha3"
 )
@@ -19,6 +21,19 @@ func Hash(data ...[]byte) []byte {
 		hash.Write(d[:]) //nolint:errcheck,gosec
 	}
 	return hash.Sum(nil)
+}
+
+// PoseidonHash calculates the poseidon hash of elements.
+func PoseidonHash(data ...[]byte) []byte {
+	msg := []byte{}
+	for _, d := range data {
+		msg = append(msg, d...)
+	}
+	hash, err := poseidon.HashBytes(msg)
+	if err != nil {
+		panic(fmt.Errorf("poseidon hash failed: %v", err))
+	}
+	return hash.Bytes()
 }
 
 // VerifyECDSASignature verifies the ecdsa signature of the given data.

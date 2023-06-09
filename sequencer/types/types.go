@@ -59,23 +59,17 @@ func (b *Block) BlsSignature() *BlsSignature {
 
 // Hash returns the hash of the bls signature.
 func (b *BlsSignature) Hash() []byte {
-	var blockNumberBuf, tvpBuf common.Hash
+	var blockNumberBuf common.Hash
 	blockHash := common.FromHex(b.ChainHeader.BlockHash)[:]
 	currentCommitteeRoot := common.FromHex(b.CurrentCommittee)[:]
 	nextCommitteeRoot := common.FromHex(b.NextCommittee)[:]
 	blockNumber := big.NewInt(int64(b.ChainHeader.BlockNumber)).FillBytes(blockNumberBuf[:])
-	tvp := big.NewInt(int64(b.TotalVotingPower)).FillBytes(tvpBuf[:])
+	tvp := big.NewInt(int64(b.TotalVotingPower))
 	chainID := make([]byte, 4)
 	binary.BigEndian.PutUint32(chainID, b.ChainHeader.ChainId)
+	chainHash := utils.Hash(blockHash, blockNumber, chainID)
 
-	return utils.Hash(
-		blockHash,
-		currentCommitteeRoot,
-		nextCommitteeRoot,
-		blockNumber,
-		tvp,
-		chainID,
-	)
+	return utils.PoseidonHash(chainHash, currentCommitteeRoot, nextCommitteeRoot, tvp.Bytes())
 }
 
 // BlockNumber returns the block number of the bls signature.
