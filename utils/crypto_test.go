@@ -19,6 +19,21 @@ func createTestRandomKeys(b *testing.B, count int) (secs []*bls.SecretKey, pubs 
 	return
 }
 
+func TestBLSSignature(t *testing.T) {
+	sec, pub := RandomBlsKey()
+	pubkey := new(bls.PublicKey)
+	require.NoError(t, pubkey.Deserialize(common.FromHex(pub)))
+
+	msg := common.Hex2Bytes("0x24796fc538ee62cea9791079ec6f54a292d05ac40e4fa00fb1f894325fe46067")
+	sig, err := sec.Sign(msg)
+	require.NoError(t, err)
+
+	t.Logf("PubKey: %s, Signature: %s", pub, BlsSignatureToHex(sig))
+	isVerified, err := VerifySignature(common.Hex2Bytes(pub), msg, common.Hex2Bytes(BlsSignatureToHex(sig)))
+	require.NoError(t, err)
+	require.True(t, isVerified)
+}
+
 func BenchmarkSign(b *testing.B) {
 	sec, _ := RandomBlsKey()
 	b.ResetTimer()
