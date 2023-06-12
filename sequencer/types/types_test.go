@@ -28,12 +28,12 @@ func TestGenerateVector(t *testing.T) {
 		b := &BlsSignatureVector{
 			BlsSignature: &BlsSignature{
 				ChainHeader: &ChainHeader{
-					BlockHash:   utils.RandomHex(32),
+					BlockHash:   common.Bytes2Hex(utils.Hash(common.Hex2Bytes(utils.RandomHex(32)))),
 					BlockNumber: uint64(i + 1),
 					ChainId:     5,
 				},
-				CurrentCommittee: utils.RandomHex(32),
-				NextCommittee:    utils.RandomHex(32),
+				CurrentCommittee: common.Bytes2Hex(utils.PoseidonHash(common.Hex2Bytes(utils.RandomHex(32)))),
+				NextCommittee:    common.Bytes2Hex(utils.PoseidonHash(common.Hex2Bytes(utils.RandomHex(32)))),
 				TotalVotingPower: 1000000,
 			},
 			BlsSecKey: utils.BlsPrivKeyToHex(sec),
