@@ -4,6 +4,7 @@ import (
 	"context"
 	"time"
 
+	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 )
@@ -64,6 +65,7 @@ func (s *Sequencer) GetChainID() uint32 {
 
 // Start starts the sequencer.
 func (s *Sequencer) Start() error {
+	logger.Info("sequencer started")
 	for {
 		select {
 		case <-s.ctx.Done():
