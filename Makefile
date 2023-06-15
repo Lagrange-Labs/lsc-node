@@ -73,7 +73,8 @@ localnet-start: stop
 	docker-compose -f docker-compose.yml up -d simnode0
 	docker-compose -f docker-compose.yml up -d simnode1
 	docker-compose -f docker-compose.yml up -d simnode2
-
+	sleep 3
+	docker-compose -f docker-compose.yml up -d prover
 
 stop:
 	docker-compose down --remove-orphans
