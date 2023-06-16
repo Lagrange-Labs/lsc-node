@@ -81,6 +81,15 @@ services:
       - "/bin/sh"
       - "-c"
       - "/app/lagrange-node run-client"
+  prover:
+    container_name: prover
+    image: lagrange-prover
+    environment:
+      - LAGRANGE_PROVER_SEQUENCERSTORAGE_DBPATH=mongodb://192.168.20.101:27017
+      - LAGRANGE_PROVER_PROVERSTORAGE_DBPATH=mongodb://192.168.20.101:27017
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.102
   lagrangesc:
     container_name: lagrange-smart-contract
     image: lagrangelabs/lagrange-contracts:latest
