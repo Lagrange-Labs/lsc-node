@@ -34,6 +34,12 @@
         "internalType": "uint256",
         "name": "duration",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "freezeDuration",
+        "type": "uint256"
       }
     ],
     "name": "InitCommittee",
@@ -82,24 +88,12 @@
       },
       {
         "indexed": false,
-        "internalType": "uint256",
+        "internalType": "bytes32",
         "name": "current",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "next1",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "next2",
-        "type": "uint256"
+        "type": "bytes32"
       }
     ],
-    "name": "RotateCommittee",
+    "name": "UpdateCommittee",
     "type": "event"
   },
   {
@@ -142,25 +136,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "COMMITTEE_DURATION",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "COMMITTEE_NEXT_1",
     "outputs": [
@@ -176,25 +151,6 @@
   {
     "inputs": [],
     "name": "COMMITTEE_NEXT_2",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "COMMITTEE_START",
     "outputs": [
       {
         "internalType": "uint256",
@@ -307,30 +263,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "CommitteeRoot",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "DOMAIN_SEPARATOR",
     "outputs": [
@@ -351,25 +283,6 @@
         "internalType": "bytes32",
         "name": "",
         "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "EpochNumber",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
       }
     ],
     "stateMutability": "view",
@@ -422,17 +335,22 @@
         "type": "uint256"
       },
       {
+        "internalType": "bytes",
+        "name": "blsPubKey",
+        "type": "bytes"
+      },
+      {
         "internalType": "uint256",
         "name": "stake",
         "type": "uint256"
       },
       {
-        "internalType": "bytes",
-        "name": "_blsPubKey",
-        "type": "bytes"
+        "internalType": "uint32",
+        "name": "serveUntilBlock",
+        "type": "uint32"
       }
     ],
-    "name": "committeeAdd",
+    "name": "add",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -440,70 +358,30 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "seqAddr",
+        "type": "address"
       }
     ],
-    "name": "epoch2committee",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
+    "name": "addSequencer",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
     "inputs": [
       {
-        "internalType": "uint256",
+        "internalType": "address",
         "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
+        "type": "address"
       }
     ],
-    "name": "epoch2height",
+    "name": "addr2bls",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "bytes",
         "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "epoch2startblock",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
+        "type": "bytes"
       }
     ],
     "stateMutability": "view",
@@ -528,9 +406,14 @@
         "internalType": "uint256",
         "name": "chainID",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "epochNumber",
+        "type": "uint256"
       }
     ],
-    "name": "getCommitteeDuration",
+    "name": "getCommittee",
     "outputs": [
       {
         "internalType": "uint256",
@@ -538,7 +421,7 @@
         "type": "uint256"
       }
     ],
-    "stateMutability": "view",
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -550,30 +433,11 @@
       },
       {
         "internalType": "uint256",
-        "name": "_epoch",
+        "name": "blockNumber",
         "type": "uint256"
       }
     ],
-    "name": "getCommitteeRoot",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint256",
-        "name": "chainID",
-        "type": "uint256"
-      }
-    ],
-    "name": "getCommitteeStart",
+    "name": "getEpochNumber",
     "outputs": [
       {
         "internalType": "uint256",
@@ -642,25 +506,39 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "chainID",
-        "type": "uint256"
-      },
-      {
-        "internalType": "uint256",
-        "name": "_epoch",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
       }
     ],
-    "name": "getNextCommitteeRoot",
+    "name": "getServeUntilBlock",
     "outputs": [
       {
-        "internalType": "bytes32",
+        "internalType": "uint32",
         "name": "",
-        "type": "bytes32"
+        "type": "uint32"
       }
     ],
-    "stateMutability": "view",
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      }
+    ],
+    "name": "getSlashed",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -690,19 +568,30 @@
   {
     "inputs": [
       {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "operators",
+    "outputs": [
+      {
         "internalType": "uint256",
-        "name": "_chainID",
+        "name": "amount",
         "type": "uint256"
       },
       {
-        "internalType": "uint256",
-        "name": "_duration",
-        "type": "uint256"
+        "internalType": "uint32",
+        "name": "serveUntilBlock",
+        "type": "uint32"
+      },
+      {
+        "internalType": "bool",
+        "name": "slashed",
+        "type": "bool"
       }
     ],
-    "name": "initCommittee",
-    "outputs": [],
-    "stateMutability": "nonpayable",
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -724,9 +613,42 @@
         "internalType": "uint256",
         "name": "chainID",
         "type": "uint256"
+      },
+      {
+        "internalType": "address[]",
+        "name": "stakedAddrs",
+        "type": "address[]"
+      },
+      {
+        "internalType": "uint256",
+        "name": "epochPeriod",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "freezeDuration",
+        "type": "uint256"
       }
     ],
-    "name": "removeCommitteeAddr",
+    "name": "registerChain",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "chainID",
+        "type": "uint256"
+      },
+      {
+        "internalType": "address",
+        "name": "addr",
+        "type": "address"
+      }
+    ],
+    "name": "remove",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -741,12 +663,17 @@
   {
     "inputs": [
       {
-        "internalType": "uint256",
-        "name": "chainID",
-        "type": "uint256"
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "internalType": "bool",
+        "name": "slashed",
+        "type": "bool"
       }
     ],
-    "name": "rotateCommittee",
+    "name": "setSlashed",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -760,6 +687,19 @@
       }
     ],
     "name": "transferOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "chainID",
+        "type": "uint256"
+      }
+    ],
+    "name": "update",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
