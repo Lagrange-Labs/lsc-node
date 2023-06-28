@@ -18,8 +18,6 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/store"
 )
 
-const CommitChannelBufferCount = 1000
-
 var (
 	configFileFlag = cli.StringFlag{
 		Name:     config.FlagCfg,
@@ -150,7 +148,7 @@ func runSequencer(ctx *cli.Context) error {
 		return fmt.Errorf("failed to create sequencer: %w", err)
 	}
 
-	governance, err := governance.NewGovernance(&cfg.Governance, storage)
+	governance, err := governance.NewGovernance(&cfg.Governance, sequencer.GetChainID(), storage)
 	if err != nil {
 		return fmt.Errorf("failed to create governance: %w", err)
 	}

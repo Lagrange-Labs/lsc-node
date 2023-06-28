@@ -26,10 +26,11 @@ var (
 	_ = common.Big1
 	_ = types.BloomLookup
 	_ = event.NewSubscription
+	_ = abi.ConvertType
 )
 
-// LagrangeServiceEvidence is an auto generated low-level Go binding around an user-defined struct.
-type LagrangeServiceEvidence struct {
+// EvidenceVerifierEvidence is an auto generated low-level Go binding around an user-defined struct.
+type EvidenceVerifierEvidence struct {
 	Operator                    common.Address
 	BlockHash                   [32]byte
 	CorrectBlockHash            [32]byte
@@ -38,16 +39,29 @@ type LagrangeServiceEvidence struct {
 	NextCommitteeRoot           [32]byte
 	CorrectNextCommitteeRoot    [32]byte
 	BlockNumber                 *big.Int
-	EpochNumber                 *big.Int
+	EpochBlockNumber            *big.Int
 	BlockSignature              []byte
 	CommitSignature             []byte
 	ChainID                     uint32
+	RawBlockHeader              []byte
+}
+
+// RLPReaderRLPItem is an auto generated low-level Go binding around an user-defined struct.
+type RLPReaderRLPItem struct {
+	Len    *big.Int
+	MemPtr *big.Int
+}
+
+// VoteWeigherBaseStorageStrategyAndWeightingMultiplier is an auto generated low-level Go binding around an user-defined struct.
+type VoteWeigherBaseStorageStrategyAndWeightingMultiplier struct {
+	Strategy   common.Address
+	Multiplier *big.Int
 }
 
 // LagrangeMetaData contains all meta data concerning the Lagrange contract.
 var LagrangeMetaData = &bind.MetaData{
-	ABI: "[{\"inputs\":[{\"internalType\":\"contractISlasher\",\"name\":\"_slasher\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"serveUntilBlock\",\"type\":\"uint32\"}],\"name\":\"OperatorRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"OperatorSlashed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"blockHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"currentCommitteeRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nextCommitteeRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"epochNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"blockSignature\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"commitSignature\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"chainID\",\"type\":\"uint32\"}],\"name\":\"UploadEvidence\",\"type\":\"event\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"isFrozen\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"latestServeUntilBlock\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"name\":\"operators\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"amount\",\"type\":\"uint256\"},{\"internalType\":\"uint32\",\"name\":\"serveUntilBlock\",\"type\":\"uint32\"},{\"internalType\":\"bool\",\"name\":\"slashed\",\"type\":\"bool\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"serveUntilBlock\",\"type\":\"uint32\"}],\"name\":\"recordLastStakeUpdateAndRevokeSlashingAbility\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"uint32\",\"name\":\"updateBlock\",\"type\":\"uint32\"},{\"internalType\":\"uint32\",\"name\":\"serveUntilBlock\",\"type\":\"uint32\"},{\"internalType\":\"uint256\",\"name\":\"prevElement\",\"type\":\"uint256\"}],\"name\":\"recordStakeUpdate\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint32\",\"name\":\"serveUntilBlock\",\"type\":\"uint32\"}],\"name\":\"register\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"slasher\",\"outputs\":[{\"internalType\":\"contractISlasher\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"taskNumber\",\"outputs\":[{\"internalType\":\"uint32\",\"name\":\"\",\"type\":\"uint32\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"blockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"correctBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"currentCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"correctCurrentCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"nextCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"correctNextCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"epochNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"blockSignature\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"commitSignature\",\"type\":\"bytes\"},{\"internalType\":\"uint32\",\"name\":\"chainID\",\"type\":\"uint32\"}],\"internalType\":\"structLagrangeService.Evidence\",\"name\":\"evidence\",\"type\":\"tuple\"}],\"name\":\"uploadEvidence\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
-	Bin: "0x60a0604052600280546001600160401b031916905534801561002057600080fd5b50604051610c30380380610c3083398101604081905261003f916100a9565b61004833610059565b6001600160a01b03166080526100d9565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b6000602082840312156100bb57600080fd5b81516001600160a01b03811681146100d257600080fd5b9392505050565b608051610b19610117600039600081816101c40152818161025a0152818161055f015281816105e3015281816106fa01526107480152610b196000f3fe608060405234801561001057600080fd5b50600436106100b45760003560e01c8063758f8dba11610071578063758f8dba146101825780638da5cb5b1461019a578063b1344271146101bf578063c747075b146101e6578063e5839836146101f9578063f2fde38b1461021c57600080fd5b80630ffabbce146100b9578063130d7906146100ce57806313e7c9d8146100e15780634495c7e914610142578063715018a61461015557806372d18e8d1461015d575b600080fd5b6100cc6100c73660046108dd565b61022f565b005b6100cc6100dc366004610910565b6102bb565b61011b6100ef366004610932565b6001602081905260009182526040909120805491015463ffffffff811690640100000000900460ff1683565b6040805193845263ffffffff90921660208401521515908201526060015b60405180910390f35b6100cc61015036600461094d565b610362565b6100cc610511565b60025461016d9063ffffffff1681565b60405163ffffffff9091168152602001610139565b60025461016d90640100000000900463ffffffff1681565b6000546001600160a01b03165b6040516001600160a01b039091168152602001610139565b6101a77f000000000000000000000000000000000000000000000000000000000000000081565b6100cc6101f4366004610989565b610525565b61020c610207366004610932565b6105c1565b6040519015158152602001610139565b6100cc61022a366004610932565b610656565b6040516307fd5de760e11b81526001600160a01b03838116600483015263ffffffff831660248301527f00000000000000000000000000000000000000000000000000000000000000001690630ffabbce906044015b600060405180830381600087803b15801561029f57600080fd5b505af11580156102b3573d6000803e3d6000fd5b505050505050565b6102c533826106cf565b60408051606081018252600180825263ffffffff848116602080850182815260008688018181523380835287855291899020975188559151969095018054915115156401000000000264ffffffffff199092169690941695909517949094179091558351918252918101919091527f3ed331d6c3431aecc422f169b89a3c24f9e23cef141e10631262a3fc865f513a91015b60405180910390a150565b60006001816103746020850185610932565b6001600160a01b0316815260208101919091526040016000206001015463ffffffff16116103e95760405162461bcd60e51b815260206004820152601e60248201527f546865206f70657261746f72206973206e6f742072656769737465726564000060448201526064015b60405180910390fd5b600160006103fa6020840184610932565b6001600160a01b03168152602081019190915260400160002060010154640100000000900460ff161561046f5760405162461bcd60e51b815260206004820152601760248201527f546865206f70657261746f7220697320736c617368656400000000000000000060448201526064016103e0565b61048461047f6020830183610932565b610729565b7fa3df44f3e14b2d57c4eed4929c8cd401795e6739ea5b89dd902f25a05fea132f6104b26020830183610932565b6020830135606084013560a085013560e08601356101008701356104da6101208901896109d4565b6104e86101408b018b6109d4565b6104fa6101808d016101608e01610910565b6040516103579b9a99989796959493929190610a4b565b610519610803565b610523600061085d565b565b60405163c747075b60e01b81526001600160a01b03858116600483015263ffffffff808616602484015284166044830152606482018390527f0000000000000000000000000000000000000000000000000000000000000000169063c747075b90608401600060405180830381600087803b1580156105a357600080fd5b505af11580156105b7573d6000803e3d6000fd5b5050505050505050565b6040516372c1cc1b60e11b81526001600160a01b0382811660048301526000917f00000000000000000000000000000000000000000000000000000000000000009091169063e583983690602401602060405180830381865afa15801561062c573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906106509190610ac1565b92915050565b61065e610803565b6001600160a01b0381166106c35760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b60648201526084016103e0565b6106cc8161085d565b50565b60405163175d320560e01b81526001600160a01b03838116600483015263ffffffff831660248301527f0000000000000000000000000000000000000000000000000000000000000000169063175d320590604401610285565b604051630e323b9960e21b81526001600160a01b0382811660048301527f000000000000000000000000000000000000000000000000000000000000000016906338c8ee6490602401600060405180830381600087803b15801561078c57600080fd5b505af11580156107a0573d6000803e3d6000fd5b505050506001600160a01b038116600081815260016020818152604092839020909101805464ff00000000191664010000000017905590519182527fd8f676e084105f4a403cee55f7a0c0aae9a015ce7a743ff68cd4e422fd4a30689101610357565b6000546001600160a01b031633146105235760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e657260448201526064016103e0565b600080546001600160a01b038381166001600160a01b0319831681178455604051919092169283917f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e09190a35050565b80356001600160a01b03811681146108c457600080fd5b919050565b803563ffffffff811681146108c457600080fd5b600080604083850312156108f057600080fd5b6108f9836108ad565b9150610907602084016108c9565b90509250929050565b60006020828403121561092257600080fd5b61092b826108c9565b9392505050565b60006020828403121561094457600080fd5b61092b826108ad565b60006020828403121561095f57600080fd5b813567ffffffffffffffff81111561097657600080fd5b8201610180818503121561092b57600080fd5b6000806000806080858703121561099f57600080fd5b6109a8856108ad565b93506109b6602086016108c9565b92506109c4604086016108c9565b9396929550929360600135925050565b6000808335601e198436030181126109eb57600080fd5b83018035915067ffffffffffffffff821115610a0657600080fd5b602001915036819003821315610a1b57600080fd5b9250929050565b81835281816020850137506000828201602090810191909152601f909101601f19169091010190565b600061012060018060a01b038e1683528c60208401528b60408401528a60608401528960808401528860a08401528060c0840152610a8c818401888a610a22565b905082810360e0840152610aa1818688610a22565b91505063ffffffff83166101008301529c9b505050505050505050505050565b600060208284031215610ad357600080fd5b8151801515811461092b57600080fdfea264697066735822122059838f5c84cf44de24fca8dcfa5a939caafd94a09ae7ec1a0073dc298ac9af8764736f6c634300080c0033",
+	ABI: "[{\"inputs\":[{\"internalType\":\"contractIServiceManager\",\"name\":\"_serviceManager\",\"type\":\"address\"},{\"internalType\":\"contractILagrangeCommittee\",\"name\":\"_committee\",\"type\":\"address\"},{\"internalType\":\"contractIStrategyManager\",\"name\":\"_strategyManager\",\"type\":\"address\"}],\"stateMutability\":\"nonpayable\",\"type\":\"constructor\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"uint8\",\"name\":\"version\",\"type\":\"uint8\"}],\"name\":\"Initialized\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"serveUntilBlock\",\"type\":\"uint32\"}],\"name\":\"OperatorRegistered\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"}],\"name\":\"OperatorSlashed\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"address\",\"name\":\"previousOwner\",\"type\":\"address\"},{\"indexed\":true,\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"OwnershipTransferred\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"quorumNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"contractIStrategy\",\"name\":\"strategy\",\"type\":\"address\"}],\"name\":\"StrategyAddedToQuorum\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":true,\"internalType\":\"uint256\",\"name\":\"quorumNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"contractIStrategy\",\"name\":\"strategy\",\"type\":\"address\"}],\"name\":\"StrategyRemovedFromQuorum\",\"type\":\"event\"},{\"anonymous\":false,\"inputs\":[{\"indexed\":false,\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"blockHash\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"currentCommitteeRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"bytes32\",\"name\":\"nextCommitteeRoot\",\"type\":\"bytes32\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"uint256\",\"name\":\"epochNumber\",\"type\":\"uint256\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"blockSignature\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"bytes\",\"name\":\"commitSignature\",\"type\":\"bytes\"},{\"indexed\":false,\"internalType\":\"uint32\",\"name\":\"chainID\",\"type\":\"uint32\"}],\"name\":\"UploadEvidence\",\"type\":\"event\"},{\"inputs\":[],\"name\":\"BLOCK_HEADER_EXTRADATA_INDEX\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"BLOCK_HEADER_NUMBER_INDEX\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"CHAIN_ID_ARBITRUM_NITRO\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"CHAIN_ID_BASE\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"CHAIN_ID_MAINNET\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"CHAIN_ID_OPTIMISM\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"NUMBER_OF_QUORUMS\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"quorumNumber\",\"type\":\"uint256\"},{\"components\":[{\"internalType\":\"contractIStrategy\",\"name\":\"strategy\",\"type\":\"address\"},{\"internalType\":\"uint96\",\"name\":\"multiplier\",\"type\":\"uint96\"}],\"internalType\":\"structVoteWeigherBaseStorage.StrategyAndWeightingMultiplier[]\",\"name\":\"_newStrategiesConsideredAndMultipliers\",\"type\":\"tuple[]\"}],\"name\":\"addStrategiesConsideredAndMultipliers\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"rlpData\",\"type\":\"bytes\"}],\"name\":\"calculateBlockHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"bytes\",\"name\":\"rlpData\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"comparisonBlockHash\",\"type\":\"bytes32\"}],\"name\":\"checkAndDecodeRLP\",\"outputs\":[{\"components\":[{\"internalType\":\"uint256\",\"name\":\"len\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"memPtr\",\"type\":\"uint256\"}],\"internalType\":\"structRLPReader.RLPItem[]\",\"name\":\"\",\"type\":\"tuple[]\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"blockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"correctBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"currentCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"correctCurrentCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"nextCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"correctNextCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"epochBlockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"blockSignature\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"commitSignature\",\"type\":\"bytes\"},{\"internalType\":\"uint32\",\"name\":\"chainID\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"rawBlockHeader\",\"type\":\"bytes\"}],\"internalType\":\"structEvidenceVerifier.Evidence\",\"name\":\"evidence\",\"type\":\"tuple\"}],\"name\":\"checkCommitSignature\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"committee\",\"outputs\":[{\"internalType\":\"contractILagrangeCommittee\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"delegation\",\"outputs\":[{\"internalType\":\"contractIDelegationManager\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"blockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"correctBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"currentCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"correctCurrentCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"nextCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"correctNextCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"epochBlockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"blockSignature\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"commitSignature\",\"type\":\"bytes\"},{\"internalType\":\"uint32\",\"name\":\"chainID\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"rawBlockHeader\",\"type\":\"bytes\"}],\"internalType\":\"structEvidenceVerifier.Evidence\",\"name\":\"evidence\",\"type\":\"tuple\"}],\"name\":\"getCommitHash\",\"outputs\":[{\"internalType\":\"bytes32\",\"name\":\"\",\"type\":\"bytes32\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"initialOwner\",\"type\":\"address\"}],\"name\":\"initialize\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"quorumNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256[]\",\"name\":\"strategyIndices\",\"type\":\"uint256[]\"},{\"internalType\":\"uint96[]\",\"name\":\"newMultipliers\",\"type\":\"uint96[]\"}],\"name\":\"modifyStrategyWeights\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"owner\",\"outputs\":[{\"internalType\":\"address\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"quorumBips\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"_blsPubKey\",\"type\":\"bytes\"},{\"internalType\":\"uint32\",\"name\":\"serveUntilBlock\",\"type\":\"uint32\"}],\"name\":\"register\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"quorumNumber\",\"type\":\"uint256\"},{\"internalType\":\"contractIStrategy[]\",\"name\":\"_strategiesToRemove\",\"type\":\"address[]\"},{\"internalType\":\"uint256[]\",\"name\":\"indicesToRemove\",\"type\":\"uint256[]\"}],\"name\":\"removeStrategiesConsideredAndMultipliers\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"renounceOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"serviceManager\",\"outputs\":[{\"internalType\":\"contractIServiceManager\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"slasher\",\"outputs\":[{\"internalType\":\"contractISlasher\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"name\":\"strategiesConsideredAndMultipliers\",\"outputs\":[{\"internalType\":\"contractIStrategy\",\"name\":\"strategy\",\"type\":\"address\"},{\"internalType\":\"uint96\",\"name\":\"multiplier\",\"type\":\"uint96\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"quorumNumber\",\"type\":\"uint256\"}],\"name\":\"strategiesConsideredAndMultipliersLength\",\"outputs\":[{\"internalType\":\"uint256\",\"name\":\"\",\"type\":\"uint256\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[],\"name\":\"strategyManager\",\"outputs\":[{\"internalType\":\"contractIStrategyManager\",\"name\":\"\",\"type\":\"address\"}],\"stateMutability\":\"view\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"newOwner\",\"type\":\"address\"}],\"name\":\"transferOwnership\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"components\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"bytes32\",\"name\":\"blockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"correctBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"currentCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"correctCurrentCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"nextCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"bytes32\",\"name\":\"correctNextCommitteeRoot\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"blockNumber\",\"type\":\"uint256\"},{\"internalType\":\"uint256\",\"name\":\"epochBlockNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"blockSignature\",\"type\":\"bytes\"},{\"internalType\":\"bytes\",\"name\":\"commitSignature\",\"type\":\"bytes\"},{\"internalType\":\"uint32\",\"name\":\"chainID\",\"type\":\"uint32\"},{\"internalType\":\"bytes\",\"name\":\"rawBlockHeader\",\"type\":\"bytes\"}],\"internalType\":\"structEvidenceVerifier.Evidence\",\"name\":\"evidence\",\"type\":\"tuple\"}],\"name\":\"uploadEvidence\",\"outputs\":[],\"stateMutability\":\"nonpayable\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"uint256\",\"name\":\"comparisonNumber\",\"type\":\"uint256\"},{\"internalType\":\"bytes\",\"name\":\"rlpData\",\"type\":\"bytes\"},{\"internalType\":\"bytes32\",\"name\":\"comparisonBlockHash\",\"type\":\"bytes32\"},{\"internalType\":\"uint256\",\"name\":\"chainID\",\"type\":\"uint256\"}],\"name\":\"verifyBlockNumber\",\"outputs\":[{\"internalType\":\"bool\",\"name\":\"\",\"type\":\"bool\"}],\"stateMutability\":\"pure\",\"type\":\"function\"},{\"inputs\":[{\"internalType\":\"address\",\"name\":\"operator\",\"type\":\"address\"},{\"internalType\":\"uint256\",\"name\":\"quorumNumber\",\"type\":\"uint256\"}],\"name\":\"weightOfOperator\",\"outputs\":[{\"internalType\":\"uint96\",\"name\":\"\",\"type\":\"uint96\"}],\"stateMutability\":\"nonpayable\",\"type\":\"function\"}]",
+	Bin: "0x6101406040523480156200001257600080fd5b50604051620031b7380380620031b783398101604081905262000035916200025f565b808360058282826200004b565b60405180910390fd5b6001600160a01b03831660a08190526040805163df5cf72360e01b8152905163df5cf723916004808201926020929091908290030181865afa15801562000096573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190620000bc9190620002b3565b6001600160a01b03166080816001600160a01b031681525050826001600160a01b031663b13442716040518163ffffffff1660e01b8152600401602060405180830381865afa15801562000114573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906200013a9190620002b3565b6001600160a01b0390811660c052821660e05260ff8116610100526200015f62000187565b5050506001600160a01b03851661012052506200017e91505062000187565b505050620002da565b600054610100900460ff1615620001f15760405162461bcd60e51b815260206004820152602760248201527f496e697469616c697a61626c653a20636f6e747261637420697320696e697469604482015266616c697a696e6760c81b606482015260840162000042565b60005460ff908116101562000244576000805460ff191660ff9081179091556040519081527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb38474024989060200160405180910390a15b565b6001600160a01b03811681146200025c57600080fd5b50565b6000806000606084860312156200027557600080fd5b8351620002828162000246565b6020850151909350620002958162000246565b6040850151909250620002a88162000246565b809150509250925092565b600060208284031215620002c657600080fd5b8151620002d38162000246565b9392505050565b60805160a05160c05160e0516101005161012051612e32620003856000396000818161042901528181611171015281816112330152818161132c01528181611d2d0152611df1015260008181610477015281816104dd01526109fe015260008181610281015281816105bf0152818161083701528181610c18015281816110f80152611ca6015260006103c1015260006102c00152600081816104500152610ad00152612e326000f3fe608060405234801561001057600080fd5b50600436106101da5760003560e01c80638da5cb5b11610104578063cec9892b116100a2578063f2fde38b11610071578063f2fde38b14610499578063f44c5c71146104ac578063f98fe1c4146104c5578063fd793ed5146104cf57600080fd5b8063cec9892b1461041c578063d864e74014610424578063df5cf7231461044b578063e21ade6d1461047257600080fd5b8063b1344271116100de578063b1344271146103bc578063b14ea753146103e3578063ba42f69e146103f6578063c4d66de81461040957600080fd5b80638da5cb5b14610381578063a3c96ce514610389578063aef524b01461039c57600080fd5b8063431e69291161017c578063715018a61161014b578063715018a6146103285780637527471114610330578063873b05a214610343578063891f28a51461035657600080fd5b8063431e6929146102e25780635ddbe7f5146102ea57806362039022146102f25780636bbc53101461031557600080fd5b80631ea1afe1116101b85780631ea1afe11461022257806328420dfa1461025c5780633998fdd31461027c57806339b70e38146102bb57600080fd5b80630191f72c146101df5780631080557814610205578063145010011461021a575b600080fd5b6101f26101ed3660046124c2565b6104d9565b6040519081526020015b60405180910390f35b61021861021336600461251f565b6105bd565b005b6101f2600881565b610235610230366004612598565b61078f565b604080516001600160a01b0390931683526001600160601b039091166020830152016101fc565b6101f261026a3660046124c2565b60666020526000908152604090205481565b6102a37f000000000000000000000000000000000000000000000000000000000000000081565b6040516001600160a01b0390911681526020016101fc565b6102a37f000000000000000000000000000000000000000000000000000000000000000081565b6101f2600a81565b6101f2600c81565b610305610300366004612697565b6107d8565b60405190151581526020016101fc565b61021861032336600461271e565b610835565b6102186108f5565b61030561033e366004612805565b610909565b6101f2610351366004612805565b610989565b610369610364366004612840565b6109f9565b6040516001600160601b0390911681526020016101fc565b6102a3610bfd565b61021861039736600461251f565b610c16565b6103af6103aa36600461286c565b610fb5565b6040516101fc91906128b0565b6102a37f000000000000000000000000000000000000000000000000000000000000000081565b6102186103f1366004612911565b61106f565b610218610404366004612805565b611227565b61021861041736600461296b565b6115ff565b6101f2600181565b6102a37f000000000000000000000000000000000000000000000000000000000000000081565b6102a37f000000000000000000000000000000000000000000000000000000000000000081565b6101f27f000000000000000000000000000000000000000000000000000000000000000081565b6102186104a736600461296b565b611712565b6101f26104ba366004612988565b805160209091012090565b6101f262014a3381565b6101f262066eed81565b60007f000000000000000000000000000000000000000000000000000000000000000082106105aa5760405162461bcd60e51b815260206004820152606660248201527f566f746557656967686572426173652e73747261746567696573436f6e73696460448201527f65726564416e644d756c7469706c696572734c656e6774683a2071756f72756d60648201527f4e756d62657220696e7075742065786365656473204e554d4245525f4f465f51608482015265554f52554d5360d01b60a482015260c4015b60405180910390fd5b5060009081526065602052604090205490565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316638da5cb5b6040518163ffffffff1660e01b8152600401602060405180830381865afa15801561061b573d6000803e3d6000fd5b505050506040513d601f19601f8201168201806040525081019061063f91906129bc565b6001600160a01b0316336001600160a01b03161461066f5760405162461bcd60e51b81526004016105a1906129d9565b828181146106e55760405162461bcd60e51b815260206004820152603c60248201527f566f746557656967686572426173652e6d6f646966795374726174656779576560448201527f69676874733a20696e707574206c656e677468206d69736d617463680000000060648201526084016105a1565b60005b818110156107865783838281811061070257610702612a10565b90506020020160208101906107179190612a26565b600088815260656020526040902087878481811061073757610737612a10565b905060200201358154811061074e5761074e612a10565b600091825260209091200180546001600160601b0392909216600160a01b026001600160a01b039092169190911790556001016106e8565b50505050505050565b606560205281600052604060002081815481106107ab57600080fd5b6000918252602090912001546001600160a01b0381169250600160a01b90046001600160601b0316905082565b600062066eed8214156107ed5750600161082d565b60006107f98585610fb5565b905060008160088151811061081057610810612a10565b6020026020010151905060006108258261178b565b881493505050505b949350505050565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316638da5cb5b6040518163ffffffff1660e01b8152600401602060405180830381865afa158015610893573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906108b791906129bc565b6001600160a01b0316336001600160a01b0316146108e75760405162461bcd60e51b81526004016105a1906129d9565b6108f182826117d8565b5050565b6108fd611a7a565b6109076000611ad9565b565b60008061091583610989565b905060006109658261092b610140870187612a41565b8080601f016020809104026020016040519081016040528093929190818152602001838380828437600092019190915250611b2b92505050565b9050610974602085018561296b565b6001600160a01b039182169116149392505050565b60006020820135606083013560a084013560e08501356101008601356109b3610120880188612a41565b6109c56101808a016101608b01612a87565b6040516020016109dc989796959493929190612aa4565b604051602081830303815290604052805190602001209050919050565b6000807f0000000000000000000000000000000000000000000000000000000000000000831015610bf6576000610a2f846104d9565b604080518082019091526000808252602082015290915060005b82811015610bf2576000868152606560205260409020805482908110610a7157610a71612a10565b6000918252602080832060408051808201825293909101546001600160a01b03808216808652600160a01b9092046001600160601b031693850193909352905163778e55f360e01b81528b8316600482015260248101919091529194507f0000000000000000000000000000000000000000000000000000000000000000169063778e55f390604401602060405180830381865afa158015610b17573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610b3b9190612af0565b90508015610be9576020830151835160405163f3e7387560e01b815260048101849052670de0b6b3a7640000926001600160601b0316916001600160a01b03169063f3e73875906024016020604051808303816000875af1158015610ba4573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610bc89190612af0565b610bd29190612b1f565b610bdc9190612b3e565b610be69086612b60565b94505b50600101610a49565b5050505b9392505050565b6000610c116033546001600160a01b031690565b905090565b7f00000000000000000000000000000000000000000000000000000000000000006001600160a01b0316638da5cb5b6040518163ffffffff1660e01b8152600401602060405180830381865afa158015610c74573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190610c9891906129bc565b6001600160a01b0316336001600160a01b031614610cc85760405162461bcd60e51b81526004016105a1906129d9565b82818114610d525760405162461bcd60e51b815260206004820152604b60248201527f566f746557656967686572426173652e72656d6f76655374726174656769657360448201527f436f6e73696465726564416e64576569676874733a20696e707574206c656e6760648201526a0e8d040dad2e6dac2e8c6d60ab1b608482015260a4016105a1565b60005b8181101561078657858582818110610d6f57610d6f612a10565b9050602002016020810190610d84919061296b565b6001600160a01b031660656000898152602001908152602001600020858584818110610db257610db2612a10565b9050602002013581548110610dc957610dc9612a10565b6000918252602090912001546001600160a01b031614610e5f5760405162461bcd60e51b815260206004820152604560248201527f566f746557656967686572426173652e72656d6f76655374726174656769657360448201527f436f6e73696465726564416e64576569676874733a20696e64657820696e636f6064820152641c9c9958dd60da1b608482015260a4016105a1565b60008781526065602052604090208054610e7b90600190612b8b565b81548110610e8b57610e8b612a10565b9060005260206000200160656000898152602001908152602001600020858584818110610eba57610eba612a10565b9050602002013581548110610ed157610ed1612a10565b600091825260208083208454920180546001600160a01b0319166001600160a01b03909316928317815593546001600160601b03600160a01b918290041602909117909255888152606590915260409020805480610f3157610f31612ba2565b600082815260208120820160001990810191909155019055867f327495b508542e8eeed9261ee4edc99d913ed525014a835e67fe5c1669c7c8b4878784818110610f7d57610f7d612a10565b9050602002016020810190610f92919061296b565b6040516001600160a01b03909116815260200160405180910390a2600101610d55565b8151602083012060609082811461102b5760405162461bcd60e51b815260206004820152603460248201527f48617368206f6620524c5020646174612064697665726765732066726f6d20636044820152730dedae0c2e4d2e6dedc40c4d8dec6d640d0c2e6d60631b60648201526084016105a1565b60006110666110618660408051808201825260008082526020918201528151808301909252825182529182019181019190915290565b611b4f565b95945050505050565b600061107c3360016109f9565b90506000816001600160601b0316116110d75760405162461bcd60e51b815260206004820152601860248201527f546865207374616b6520616d6f756e74206973207a65726f000000000000000060448201526064016105a1565b60405163175d320560e01b815233600482015263ffffffff831660248201527f00000000000000000000000000000000000000000000000000000000000000006001600160a01b03169063175d320590604401600060405180830381600087803b15801561114457600080fd5b505af1158015611158573d6000803e3d6000fd5b505060405163668ba66f60e11b81526001600160a01b037f000000000000000000000000000000000000000000000000000000000000000016925063cd174cde91506111b09033908890889087908990600401612bb8565b600060405180830381600087803b1580156111ca57600080fd5b505af11580156111de573d6000803e3d6000fd5b50506040805133815263ffffffff861660208201527f3ed331d6c3431aecc422f169b89a3c24f9e23cef141e10631262a3fc865f513a935001905060405180910390a150505050565b60006001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000166344a5c4bf611265602085018561296b565b6040516001600160e01b031960e084901b1681526001600160a01b0390911660048201526024016020604051808303816000875af11580156112ab573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906112cf9190612c43565b63ffffffff16116113225760405162461bcd60e51b815260206004820152601e60248201527f546865206f70657261746f72206973206e6f742072656769737465726564000060448201526064016105a1565b6001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000166344f5b6b461135e602084018461296b565b6040516001600160e01b031960e084901b1681526001600160a01b0390911660048201526024016020604051808303816000875af11580156113a4573d6000803e3d6000fd5b505050506040513d601f19601f820116820180604052508101906113c89190612c60565b156114155760405162461bcd60e51b815260206004820152601760248201527f546865206f70657261746f7220697320736c617368656400000000000000000060448201526064016105a1565b61141e81610909565b6114765760405162461bcd60e51b815260206004820152602360248201527f54686520636f6d6d6974207369676e6174757265206973206e6f7420636f72726044820152621958dd60ea1b60648201526084016105a1565b6114e86040820135602083013560e0840135611496610180860186612a41565b8080601f0160208091040260200160405190810160405280939291908181526020018383808284376000920191909152506114dd9250505061018087016101608801612a87565b63ffffffff16611c64565b611519576115196114fc602083018361296b565b61150e61018084016101608501612a87565b63ffffffff16611c87565b6115536080820135606083013560c084013560a085013561010086013561154861018088016101608901612a87565b63ffffffff16611dc5565b611567576115676114fc602083018361296b565b7fa3df44f3e14b2d57c4eed4929c8cd401795e6739ea5b89dd902f25a05fea132f611595602083018361296b565b6020830135606084013560a085013560e08601356101008701356115bd610120890189612a41565b6115cb6101408b018b612a41565b6115dd6101808d016101608e01612a87565b6040516115f49b9a99989796959493929190612cab565b60405180910390a150565b600054610100900460ff161580801561161f5750600054600160ff909116105b806116395750303b158015611639575060005460ff166001145b61169c5760405162461bcd60e51b815260206004820152602e60248201527f496e697469616c697a61626c653a20636f6e747261637420697320616c72656160448201526d191e481a5b9a5d1a585b1a5e995960921b60648201526084016105a1565b6000805460ff1916600117905580156116bf576000805461ff0019166101001790555b6116c882611ad9565b80156108f1576000805461ff0019169055604051600181527f7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498906020015b60405180910390a15050565b61171a611a7a565b6001600160a01b03811661177f5760405162461bcd60e51b815260206004820152602660248201527f4f776e61626c653a206e6577206f776e657220697320746865207a65726f206160448201526564647265737360d01b60648201526084016105a1565b61178881611ad9565b50565b8051600090158015906117a057508151602110155b6117a957600080fd5b6000806117b584611f4a565b81519193509150602082101561082d5760208290036101000a9004949350505050565b8051600083815260656020908152604090912054906117f78383612d21565b11156118915760405162461bcd60e51b815260206004820152605b60248201527f566f746557656967686572426173652e5f61646453747261746567696573436f60448201527f6e73696465726564416e644d756c7469706c696572733a20657863656564204d60648201527f41585f5745494748494e475f46554e4354494f4e5f4c454e4754480000000000608482015260a4016105a1565b60005b82811015611a735760005b6118a98284612d21565b8110156119a8578482815181106118c2576118c2612a10565b6020026020010151600001516001600160a01b03166065600088815260200190815260200160002082815481106118fb576118fb612a10565b6000918252602090912001546001600160a01b031614156119a05760405162461bcd60e51b815260206004820152605360248201527f566f746557656967686572426173652e5f61646453747261746567696573436f60448201527f6e73696465726564416e644d756c7469706c696572733a2063616e6e6f7420616064820152720c8c840e6c2daca40e6e8e4c2e8cacef24064f606b1b608482015260a4016105a1565b60010161189f565b50600085815260656020526040902084518590839081106119cb576119cb612a10565b6020908102919091018101518254600181018455600093845292829020815191909201516001600160601b0316600160a01b026001600160a01b0390911617910155835185907fa9d6f91aa411cbebcc7bd4c1f2685e2f4677353ebadfba370f19a365ea679d9290869084908110611a4557611a45612a10565b602090810291909101810151516040516001600160a01b0390911681520160405180910390a2600101611894565b5050505050565b33611a83610bfd565b6001600160a01b0316146109075760405162461bcd60e51b815260206004820181905260248201527f4f776e61626c653a2063616c6c6572206973206e6f7420746865206f776e657260448201526064016105a1565b603380546001600160a01b038381166001600160a01b0319831681179093556040519116919082907f8be0079c531659141344cd1fd0a4f28419497f9722a3daafe3b4186f6b6457e090600090a35050565b6000806000611b3a8585611f91565b91509150611b4781612001565b509392505050565b6060611b5a826121bc565b611b6357600080fd5b6000611b6e836121f5565b90506000816001600160401b03811115611b8a57611b8a6125ba565b604051908082528060200260200182016040528015611bcf57816020015b6040805180820190915260008082526020820152815260200190600190039081611ba85790505b5090506000611be18560200151612278565b8560200151611bf09190612d21565b90506000805b84811015611c5957611c07836122f3565b9150604051806040016040528083815260200184815250848281518110611c3057611c30612a10565b6020908102919091010152611c458284612d21565b925080611c5181612d39565b915050611bf6565b509195945050505050565b6000611c72848488856107d8565b8015611c7d57508585145b9695505050505050565b604051630e323b9960e21b81526001600160a01b0383811660048301527f000000000000000000000000000000000000000000000000000000000000000016906338c8ee6490602401600060405180830381600087803b158015611cea57600080fd5b505af1158015611cfe573d6000803e3d6000fd5b5050604051636241171f60e01b81526001600160a01b03858116600483015260248201859052600160448301527f0000000000000000000000000000000000000000000000000000000000000000169250636241171f9150606401600060405180830381600087803b158015611d7357600080fd5b505af1158015611d87573d6000803e3d6000fd5b50506040516001600160a01b03851681527fd8f676e084105f4a403cee55f7a0c0aae9a015ce7a743ff68cd4e422fd4a306892506020019050611706565b60405163cf7aa21160e01b81526004810182905260248101839052600090819081906001600160a01b037f0000000000000000000000000000000000000000000000000000000000000000169063cf7aa211906044016080604051808303816000875af1158015611e3a573d6000803e3d6000fd5b505050506040513d601f19601f82011682018060405250810190611e5e9190612d54565b815191935091508914611ecb5760405162461bcd60e51b815260206004820152602f60248201527f5265666572656e63652063757272656e7420636f6d6d697474656520726f6f7460448201526e39903237903737ba1036b0ba31b41760891b60648201526084016105a1565b868114611f2f5760405162461bcd60e51b815260206004820152602c60248201527f5265666572656e6365206e65787420636f6d6d697474656520726f6f7473206460448201526b37903737ba1036b0ba31b41760a11b60648201526084016105a1565b8888148015611f3d57508686145b9998505050505050505050565b6000806000611f5c8460200151612278565b90506000818560200151611f709190612d21565b90506000828660000151611f849190612b8b565b9196919550909350505050565b600080825160411415611fc85760208301516040840151606085015160001a611fbc8782858561239c565b94509450505050611ffa565b825160401415611ff25760208301516040840151611fe7868383612489565b935093505050611ffa565b506000905060025b9250929050565b600081600481111561201557612015612dc3565b141561201e5750565b600181600481111561203257612032612dc3565b14156120805760405162461bcd60e51b815260206004820152601860248201527f45434453413a20696e76616c6964207369676e6174757265000000000000000060448201526064016105a1565b600281600481111561209457612094612dc3565b14156120e25760405162461bcd60e51b815260206004820152601f60248201527f45434453413a20696e76616c6964207369676e6174757265206c656e6774680060448201526064016105a1565b60038160048111156120f6576120f6612dc3565b141561214f5760405162461bcd60e51b815260206004820152602260248201527f45434453413a20696e76616c6964207369676e6174757265202773272076616c604482015261756560f01b60648201526084016105a1565b600481600481111561216357612163612dc3565b14156117885760405162461bcd60e51b815260206004820152602260248201527f45434453413a20696e76616c6964207369676e6174757265202776272076616c604482015261756560f01b60648201526084016105a1565b80516000906121cd57506000919050565b6020820151805160001a9060c08210156121eb575060009392505050565b5060019392505050565b805160009061220657506000919050565b6000806122168460200151612278565b84602001516122259190612d21565b905060008460000151856020015161223d9190612d21565b90505b8082101561226f57612251826122f3565b61225b9083612d21565b91508261226781612d39565b935050612240565b50909392505050565b8051600090811a60808110156122915750600092915050565b60b88110806122ac575060c081108015906122ac575060f881105b156122ba5750600192915050565b60c08110156122e7576122cf600160b8612dd9565b6122dc9060ff1682612b8b565b610bf6906001612d21565b6122cf600160f8612dd9565b80516000908190811a608081101561230e5760019150612395565b60b881101561233457612322608082612b8b565b61232d906001612d21565b9150612395565b60c08110156123615760b78103600185019450806020036101000a85510460018201810193505050612395565b60f88110156123755761232260c082612b8b565b60f78103600185019450806020036101000a855104600182018101935050505b5092915050565b6000807f7fffffffffffffffffffffffffffffff5d576e7357a4501ddfe92f46681b20a08311156123d35750600090506003612480565b8460ff16601b141580156123eb57508460ff16601c14155b156123fc5750600090506004612480565b6040805160008082526020820180845289905260ff881692820192909252606081018690526080810185905260019060a0016020604051602081039080840390855afa158015612450573d6000803e3d6000fd5b5050604051601f1901519150506001600160a01b03811661247957600060019250925050612480565b9150600090505b94509492505050565b6000806001600160ff1b038316816124a660ff86901c601b612d21565b90506124b48782888561239c565b935093505050935093915050565b6000602082840312156124d457600080fd5b5035919050565b60008083601f8401126124ed57600080fd5b5081356001600160401b0381111561250457600080fd5b6020830191508360208260051b8501011115611ffa57600080fd5b60008060008060006060868803121561253757600080fd5b8535945060208601356001600160401b038082111561255557600080fd5b61256189838a016124db565b9096509450604088013591508082111561257a57600080fd5b50612587888289016124db565b969995985093965092949392505050565b600080604083850312156125ab57600080fd5b50508035926020909101359150565b634e487b7160e01b600052604160045260246000fd5b604080519081016001600160401b03811182821017156125f2576125f26125ba565b60405290565b604051601f8201601f191681016001600160401b0381118282101715612620576126206125ba565b604052919050565b600082601f83011261263957600080fd5b81356001600160401b03811115612652576126526125ba565b612665601f8201601f19166020016125f8565b81815284602083860101111561267a57600080fd5b816020850160208301376000918101602001919091529392505050565b600080600080608085870312156126ad57600080fd5b8435935060208501356001600160401b038111156126ca57600080fd5b6126d687828801612628565b949794965050505060408301359260600135919050565b6001600160a01b038116811461178857600080fd5b80356001600160601b038116811461271957600080fd5b919050565b600080604080848603121561273257600080fd5b833592506020808501356001600160401b038082111561275157600080fd5b818701915087601f83011261276557600080fd5b813581811115612777576127776125ba565b612785848260051b016125f8565b818152848101925060069190911b8301840190898211156127a557600080fd5b928401925b818410156127f55785848b0312156127c25760008081fd5b6127ca6125d0565b84356127d5816126ed565b81526127e2858701612702565b81870152835292850192918401916127aa565b8096505050505050509250929050565b60006020828403121561281757600080fd5b81356001600160401b0381111561282d57600080fd5b82016101a08185031215610bf657600080fd5b6000806040838503121561285357600080fd5b823561285e816126ed565b946020939093013593505050565b6000806040838503121561287f57600080fd5b82356001600160401b0381111561289557600080fd5b6128a185828601612628565b95602094909401359450505050565b602080825282518282018190526000919060409081850190868401855b828110156128f2578151805185528601518685015292840192908501906001016128cd565b5091979650505050505050565b63ffffffff8116811461178857600080fd5b60008060006060848603121561292657600080fd5b8335925060208401356001600160401b0381111561294357600080fd5b61294f86828701612628565b9250506040840135612960816128ff565b809150509250925092565b60006020828403121561297d57600080fd5b8135610bf6816126ed565b60006020828403121561299a57600080fd5b81356001600160401b038111156129b057600080fd5b61082d84828501612628565b6000602082840312156129ce57600080fd5b8151610bf6816126ed565b60208082526017908201527f6f6e6c79536572766963654d616e616765724f776e6572000000000000000000604082015260600190565b634e487b7160e01b600052603260045260246000fd5b600060208284031215612a3857600080fd5b610bf682612702565b6000808335601e19843603018112612a5857600080fd5b8301803591506001600160401b03821115612a7257600080fd5b602001915036819003821315611ffa57600080fd5b600060208284031215612a9957600080fd5b8135610bf6816128ff565b888152876020820152866040820152856060820152846080820152828460a083013760e09190911b6001600160e01b03191660a0919092019081019190915260a4019695505050505050565b600060208284031215612b0257600080fd5b5051919050565b634e487b7160e01b600052601160045260246000fd5b6000816000190483118215151615612b3957612b39612b09565b500290565b600082612b5b57634e487b7160e01b600052601260045260246000fd5b500490565b60006001600160601b03808316818516808303821115612b8257612b82612b09565b01949350505050565b600082821015612b9d57612b9d612b09565b500390565b634e487b7160e01b600052603160045260246000fd5b60018060a01b038616815260006020868184015260a0604084015285518060a085015260005b81811015612bfa5787810183015185820160c001528201612bde565b81811115612c0c57600060c083870101525b50601f01601f1916830160c0019150612c32905060608301856001600160601b03169052565b63ffffffff83166080830152611c7d565b600060208284031215612c5557600080fd5b8151610bf6816128ff565b600060208284031215612c7257600080fd5b81518015158114610bf657600080fd5b81835281816020850137506000828201602090810191909152601f909101601f19169091010190565b600061012060018060a01b038e1683528c60208401528b60408401528a60608401528960808401528860a08401528060c0840152612cec818401888a612c82565b905082810360e0840152612d01818688612c82565b91505063ffffffff83166101008301529c9b505050505050505050505050565b60008219821115612d3457612d34612b09565b500190565b6000600019821415612d4d57612d4d612b09565b5060010190565b6000808284036080811215612d6857600080fd5b6060811215612d7657600080fd5b50604051606081018181106001600160401b0382111715612d9957612d996125ba565b60409081528451825260208086015190830152848101519082015260609093015192949293505050565b634e487b7160e01b600052602160045260246000fd5b600060ff821660ff841680821015612df357612df3612b09565b9003939250505056fea2646970667358221220cc5d31a8f55c4849d8bf9e01d6908d9ae229b0ab452b76e65129fcf2093cbbdf64736f6c634300080c0033",
 }
 
 // LagrangeABI is the input ABI used to generate the binding from.
@@ -59,7 +73,7 @@ var LagrangeABI = LagrangeMetaData.ABI
 var LagrangeBin = LagrangeMetaData.Bin
 
 // DeployLagrange deploys a new Ethereum contract, binding an instance of Lagrange to it.
-func DeployLagrange(auth *bind.TransactOpts, backend bind.ContractBackend, _slasher common.Address) (common.Address, *types.Transaction, *Lagrange, error) {
+func DeployLagrange(auth *bind.TransactOpts, backend bind.ContractBackend, _serviceManager common.Address, _committee common.Address, _strategyManager common.Address) (common.Address, *types.Transaction, *Lagrange, error) {
 	parsed, err := LagrangeMetaData.GetAbi()
 	if err != nil {
 		return common.Address{}, nil, nil, err
@@ -68,7 +82,7 @@ func DeployLagrange(auth *bind.TransactOpts, backend bind.ContractBackend, _slas
 		return common.Address{}, nil, nil, errors.New("GetABI returned nil")
 	}
 
-	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(LagrangeBin), backend, _slasher)
+	address, tx, contract, err := bind.DeployContract(auth, *parsed, common.FromHex(LagrangeBin), backend, _serviceManager, _committee, _strategyManager)
 	if err != nil {
 		return common.Address{}, nil, nil, err
 	}
@@ -172,11 +186,11 @@ func NewLagrangeFilterer(address common.Address, filterer bind.ContractFilterer)
 
 // bindLagrange binds a generic wrapper to an already deployed contract.
 func bindLagrange(address common.Address, caller bind.ContractCaller, transactor bind.ContractTransactor, filterer bind.ContractFilterer) (*bind.BoundContract, error) {
-	parsed, err := abi.JSON(strings.NewReader(LagrangeABI))
+	parsed, err := LagrangeMetaData.GetAbi()
 	if err != nil {
 		return nil, err
 	}
-	return bind.NewBoundContract(address, parsed, caller, transactor, filterer), nil
+	return bind.NewBoundContract(address, *parsed, caller, transactor, filterer), nil
 }
 
 // Call invokes the (constant) contract method with params as input values and
@@ -217,12 +231,291 @@ func (_Lagrange *LagrangeTransactorRaw) Transact(opts *bind.TransactOpts, method
 	return _Lagrange.Contract.contract.Transact(opts, method, params...)
 }
 
-// IsFrozen is a free data retrieval call binding the contract method 0xe5839836.
+// BLOCKHEADEREXTRADATAINDEX is a free data retrieval call binding the contract method 0x5ddbe7f5.
 //
-// Solidity: function isFrozen(address operator) view returns(bool)
-func (_Lagrange *LagrangeCaller) IsFrozen(opts *bind.CallOpts, operator common.Address) (bool, error) {
+// Solidity: function BLOCK_HEADER_EXTRADATA_INDEX() view returns(uint256)
+func (_Lagrange *LagrangeCaller) BLOCKHEADEREXTRADATAINDEX(opts *bind.CallOpts) (*big.Int, error) {
 	var out []interface{}
-	err := _Lagrange.contract.Call(opts, &out, "isFrozen", operator)
+	err := _Lagrange.contract.Call(opts, &out, "BLOCK_HEADER_EXTRADATA_INDEX")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// BLOCKHEADEREXTRADATAINDEX is a free data retrieval call binding the contract method 0x5ddbe7f5.
+//
+// Solidity: function BLOCK_HEADER_EXTRADATA_INDEX() view returns(uint256)
+func (_Lagrange *LagrangeSession) BLOCKHEADEREXTRADATAINDEX() (*big.Int, error) {
+	return _Lagrange.Contract.BLOCKHEADEREXTRADATAINDEX(&_Lagrange.CallOpts)
+}
+
+// BLOCKHEADEREXTRADATAINDEX is a free data retrieval call binding the contract method 0x5ddbe7f5.
+//
+// Solidity: function BLOCK_HEADER_EXTRADATA_INDEX() view returns(uint256)
+func (_Lagrange *LagrangeCallerSession) BLOCKHEADEREXTRADATAINDEX() (*big.Int, error) {
+	return _Lagrange.Contract.BLOCKHEADEREXTRADATAINDEX(&_Lagrange.CallOpts)
+}
+
+// BLOCKHEADERNUMBERINDEX is a free data retrieval call binding the contract method 0x14501001.
+//
+// Solidity: function BLOCK_HEADER_NUMBER_INDEX() view returns(uint256)
+func (_Lagrange *LagrangeCaller) BLOCKHEADERNUMBERINDEX(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "BLOCK_HEADER_NUMBER_INDEX")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// BLOCKHEADERNUMBERINDEX is a free data retrieval call binding the contract method 0x14501001.
+//
+// Solidity: function BLOCK_HEADER_NUMBER_INDEX() view returns(uint256)
+func (_Lagrange *LagrangeSession) BLOCKHEADERNUMBERINDEX() (*big.Int, error) {
+	return _Lagrange.Contract.BLOCKHEADERNUMBERINDEX(&_Lagrange.CallOpts)
+}
+
+// BLOCKHEADERNUMBERINDEX is a free data retrieval call binding the contract method 0x14501001.
+//
+// Solidity: function BLOCK_HEADER_NUMBER_INDEX() view returns(uint256)
+func (_Lagrange *LagrangeCallerSession) BLOCKHEADERNUMBERINDEX() (*big.Int, error) {
+	return _Lagrange.Contract.BLOCKHEADERNUMBERINDEX(&_Lagrange.CallOpts)
+}
+
+// CHAINIDARBITRUMNITRO is a free data retrieval call binding the contract method 0xfd793ed5.
+//
+// Solidity: function CHAIN_ID_ARBITRUM_NITRO() view returns(uint256)
+func (_Lagrange *LagrangeCaller) CHAINIDARBITRUMNITRO(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "CHAIN_ID_ARBITRUM_NITRO")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// CHAINIDARBITRUMNITRO is a free data retrieval call binding the contract method 0xfd793ed5.
+//
+// Solidity: function CHAIN_ID_ARBITRUM_NITRO() view returns(uint256)
+func (_Lagrange *LagrangeSession) CHAINIDARBITRUMNITRO() (*big.Int, error) {
+	return _Lagrange.Contract.CHAINIDARBITRUMNITRO(&_Lagrange.CallOpts)
+}
+
+// CHAINIDARBITRUMNITRO is a free data retrieval call binding the contract method 0xfd793ed5.
+//
+// Solidity: function CHAIN_ID_ARBITRUM_NITRO() view returns(uint256)
+func (_Lagrange *LagrangeCallerSession) CHAINIDARBITRUMNITRO() (*big.Int, error) {
+	return _Lagrange.Contract.CHAINIDARBITRUMNITRO(&_Lagrange.CallOpts)
+}
+
+// CHAINIDBASE is a free data retrieval call binding the contract method 0xf98fe1c4.
+//
+// Solidity: function CHAIN_ID_BASE() view returns(uint256)
+func (_Lagrange *LagrangeCaller) CHAINIDBASE(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "CHAIN_ID_BASE")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// CHAINIDBASE is a free data retrieval call binding the contract method 0xf98fe1c4.
+//
+// Solidity: function CHAIN_ID_BASE() view returns(uint256)
+func (_Lagrange *LagrangeSession) CHAINIDBASE() (*big.Int, error) {
+	return _Lagrange.Contract.CHAINIDBASE(&_Lagrange.CallOpts)
+}
+
+// CHAINIDBASE is a free data retrieval call binding the contract method 0xf98fe1c4.
+//
+// Solidity: function CHAIN_ID_BASE() view returns(uint256)
+func (_Lagrange *LagrangeCallerSession) CHAINIDBASE() (*big.Int, error) {
+	return _Lagrange.Contract.CHAINIDBASE(&_Lagrange.CallOpts)
+}
+
+// CHAINIDMAINNET is a free data retrieval call binding the contract method 0xcec9892b.
+//
+// Solidity: function CHAIN_ID_MAINNET() view returns(uint256)
+func (_Lagrange *LagrangeCaller) CHAINIDMAINNET(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "CHAIN_ID_MAINNET")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// CHAINIDMAINNET is a free data retrieval call binding the contract method 0xcec9892b.
+//
+// Solidity: function CHAIN_ID_MAINNET() view returns(uint256)
+func (_Lagrange *LagrangeSession) CHAINIDMAINNET() (*big.Int, error) {
+	return _Lagrange.Contract.CHAINIDMAINNET(&_Lagrange.CallOpts)
+}
+
+// CHAINIDMAINNET is a free data retrieval call binding the contract method 0xcec9892b.
+//
+// Solidity: function CHAIN_ID_MAINNET() view returns(uint256)
+func (_Lagrange *LagrangeCallerSession) CHAINIDMAINNET() (*big.Int, error) {
+	return _Lagrange.Contract.CHAINIDMAINNET(&_Lagrange.CallOpts)
+}
+
+// CHAINIDOPTIMISM is a free data retrieval call binding the contract method 0x431e6929.
+//
+// Solidity: function CHAIN_ID_OPTIMISM() view returns(uint256)
+func (_Lagrange *LagrangeCaller) CHAINIDOPTIMISM(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "CHAIN_ID_OPTIMISM")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// CHAINIDOPTIMISM is a free data retrieval call binding the contract method 0x431e6929.
+//
+// Solidity: function CHAIN_ID_OPTIMISM() view returns(uint256)
+func (_Lagrange *LagrangeSession) CHAINIDOPTIMISM() (*big.Int, error) {
+	return _Lagrange.Contract.CHAINIDOPTIMISM(&_Lagrange.CallOpts)
+}
+
+// CHAINIDOPTIMISM is a free data retrieval call binding the contract method 0x431e6929.
+//
+// Solidity: function CHAIN_ID_OPTIMISM() view returns(uint256)
+func (_Lagrange *LagrangeCallerSession) CHAINIDOPTIMISM() (*big.Int, error) {
+	return _Lagrange.Contract.CHAINIDOPTIMISM(&_Lagrange.CallOpts)
+}
+
+// NUMBEROFQUORUMS is a free data retrieval call binding the contract method 0xe21ade6d.
+//
+// Solidity: function NUMBER_OF_QUORUMS() view returns(uint256)
+func (_Lagrange *LagrangeCaller) NUMBEROFQUORUMS(opts *bind.CallOpts) (*big.Int, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "NUMBER_OF_QUORUMS")
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// NUMBEROFQUORUMS is a free data retrieval call binding the contract method 0xe21ade6d.
+//
+// Solidity: function NUMBER_OF_QUORUMS() view returns(uint256)
+func (_Lagrange *LagrangeSession) NUMBEROFQUORUMS() (*big.Int, error) {
+	return _Lagrange.Contract.NUMBEROFQUORUMS(&_Lagrange.CallOpts)
+}
+
+// NUMBEROFQUORUMS is a free data retrieval call binding the contract method 0xe21ade6d.
+//
+// Solidity: function NUMBER_OF_QUORUMS() view returns(uint256)
+func (_Lagrange *LagrangeCallerSession) NUMBEROFQUORUMS() (*big.Int, error) {
+	return _Lagrange.Contract.NUMBEROFQUORUMS(&_Lagrange.CallOpts)
+}
+
+// CalculateBlockHash is a free data retrieval call binding the contract method 0xf44c5c71.
+//
+// Solidity: function calculateBlockHash(bytes rlpData) pure returns(bytes32)
+func (_Lagrange *LagrangeCaller) CalculateBlockHash(opts *bind.CallOpts, rlpData []byte) ([32]byte, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "calculateBlockHash", rlpData)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// CalculateBlockHash is a free data retrieval call binding the contract method 0xf44c5c71.
+//
+// Solidity: function calculateBlockHash(bytes rlpData) pure returns(bytes32)
+func (_Lagrange *LagrangeSession) CalculateBlockHash(rlpData []byte) ([32]byte, error) {
+	return _Lagrange.Contract.CalculateBlockHash(&_Lagrange.CallOpts, rlpData)
+}
+
+// CalculateBlockHash is a free data retrieval call binding the contract method 0xf44c5c71.
+//
+// Solidity: function calculateBlockHash(bytes rlpData) pure returns(bytes32)
+func (_Lagrange *LagrangeCallerSession) CalculateBlockHash(rlpData []byte) ([32]byte, error) {
+	return _Lagrange.Contract.CalculateBlockHash(&_Lagrange.CallOpts, rlpData)
+}
+
+// CheckAndDecodeRLP is a free data retrieval call binding the contract method 0xaef524b0.
+//
+// Solidity: function checkAndDecodeRLP(bytes rlpData, bytes32 comparisonBlockHash) pure returns((uint256,uint256)[])
+func (_Lagrange *LagrangeCaller) CheckAndDecodeRLP(opts *bind.CallOpts, rlpData []byte, comparisonBlockHash [32]byte) ([]RLPReaderRLPItem, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "checkAndDecodeRLP", rlpData, comparisonBlockHash)
+
+	if err != nil {
+		return *new([]RLPReaderRLPItem), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([]RLPReaderRLPItem)).(*[]RLPReaderRLPItem)
+
+	return out0, err
+
+}
+
+// CheckAndDecodeRLP is a free data retrieval call binding the contract method 0xaef524b0.
+//
+// Solidity: function checkAndDecodeRLP(bytes rlpData, bytes32 comparisonBlockHash) pure returns((uint256,uint256)[])
+func (_Lagrange *LagrangeSession) CheckAndDecodeRLP(rlpData []byte, comparisonBlockHash [32]byte) ([]RLPReaderRLPItem, error) {
+	return _Lagrange.Contract.CheckAndDecodeRLP(&_Lagrange.CallOpts, rlpData, comparisonBlockHash)
+}
+
+// CheckAndDecodeRLP is a free data retrieval call binding the contract method 0xaef524b0.
+//
+// Solidity: function checkAndDecodeRLP(bytes rlpData, bytes32 comparisonBlockHash) pure returns((uint256,uint256)[])
+func (_Lagrange *LagrangeCallerSession) CheckAndDecodeRLP(rlpData []byte, comparisonBlockHash [32]byte) ([]RLPReaderRLPItem, error) {
+	return _Lagrange.Contract.CheckAndDecodeRLP(&_Lagrange.CallOpts, rlpData, comparisonBlockHash)
+}
+
+// CheckCommitSignature is a free data retrieval call binding the contract method 0x75274711.
+//
+// Solidity: function checkCommitSignature((address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint256,uint256,bytes,bytes,uint32,bytes) evidence) pure returns(bool)
+func (_Lagrange *LagrangeCaller) CheckCommitSignature(opts *bind.CallOpts, evidence EvidenceVerifierEvidence) (bool, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "checkCommitSignature", evidence)
 
 	if err != nil {
 		return *new(bool), err
@@ -234,99 +527,111 @@ func (_Lagrange *LagrangeCaller) IsFrozen(opts *bind.CallOpts, operator common.A
 
 }
 
-// IsFrozen is a free data retrieval call binding the contract method 0xe5839836.
+// CheckCommitSignature is a free data retrieval call binding the contract method 0x75274711.
 //
-// Solidity: function isFrozen(address operator) view returns(bool)
-func (_Lagrange *LagrangeSession) IsFrozen(operator common.Address) (bool, error) {
-	return _Lagrange.Contract.IsFrozen(&_Lagrange.CallOpts, operator)
+// Solidity: function checkCommitSignature((address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint256,uint256,bytes,bytes,uint32,bytes) evidence) pure returns(bool)
+func (_Lagrange *LagrangeSession) CheckCommitSignature(evidence EvidenceVerifierEvidence) (bool, error) {
+	return _Lagrange.Contract.CheckCommitSignature(&_Lagrange.CallOpts, evidence)
 }
 
-// IsFrozen is a free data retrieval call binding the contract method 0xe5839836.
+// CheckCommitSignature is a free data retrieval call binding the contract method 0x75274711.
 //
-// Solidity: function isFrozen(address operator) view returns(bool)
-func (_Lagrange *LagrangeCallerSession) IsFrozen(operator common.Address) (bool, error) {
-	return _Lagrange.Contract.IsFrozen(&_Lagrange.CallOpts, operator)
+// Solidity: function checkCommitSignature((address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint256,uint256,bytes,bytes,uint32,bytes) evidence) pure returns(bool)
+func (_Lagrange *LagrangeCallerSession) CheckCommitSignature(evidence EvidenceVerifierEvidence) (bool, error) {
+	return _Lagrange.Contract.CheckCommitSignature(&_Lagrange.CallOpts, evidence)
 }
 
-// LatestServeUntilBlock is a free data retrieval call binding the contract method 0x758f8dba.
+// Committee is a free data retrieval call binding the contract method 0xd864e740.
 //
-// Solidity: function latestServeUntilBlock() view returns(uint32)
-func (_Lagrange *LagrangeCaller) LatestServeUntilBlock(opts *bind.CallOpts) (uint32, error) {
+// Solidity: function committee() view returns(address)
+func (_Lagrange *LagrangeCaller) Committee(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
-	err := _Lagrange.contract.Call(opts, &out, "latestServeUntilBlock")
+	err := _Lagrange.contract.Call(opts, &out, "committee")
 
 	if err != nil {
-		return *new(uint32), err
+		return *new(common.Address), err
 	}
 
-	out0 := *abi.ConvertType(out[0], new(uint32)).(*uint32)
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
 	return out0, err
 
 }
 
-// LatestServeUntilBlock is a free data retrieval call binding the contract method 0x758f8dba.
+// Committee is a free data retrieval call binding the contract method 0xd864e740.
 //
-// Solidity: function latestServeUntilBlock() view returns(uint32)
-func (_Lagrange *LagrangeSession) LatestServeUntilBlock() (uint32, error) {
-	return _Lagrange.Contract.LatestServeUntilBlock(&_Lagrange.CallOpts)
+// Solidity: function committee() view returns(address)
+func (_Lagrange *LagrangeSession) Committee() (common.Address, error) {
+	return _Lagrange.Contract.Committee(&_Lagrange.CallOpts)
 }
 
-// LatestServeUntilBlock is a free data retrieval call binding the contract method 0x758f8dba.
+// Committee is a free data retrieval call binding the contract method 0xd864e740.
 //
-// Solidity: function latestServeUntilBlock() view returns(uint32)
-func (_Lagrange *LagrangeCallerSession) LatestServeUntilBlock() (uint32, error) {
-	return _Lagrange.Contract.LatestServeUntilBlock(&_Lagrange.CallOpts)
+// Solidity: function committee() view returns(address)
+func (_Lagrange *LagrangeCallerSession) Committee() (common.Address, error) {
+	return _Lagrange.Contract.Committee(&_Lagrange.CallOpts)
 }
 
-// Operators is a free data retrieval call binding the contract method 0x13e7c9d8.
+// Delegation is a free data retrieval call binding the contract method 0xdf5cf723.
 //
-// Solidity: function operators(address ) view returns(uint256 amount, uint32 serveUntilBlock, bool slashed)
-func (_Lagrange *LagrangeCaller) Operators(opts *bind.CallOpts, arg0 common.Address) (struct {
-	Amount          *big.Int
-	ServeUntilBlock uint32
-	Slashed         bool
-}, error) {
+// Solidity: function delegation() view returns(address)
+func (_Lagrange *LagrangeCaller) Delegation(opts *bind.CallOpts) (common.Address, error) {
 	var out []interface{}
-	err := _Lagrange.contract.Call(opts, &out, "operators", arg0)
+	err := _Lagrange.contract.Call(opts, &out, "delegation")
 
-	outstruct := new(struct {
-		Amount          *big.Int
-		ServeUntilBlock uint32
-		Slashed         bool
-	})
 	if err != nil {
-		return *outstruct, err
+		return *new(common.Address), err
 	}
 
-	outstruct.Amount = *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
-	outstruct.ServeUntilBlock = *abi.ConvertType(out[1], new(uint32)).(*uint32)
-	outstruct.Slashed = *abi.ConvertType(out[2], new(bool)).(*bool)
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
 
-	return *outstruct, err
+	return out0, err
 
 }
 
-// Operators is a free data retrieval call binding the contract method 0x13e7c9d8.
+// Delegation is a free data retrieval call binding the contract method 0xdf5cf723.
 //
-// Solidity: function operators(address ) view returns(uint256 amount, uint32 serveUntilBlock, bool slashed)
-func (_Lagrange *LagrangeSession) Operators(arg0 common.Address) (struct {
-	Amount          *big.Int
-	ServeUntilBlock uint32
-	Slashed         bool
-}, error) {
-	return _Lagrange.Contract.Operators(&_Lagrange.CallOpts, arg0)
+// Solidity: function delegation() view returns(address)
+func (_Lagrange *LagrangeSession) Delegation() (common.Address, error) {
+	return _Lagrange.Contract.Delegation(&_Lagrange.CallOpts)
 }
 
-// Operators is a free data retrieval call binding the contract method 0x13e7c9d8.
+// Delegation is a free data retrieval call binding the contract method 0xdf5cf723.
 //
-// Solidity: function operators(address ) view returns(uint256 amount, uint32 serveUntilBlock, bool slashed)
-func (_Lagrange *LagrangeCallerSession) Operators(arg0 common.Address) (struct {
-	Amount          *big.Int
-	ServeUntilBlock uint32
-	Slashed         bool
-}, error) {
-	return _Lagrange.Contract.Operators(&_Lagrange.CallOpts, arg0)
+// Solidity: function delegation() view returns(address)
+func (_Lagrange *LagrangeCallerSession) Delegation() (common.Address, error) {
+	return _Lagrange.Contract.Delegation(&_Lagrange.CallOpts)
+}
+
+// GetCommitHash is a free data retrieval call binding the contract method 0x873b05a2.
+//
+// Solidity: function getCommitHash((address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint256,uint256,bytes,bytes,uint32,bytes) evidence) pure returns(bytes32)
+func (_Lagrange *LagrangeCaller) GetCommitHash(opts *bind.CallOpts, evidence EvidenceVerifierEvidence) ([32]byte, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "getCommitHash", evidence)
+
+	if err != nil {
+		return *new([32]byte), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new([32]byte)).(*[32]byte)
+
+	return out0, err
+
+}
+
+// GetCommitHash is a free data retrieval call binding the contract method 0x873b05a2.
+//
+// Solidity: function getCommitHash((address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint256,uint256,bytes,bytes,uint32,bytes) evidence) pure returns(bytes32)
+func (_Lagrange *LagrangeSession) GetCommitHash(evidence EvidenceVerifierEvidence) ([32]byte, error) {
+	return _Lagrange.Contract.GetCommitHash(&_Lagrange.CallOpts, evidence)
+}
+
+// GetCommitHash is a free data retrieval call binding the contract method 0x873b05a2.
+//
+// Solidity: function getCommitHash((address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint256,uint256,bytes,bytes,uint32,bytes) evidence) pure returns(bytes32)
+func (_Lagrange *LagrangeCallerSession) GetCommitHash(evidence EvidenceVerifierEvidence) ([32]byte, error) {
+	return _Lagrange.Contract.GetCommitHash(&_Lagrange.CallOpts, evidence)
 }
 
 // Owner is a free data retrieval call binding the contract method 0x8da5cb5b.
@@ -360,6 +665,68 @@ func (_Lagrange *LagrangeCallerSession) Owner() (common.Address, error) {
 	return _Lagrange.Contract.Owner(&_Lagrange.CallOpts)
 }
 
+// QuorumBips is a free data retrieval call binding the contract method 0x28420dfa.
+//
+// Solidity: function quorumBips(uint256 ) view returns(uint256)
+func (_Lagrange *LagrangeCaller) QuorumBips(opts *bind.CallOpts, arg0 *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "quorumBips", arg0)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
+
+	return out0, err
+
+}
+
+// QuorumBips is a free data retrieval call binding the contract method 0x28420dfa.
+//
+// Solidity: function quorumBips(uint256 ) view returns(uint256)
+func (_Lagrange *LagrangeSession) QuorumBips(arg0 *big.Int) (*big.Int, error) {
+	return _Lagrange.Contract.QuorumBips(&_Lagrange.CallOpts, arg0)
+}
+
+// QuorumBips is a free data retrieval call binding the contract method 0x28420dfa.
+//
+// Solidity: function quorumBips(uint256 ) view returns(uint256)
+func (_Lagrange *LagrangeCallerSession) QuorumBips(arg0 *big.Int) (*big.Int, error) {
+	return _Lagrange.Contract.QuorumBips(&_Lagrange.CallOpts, arg0)
+}
+
+// ServiceManager is a free data retrieval call binding the contract method 0x3998fdd3.
+//
+// Solidity: function serviceManager() view returns(address)
+func (_Lagrange *LagrangeCaller) ServiceManager(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "serviceManager")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
+}
+
+// ServiceManager is a free data retrieval call binding the contract method 0x3998fdd3.
+//
+// Solidity: function serviceManager() view returns(address)
+func (_Lagrange *LagrangeSession) ServiceManager() (common.Address, error) {
+	return _Lagrange.Contract.ServiceManager(&_Lagrange.CallOpts)
+}
+
+// ServiceManager is a free data retrieval call binding the contract method 0x3998fdd3.
+//
+// Solidity: function serviceManager() view returns(address)
+func (_Lagrange *LagrangeCallerSession) ServiceManager() (common.Address, error) {
+	return _Lagrange.Contract.ServiceManager(&_Lagrange.CallOpts)
+}
+
 // Slasher is a free data retrieval call binding the contract method 0xb1344271.
 //
 // Solidity: function slasher() view returns(address)
@@ -391,98 +758,247 @@ func (_Lagrange *LagrangeCallerSession) Slasher() (common.Address, error) {
 	return _Lagrange.Contract.Slasher(&_Lagrange.CallOpts)
 }
 
-// TaskNumber is a free data retrieval call binding the contract method 0x72d18e8d.
+// StrategiesConsideredAndMultipliers is a free data retrieval call binding the contract method 0x1ea1afe1.
 //
-// Solidity: function taskNumber() view returns(uint32)
-func (_Lagrange *LagrangeCaller) TaskNumber(opts *bind.CallOpts) (uint32, error) {
+// Solidity: function strategiesConsideredAndMultipliers(uint256 , uint256 ) view returns(address strategy, uint96 multiplier)
+func (_Lagrange *LagrangeCaller) StrategiesConsideredAndMultipliers(opts *bind.CallOpts, arg0 *big.Int, arg1 *big.Int) (struct {
+	Strategy   common.Address
+	Multiplier *big.Int
+}, error) {
 	var out []interface{}
-	err := _Lagrange.contract.Call(opts, &out, "taskNumber")
+	err := _Lagrange.contract.Call(opts, &out, "strategiesConsideredAndMultipliers", arg0, arg1)
 
+	outstruct := new(struct {
+		Strategy   common.Address
+		Multiplier *big.Int
+	})
 	if err != nil {
-		return *new(uint32), err
+		return *outstruct, err
 	}
 
-	out0 := *abi.ConvertType(out[0], new(uint32)).(*uint32)
+	outstruct.Strategy = *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+	outstruct.Multiplier = *abi.ConvertType(out[1], new(*big.Int)).(**big.Int)
+
+	return *outstruct, err
+
+}
+
+// StrategiesConsideredAndMultipliers is a free data retrieval call binding the contract method 0x1ea1afe1.
+//
+// Solidity: function strategiesConsideredAndMultipliers(uint256 , uint256 ) view returns(address strategy, uint96 multiplier)
+func (_Lagrange *LagrangeSession) StrategiesConsideredAndMultipliers(arg0 *big.Int, arg1 *big.Int) (struct {
+	Strategy   common.Address
+	Multiplier *big.Int
+}, error) {
+	return _Lagrange.Contract.StrategiesConsideredAndMultipliers(&_Lagrange.CallOpts, arg0, arg1)
+}
+
+// StrategiesConsideredAndMultipliers is a free data retrieval call binding the contract method 0x1ea1afe1.
+//
+// Solidity: function strategiesConsideredAndMultipliers(uint256 , uint256 ) view returns(address strategy, uint96 multiplier)
+func (_Lagrange *LagrangeCallerSession) StrategiesConsideredAndMultipliers(arg0 *big.Int, arg1 *big.Int) (struct {
+	Strategy   common.Address
+	Multiplier *big.Int
+}, error) {
+	return _Lagrange.Contract.StrategiesConsideredAndMultipliers(&_Lagrange.CallOpts, arg0, arg1)
+}
+
+// StrategiesConsideredAndMultipliersLength is a free data retrieval call binding the contract method 0x0191f72c.
+//
+// Solidity: function strategiesConsideredAndMultipliersLength(uint256 quorumNumber) view returns(uint256)
+func (_Lagrange *LagrangeCaller) StrategiesConsideredAndMultipliersLength(opts *bind.CallOpts, quorumNumber *big.Int) (*big.Int, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "strategiesConsideredAndMultipliersLength", quorumNumber)
+
+	if err != nil {
+		return *new(*big.Int), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(*big.Int)).(**big.Int)
 
 	return out0, err
 
 }
 
-// TaskNumber is a free data retrieval call binding the contract method 0x72d18e8d.
+// StrategiesConsideredAndMultipliersLength is a free data retrieval call binding the contract method 0x0191f72c.
 //
-// Solidity: function taskNumber() view returns(uint32)
-func (_Lagrange *LagrangeSession) TaskNumber() (uint32, error) {
-	return _Lagrange.Contract.TaskNumber(&_Lagrange.CallOpts)
+// Solidity: function strategiesConsideredAndMultipliersLength(uint256 quorumNumber) view returns(uint256)
+func (_Lagrange *LagrangeSession) StrategiesConsideredAndMultipliersLength(quorumNumber *big.Int) (*big.Int, error) {
+	return _Lagrange.Contract.StrategiesConsideredAndMultipliersLength(&_Lagrange.CallOpts, quorumNumber)
 }
 
-// TaskNumber is a free data retrieval call binding the contract method 0x72d18e8d.
+// StrategiesConsideredAndMultipliersLength is a free data retrieval call binding the contract method 0x0191f72c.
 //
-// Solidity: function taskNumber() view returns(uint32)
-func (_Lagrange *LagrangeCallerSession) TaskNumber() (uint32, error) {
-	return _Lagrange.Contract.TaskNumber(&_Lagrange.CallOpts)
+// Solidity: function strategiesConsideredAndMultipliersLength(uint256 quorumNumber) view returns(uint256)
+func (_Lagrange *LagrangeCallerSession) StrategiesConsideredAndMultipliersLength(quorumNumber *big.Int) (*big.Int, error) {
+	return _Lagrange.Contract.StrategiesConsideredAndMultipliersLength(&_Lagrange.CallOpts, quorumNumber)
 }
 
-// RecordLastStakeUpdateAndRevokeSlashingAbility is a paid mutator transaction binding the contract method 0x0ffabbce.
+// StrategyManager is a free data retrieval call binding the contract method 0x39b70e38.
 //
-// Solidity: function recordLastStakeUpdateAndRevokeSlashingAbility(address operator, uint32 serveUntilBlock) returns()
-func (_Lagrange *LagrangeTransactor) RecordLastStakeUpdateAndRevokeSlashingAbility(opts *bind.TransactOpts, operator common.Address, serveUntilBlock uint32) (*types.Transaction, error) {
-	return _Lagrange.contract.Transact(opts, "recordLastStakeUpdateAndRevokeSlashingAbility", operator, serveUntilBlock)
+// Solidity: function strategyManager() view returns(address)
+func (_Lagrange *LagrangeCaller) StrategyManager(opts *bind.CallOpts) (common.Address, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "strategyManager")
+
+	if err != nil {
+		return *new(common.Address), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(common.Address)).(*common.Address)
+
+	return out0, err
+
 }
 
-// RecordLastStakeUpdateAndRevokeSlashingAbility is a paid mutator transaction binding the contract method 0x0ffabbce.
+// StrategyManager is a free data retrieval call binding the contract method 0x39b70e38.
 //
-// Solidity: function recordLastStakeUpdateAndRevokeSlashingAbility(address operator, uint32 serveUntilBlock) returns()
-func (_Lagrange *LagrangeSession) RecordLastStakeUpdateAndRevokeSlashingAbility(operator common.Address, serveUntilBlock uint32) (*types.Transaction, error) {
-	return _Lagrange.Contract.RecordLastStakeUpdateAndRevokeSlashingAbility(&_Lagrange.TransactOpts, operator, serveUntilBlock)
+// Solidity: function strategyManager() view returns(address)
+func (_Lagrange *LagrangeSession) StrategyManager() (common.Address, error) {
+	return _Lagrange.Contract.StrategyManager(&_Lagrange.CallOpts)
 }
 
-// RecordLastStakeUpdateAndRevokeSlashingAbility is a paid mutator transaction binding the contract method 0x0ffabbce.
+// StrategyManager is a free data retrieval call binding the contract method 0x39b70e38.
 //
-// Solidity: function recordLastStakeUpdateAndRevokeSlashingAbility(address operator, uint32 serveUntilBlock) returns()
-func (_Lagrange *LagrangeTransactorSession) RecordLastStakeUpdateAndRevokeSlashingAbility(operator common.Address, serveUntilBlock uint32) (*types.Transaction, error) {
-	return _Lagrange.Contract.RecordLastStakeUpdateAndRevokeSlashingAbility(&_Lagrange.TransactOpts, operator, serveUntilBlock)
+// Solidity: function strategyManager() view returns(address)
+func (_Lagrange *LagrangeCallerSession) StrategyManager() (common.Address, error) {
+	return _Lagrange.Contract.StrategyManager(&_Lagrange.CallOpts)
 }
 
-// RecordStakeUpdate is a paid mutator transaction binding the contract method 0xc747075b.
+// VerifyBlockNumber is a free data retrieval call binding the contract method 0x62039022.
 //
-// Solidity: function recordStakeUpdate(address operator, uint32 updateBlock, uint32 serveUntilBlock, uint256 prevElement) returns()
-func (_Lagrange *LagrangeTransactor) RecordStakeUpdate(opts *bind.TransactOpts, operator common.Address, updateBlock uint32, serveUntilBlock uint32, prevElement *big.Int) (*types.Transaction, error) {
-	return _Lagrange.contract.Transact(opts, "recordStakeUpdate", operator, updateBlock, serveUntilBlock, prevElement)
+// Solidity: function verifyBlockNumber(uint256 comparisonNumber, bytes rlpData, bytes32 comparisonBlockHash, uint256 chainID) pure returns(bool)
+func (_Lagrange *LagrangeCaller) VerifyBlockNumber(opts *bind.CallOpts, comparisonNumber *big.Int, rlpData []byte, comparisonBlockHash [32]byte, chainID *big.Int) (bool, error) {
+	var out []interface{}
+	err := _Lagrange.contract.Call(opts, &out, "verifyBlockNumber", comparisonNumber, rlpData, comparisonBlockHash, chainID)
+
+	if err != nil {
+		return *new(bool), err
+	}
+
+	out0 := *abi.ConvertType(out[0], new(bool)).(*bool)
+
+	return out0, err
+
 }
 
-// RecordStakeUpdate is a paid mutator transaction binding the contract method 0xc747075b.
+// VerifyBlockNumber is a free data retrieval call binding the contract method 0x62039022.
 //
-// Solidity: function recordStakeUpdate(address operator, uint32 updateBlock, uint32 serveUntilBlock, uint256 prevElement) returns()
-func (_Lagrange *LagrangeSession) RecordStakeUpdate(operator common.Address, updateBlock uint32, serveUntilBlock uint32, prevElement *big.Int) (*types.Transaction, error) {
-	return _Lagrange.Contract.RecordStakeUpdate(&_Lagrange.TransactOpts, operator, updateBlock, serveUntilBlock, prevElement)
+// Solidity: function verifyBlockNumber(uint256 comparisonNumber, bytes rlpData, bytes32 comparisonBlockHash, uint256 chainID) pure returns(bool)
+func (_Lagrange *LagrangeSession) VerifyBlockNumber(comparisonNumber *big.Int, rlpData []byte, comparisonBlockHash [32]byte, chainID *big.Int) (bool, error) {
+	return _Lagrange.Contract.VerifyBlockNumber(&_Lagrange.CallOpts, comparisonNumber, rlpData, comparisonBlockHash, chainID)
 }
 
-// RecordStakeUpdate is a paid mutator transaction binding the contract method 0xc747075b.
+// VerifyBlockNumber is a free data retrieval call binding the contract method 0x62039022.
 //
-// Solidity: function recordStakeUpdate(address operator, uint32 updateBlock, uint32 serveUntilBlock, uint256 prevElement) returns()
-func (_Lagrange *LagrangeTransactorSession) RecordStakeUpdate(operator common.Address, updateBlock uint32, serveUntilBlock uint32, prevElement *big.Int) (*types.Transaction, error) {
-	return _Lagrange.Contract.RecordStakeUpdate(&_Lagrange.TransactOpts, operator, updateBlock, serveUntilBlock, prevElement)
+// Solidity: function verifyBlockNumber(uint256 comparisonNumber, bytes rlpData, bytes32 comparisonBlockHash, uint256 chainID) pure returns(bool)
+func (_Lagrange *LagrangeCallerSession) VerifyBlockNumber(comparisonNumber *big.Int, rlpData []byte, comparisonBlockHash [32]byte, chainID *big.Int) (bool, error) {
+	return _Lagrange.Contract.VerifyBlockNumber(&_Lagrange.CallOpts, comparisonNumber, rlpData, comparisonBlockHash, chainID)
 }
 
-// Register is a paid mutator transaction binding the contract method 0x130d7906.
+// AddStrategiesConsideredAndMultipliers is a paid mutator transaction binding the contract method 0x6bbc5310.
 //
-// Solidity: function register(uint32 serveUntilBlock) returns()
-func (_Lagrange *LagrangeTransactor) Register(opts *bind.TransactOpts, serveUntilBlock uint32) (*types.Transaction, error) {
-	return _Lagrange.contract.Transact(opts, "register", serveUntilBlock)
+// Solidity: function addStrategiesConsideredAndMultipliers(uint256 quorumNumber, (address,uint96)[] _newStrategiesConsideredAndMultipliers) returns()
+func (_Lagrange *LagrangeTransactor) AddStrategiesConsideredAndMultipliers(opts *bind.TransactOpts, quorumNumber *big.Int, _newStrategiesConsideredAndMultipliers []VoteWeigherBaseStorageStrategyAndWeightingMultiplier) (*types.Transaction, error) {
+	return _Lagrange.contract.Transact(opts, "addStrategiesConsideredAndMultipliers", quorumNumber, _newStrategiesConsideredAndMultipliers)
 }
 
-// Register is a paid mutator transaction binding the contract method 0x130d7906.
+// AddStrategiesConsideredAndMultipliers is a paid mutator transaction binding the contract method 0x6bbc5310.
 //
-// Solidity: function register(uint32 serveUntilBlock) returns()
-func (_Lagrange *LagrangeSession) Register(serveUntilBlock uint32) (*types.Transaction, error) {
-	return _Lagrange.Contract.Register(&_Lagrange.TransactOpts, serveUntilBlock)
+// Solidity: function addStrategiesConsideredAndMultipliers(uint256 quorumNumber, (address,uint96)[] _newStrategiesConsideredAndMultipliers) returns()
+func (_Lagrange *LagrangeSession) AddStrategiesConsideredAndMultipliers(quorumNumber *big.Int, _newStrategiesConsideredAndMultipliers []VoteWeigherBaseStorageStrategyAndWeightingMultiplier) (*types.Transaction, error) {
+	return _Lagrange.Contract.AddStrategiesConsideredAndMultipliers(&_Lagrange.TransactOpts, quorumNumber, _newStrategiesConsideredAndMultipliers)
 }
 
-// Register is a paid mutator transaction binding the contract method 0x130d7906.
+// AddStrategiesConsideredAndMultipliers is a paid mutator transaction binding the contract method 0x6bbc5310.
 //
-// Solidity: function register(uint32 serveUntilBlock) returns()
-func (_Lagrange *LagrangeTransactorSession) Register(serveUntilBlock uint32) (*types.Transaction, error) {
-	return _Lagrange.Contract.Register(&_Lagrange.TransactOpts, serveUntilBlock)
+// Solidity: function addStrategiesConsideredAndMultipliers(uint256 quorumNumber, (address,uint96)[] _newStrategiesConsideredAndMultipliers) returns()
+func (_Lagrange *LagrangeTransactorSession) AddStrategiesConsideredAndMultipliers(quorumNumber *big.Int, _newStrategiesConsideredAndMultipliers []VoteWeigherBaseStorageStrategyAndWeightingMultiplier) (*types.Transaction, error) {
+	return _Lagrange.Contract.AddStrategiesConsideredAndMultipliers(&_Lagrange.TransactOpts, quorumNumber, _newStrategiesConsideredAndMultipliers)
+}
+
+// Initialize is a paid mutator transaction binding the contract method 0xc4d66de8.
+//
+// Solidity: function initialize(address initialOwner) returns()
+func (_Lagrange *LagrangeTransactor) Initialize(opts *bind.TransactOpts, initialOwner common.Address) (*types.Transaction, error) {
+	return _Lagrange.contract.Transact(opts, "initialize", initialOwner)
+}
+
+// Initialize is a paid mutator transaction binding the contract method 0xc4d66de8.
+//
+// Solidity: function initialize(address initialOwner) returns()
+func (_Lagrange *LagrangeSession) Initialize(initialOwner common.Address) (*types.Transaction, error) {
+	return _Lagrange.Contract.Initialize(&_Lagrange.TransactOpts, initialOwner)
+}
+
+// Initialize is a paid mutator transaction binding the contract method 0xc4d66de8.
+//
+// Solidity: function initialize(address initialOwner) returns()
+func (_Lagrange *LagrangeTransactorSession) Initialize(initialOwner common.Address) (*types.Transaction, error) {
+	return _Lagrange.Contract.Initialize(&_Lagrange.TransactOpts, initialOwner)
+}
+
+// ModifyStrategyWeights is a paid mutator transaction binding the contract method 0x10805578.
+//
+// Solidity: function modifyStrategyWeights(uint256 quorumNumber, uint256[] strategyIndices, uint96[] newMultipliers) returns()
+func (_Lagrange *LagrangeTransactor) ModifyStrategyWeights(opts *bind.TransactOpts, quorumNumber *big.Int, strategyIndices []*big.Int, newMultipliers []*big.Int) (*types.Transaction, error) {
+	return _Lagrange.contract.Transact(opts, "modifyStrategyWeights", quorumNumber, strategyIndices, newMultipliers)
+}
+
+// ModifyStrategyWeights is a paid mutator transaction binding the contract method 0x10805578.
+//
+// Solidity: function modifyStrategyWeights(uint256 quorumNumber, uint256[] strategyIndices, uint96[] newMultipliers) returns()
+func (_Lagrange *LagrangeSession) ModifyStrategyWeights(quorumNumber *big.Int, strategyIndices []*big.Int, newMultipliers []*big.Int) (*types.Transaction, error) {
+	return _Lagrange.Contract.ModifyStrategyWeights(&_Lagrange.TransactOpts, quorumNumber, strategyIndices, newMultipliers)
+}
+
+// ModifyStrategyWeights is a paid mutator transaction binding the contract method 0x10805578.
+//
+// Solidity: function modifyStrategyWeights(uint256 quorumNumber, uint256[] strategyIndices, uint96[] newMultipliers) returns()
+func (_Lagrange *LagrangeTransactorSession) ModifyStrategyWeights(quorumNumber *big.Int, strategyIndices []*big.Int, newMultipliers []*big.Int) (*types.Transaction, error) {
+	return _Lagrange.Contract.ModifyStrategyWeights(&_Lagrange.TransactOpts, quorumNumber, strategyIndices, newMultipliers)
+}
+
+// Register is a paid mutator transaction binding the contract method 0xb14ea753.
+//
+// Solidity: function register(uint256 chainID, bytes _blsPubKey, uint32 serveUntilBlock) returns()
+func (_Lagrange *LagrangeTransactor) Register(opts *bind.TransactOpts, chainID *big.Int, _blsPubKey []byte, serveUntilBlock uint32) (*types.Transaction, error) {
+	return _Lagrange.contract.Transact(opts, "register", chainID, _blsPubKey, serveUntilBlock)
+}
+
+// Register is a paid mutator transaction binding the contract method 0xb14ea753.
+//
+// Solidity: function register(uint256 chainID, bytes _blsPubKey, uint32 serveUntilBlock) returns()
+func (_Lagrange *LagrangeSession) Register(chainID *big.Int, _blsPubKey []byte, serveUntilBlock uint32) (*types.Transaction, error) {
+	return _Lagrange.Contract.Register(&_Lagrange.TransactOpts, chainID, _blsPubKey, serveUntilBlock)
+}
+
+// Register is a paid mutator transaction binding the contract method 0xb14ea753.
+//
+// Solidity: function register(uint256 chainID, bytes _blsPubKey, uint32 serveUntilBlock) returns()
+func (_Lagrange *LagrangeTransactorSession) Register(chainID *big.Int, _blsPubKey []byte, serveUntilBlock uint32) (*types.Transaction, error) {
+	return _Lagrange.Contract.Register(&_Lagrange.TransactOpts, chainID, _blsPubKey, serveUntilBlock)
+}
+
+// RemoveStrategiesConsideredAndMultipliers is a paid mutator transaction binding the contract method 0xa3c96ce5.
+//
+// Solidity: function removeStrategiesConsideredAndMultipliers(uint256 quorumNumber, address[] _strategiesToRemove, uint256[] indicesToRemove) returns()
+func (_Lagrange *LagrangeTransactor) RemoveStrategiesConsideredAndMultipliers(opts *bind.TransactOpts, quorumNumber *big.Int, _strategiesToRemove []common.Address, indicesToRemove []*big.Int) (*types.Transaction, error) {
+	return _Lagrange.contract.Transact(opts, "removeStrategiesConsideredAndMultipliers", quorumNumber, _strategiesToRemove, indicesToRemove)
+}
+
+// RemoveStrategiesConsideredAndMultipliers is a paid mutator transaction binding the contract method 0xa3c96ce5.
+//
+// Solidity: function removeStrategiesConsideredAndMultipliers(uint256 quorumNumber, address[] _strategiesToRemove, uint256[] indicesToRemove) returns()
+func (_Lagrange *LagrangeSession) RemoveStrategiesConsideredAndMultipliers(quorumNumber *big.Int, _strategiesToRemove []common.Address, indicesToRemove []*big.Int) (*types.Transaction, error) {
+	return _Lagrange.Contract.RemoveStrategiesConsideredAndMultipliers(&_Lagrange.TransactOpts, quorumNumber, _strategiesToRemove, indicesToRemove)
+}
+
+// RemoveStrategiesConsideredAndMultipliers is a paid mutator transaction binding the contract method 0xa3c96ce5.
+//
+// Solidity: function removeStrategiesConsideredAndMultipliers(uint256 quorumNumber, address[] _strategiesToRemove, uint256[] indicesToRemove) returns()
+func (_Lagrange *LagrangeTransactorSession) RemoveStrategiesConsideredAndMultipliers(quorumNumber *big.Int, _strategiesToRemove []common.Address, indicesToRemove []*big.Int) (*types.Transaction, error) {
+	return _Lagrange.Contract.RemoveStrategiesConsideredAndMultipliers(&_Lagrange.TransactOpts, quorumNumber, _strategiesToRemove, indicesToRemove)
 }
 
 // RenounceOwnership is a paid mutator transaction binding the contract method 0x715018a6.
@@ -527,25 +1043,180 @@ func (_Lagrange *LagrangeTransactorSession) TransferOwnership(newOwner common.Ad
 	return _Lagrange.Contract.TransferOwnership(&_Lagrange.TransactOpts, newOwner)
 }
 
-// UploadEvidence is a paid mutator transaction binding the contract method 0x4495c7e9.
+// UploadEvidence is a paid mutator transaction binding the contract method 0xba42f69e.
 //
-// Solidity: function uploadEvidence((address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint256,uint256,bytes,bytes,uint32) evidence) returns()
-func (_Lagrange *LagrangeTransactor) UploadEvidence(opts *bind.TransactOpts, evidence LagrangeServiceEvidence) (*types.Transaction, error) {
+// Solidity: function uploadEvidence((address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint256,uint256,bytes,bytes,uint32,bytes) evidence) returns()
+func (_Lagrange *LagrangeTransactor) UploadEvidence(opts *bind.TransactOpts, evidence EvidenceVerifierEvidence) (*types.Transaction, error) {
 	return _Lagrange.contract.Transact(opts, "uploadEvidence", evidence)
 }
 
-// UploadEvidence is a paid mutator transaction binding the contract method 0x4495c7e9.
+// UploadEvidence is a paid mutator transaction binding the contract method 0xba42f69e.
 //
-// Solidity: function uploadEvidence((address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint256,uint256,bytes,bytes,uint32) evidence) returns()
-func (_Lagrange *LagrangeSession) UploadEvidence(evidence LagrangeServiceEvidence) (*types.Transaction, error) {
+// Solidity: function uploadEvidence((address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint256,uint256,bytes,bytes,uint32,bytes) evidence) returns()
+func (_Lagrange *LagrangeSession) UploadEvidence(evidence EvidenceVerifierEvidence) (*types.Transaction, error) {
 	return _Lagrange.Contract.UploadEvidence(&_Lagrange.TransactOpts, evidence)
 }
 
-// UploadEvidence is a paid mutator transaction binding the contract method 0x4495c7e9.
+// UploadEvidence is a paid mutator transaction binding the contract method 0xba42f69e.
 //
-// Solidity: function uploadEvidence((address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint256,uint256,bytes,bytes,uint32) evidence) returns()
-func (_Lagrange *LagrangeTransactorSession) UploadEvidence(evidence LagrangeServiceEvidence) (*types.Transaction, error) {
+// Solidity: function uploadEvidence((address,bytes32,bytes32,bytes32,bytes32,bytes32,bytes32,uint256,uint256,bytes,bytes,uint32,bytes) evidence) returns()
+func (_Lagrange *LagrangeTransactorSession) UploadEvidence(evidence EvidenceVerifierEvidence) (*types.Transaction, error) {
 	return _Lagrange.Contract.UploadEvidence(&_Lagrange.TransactOpts, evidence)
+}
+
+// WeightOfOperator is a paid mutator transaction binding the contract method 0x891f28a5.
+//
+// Solidity: function weightOfOperator(address operator, uint256 quorumNumber) returns(uint96)
+func (_Lagrange *LagrangeTransactor) WeightOfOperator(opts *bind.TransactOpts, operator common.Address, quorumNumber *big.Int) (*types.Transaction, error) {
+	return _Lagrange.contract.Transact(opts, "weightOfOperator", operator, quorumNumber)
+}
+
+// WeightOfOperator is a paid mutator transaction binding the contract method 0x891f28a5.
+//
+// Solidity: function weightOfOperator(address operator, uint256 quorumNumber) returns(uint96)
+func (_Lagrange *LagrangeSession) WeightOfOperator(operator common.Address, quorumNumber *big.Int) (*types.Transaction, error) {
+	return _Lagrange.Contract.WeightOfOperator(&_Lagrange.TransactOpts, operator, quorumNumber)
+}
+
+// WeightOfOperator is a paid mutator transaction binding the contract method 0x891f28a5.
+//
+// Solidity: function weightOfOperator(address operator, uint256 quorumNumber) returns(uint96)
+func (_Lagrange *LagrangeTransactorSession) WeightOfOperator(operator common.Address, quorumNumber *big.Int) (*types.Transaction, error) {
+	return _Lagrange.Contract.WeightOfOperator(&_Lagrange.TransactOpts, operator, quorumNumber)
+}
+
+// LagrangeInitializedIterator is returned from FilterInitialized and is used to iterate over the raw logs and unpacked data for Initialized events raised by the Lagrange contract.
+type LagrangeInitializedIterator struct {
+	Event *LagrangeInitialized // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *LagrangeInitializedIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(LagrangeInitialized)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(LagrangeInitialized)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *LagrangeInitializedIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *LagrangeInitializedIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// LagrangeInitialized represents a Initialized event raised by the Lagrange contract.
+type LagrangeInitialized struct {
+	Version uint8
+	Raw     types.Log // Blockchain specific contextual infos
+}
+
+// FilterInitialized is a free log retrieval operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
+//
+// Solidity: event Initialized(uint8 version)
+func (_Lagrange *LagrangeFilterer) FilterInitialized(opts *bind.FilterOpts) (*LagrangeInitializedIterator, error) {
+
+	logs, sub, err := _Lagrange.contract.FilterLogs(opts, "Initialized")
+	if err != nil {
+		return nil, err
+	}
+	return &LagrangeInitializedIterator{contract: _Lagrange.contract, event: "Initialized", logs: logs, sub: sub}, nil
+}
+
+// WatchInitialized is a free log subscription operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
+//
+// Solidity: event Initialized(uint8 version)
+func (_Lagrange *LagrangeFilterer) WatchInitialized(opts *bind.WatchOpts, sink chan<- *LagrangeInitialized) (event.Subscription, error) {
+
+	logs, sub, err := _Lagrange.contract.WatchLogs(opts, "Initialized")
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(LagrangeInitialized)
+				if err := _Lagrange.contract.UnpackLog(event, "Initialized", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseInitialized is a log parse operation binding the contract event 0x7f26b83ff96e1f2b6a682f133852f6798a09c465da95921460cefb3847402498.
+//
+// Solidity: event Initialized(uint8 version)
+func (_Lagrange *LagrangeFilterer) ParseInitialized(log types.Log) (*LagrangeInitialized, error) {
+	event := new(LagrangeInitialized)
+	if err := _Lagrange.contract.UnpackLog(event, "Initialized", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
 }
 
 // LagrangeOperatorRegisteredIterator is returned from FilterOperatorRegistered and is used to iterate over the raw logs and unpacked data for OperatorRegistered events raised by the Lagrange contract.
@@ -964,6 +1635,296 @@ func (_Lagrange *LagrangeFilterer) WatchOwnershipTransferred(opts *bind.WatchOpt
 func (_Lagrange *LagrangeFilterer) ParseOwnershipTransferred(log types.Log) (*LagrangeOwnershipTransferred, error) {
 	event := new(LagrangeOwnershipTransferred)
 	if err := _Lagrange.contract.UnpackLog(event, "OwnershipTransferred", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// LagrangeStrategyAddedToQuorumIterator is returned from FilterStrategyAddedToQuorum and is used to iterate over the raw logs and unpacked data for StrategyAddedToQuorum events raised by the Lagrange contract.
+type LagrangeStrategyAddedToQuorumIterator struct {
+	Event *LagrangeStrategyAddedToQuorum // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *LagrangeStrategyAddedToQuorumIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(LagrangeStrategyAddedToQuorum)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(LagrangeStrategyAddedToQuorum)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *LagrangeStrategyAddedToQuorumIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *LagrangeStrategyAddedToQuorumIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// LagrangeStrategyAddedToQuorum represents a StrategyAddedToQuorum event raised by the Lagrange contract.
+type LagrangeStrategyAddedToQuorum struct {
+	QuorumNumber *big.Int
+	Strategy     common.Address
+	Raw          types.Log // Blockchain specific contextual infos
+}
+
+// FilterStrategyAddedToQuorum is a free log retrieval operation binding the contract event 0xa9d6f91aa411cbebcc7bd4c1f2685e2f4677353ebadfba370f19a365ea679d92.
+//
+// Solidity: event StrategyAddedToQuorum(uint256 indexed quorumNumber, address strategy)
+func (_Lagrange *LagrangeFilterer) FilterStrategyAddedToQuorum(opts *bind.FilterOpts, quorumNumber []*big.Int) (*LagrangeStrategyAddedToQuorumIterator, error) {
+
+	var quorumNumberRule []interface{}
+	for _, quorumNumberItem := range quorumNumber {
+		quorumNumberRule = append(quorumNumberRule, quorumNumberItem)
+	}
+
+	logs, sub, err := _Lagrange.contract.FilterLogs(opts, "StrategyAddedToQuorum", quorumNumberRule)
+	if err != nil {
+		return nil, err
+	}
+	return &LagrangeStrategyAddedToQuorumIterator{contract: _Lagrange.contract, event: "StrategyAddedToQuorum", logs: logs, sub: sub}, nil
+}
+
+// WatchStrategyAddedToQuorum is a free log subscription operation binding the contract event 0xa9d6f91aa411cbebcc7bd4c1f2685e2f4677353ebadfba370f19a365ea679d92.
+//
+// Solidity: event StrategyAddedToQuorum(uint256 indexed quorumNumber, address strategy)
+func (_Lagrange *LagrangeFilterer) WatchStrategyAddedToQuorum(opts *bind.WatchOpts, sink chan<- *LagrangeStrategyAddedToQuorum, quorumNumber []*big.Int) (event.Subscription, error) {
+
+	var quorumNumberRule []interface{}
+	for _, quorumNumberItem := range quorumNumber {
+		quorumNumberRule = append(quorumNumberRule, quorumNumberItem)
+	}
+
+	logs, sub, err := _Lagrange.contract.WatchLogs(opts, "StrategyAddedToQuorum", quorumNumberRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(LagrangeStrategyAddedToQuorum)
+				if err := _Lagrange.contract.UnpackLog(event, "StrategyAddedToQuorum", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseStrategyAddedToQuorum is a log parse operation binding the contract event 0xa9d6f91aa411cbebcc7bd4c1f2685e2f4677353ebadfba370f19a365ea679d92.
+//
+// Solidity: event StrategyAddedToQuorum(uint256 indexed quorumNumber, address strategy)
+func (_Lagrange *LagrangeFilterer) ParseStrategyAddedToQuorum(log types.Log) (*LagrangeStrategyAddedToQuorum, error) {
+	event := new(LagrangeStrategyAddedToQuorum)
+	if err := _Lagrange.contract.UnpackLog(event, "StrategyAddedToQuorum", log); err != nil {
+		return nil, err
+	}
+	event.Raw = log
+	return event, nil
+}
+
+// LagrangeStrategyRemovedFromQuorumIterator is returned from FilterStrategyRemovedFromQuorum and is used to iterate over the raw logs and unpacked data for StrategyRemovedFromQuorum events raised by the Lagrange contract.
+type LagrangeStrategyRemovedFromQuorumIterator struct {
+	Event *LagrangeStrategyRemovedFromQuorum // Event containing the contract specifics and raw log
+
+	contract *bind.BoundContract // Generic contract to use for unpacking event data
+	event    string              // Event name to use for unpacking event data
+
+	logs chan types.Log        // Log channel receiving the found contract events
+	sub  ethereum.Subscription // Subscription for errors, completion and termination
+	done bool                  // Whether the subscription completed delivering logs
+	fail error                 // Occurred error to stop iteration
+}
+
+// Next advances the iterator to the subsequent event, returning whether there
+// are any more events found. In case of a retrieval or parsing error, false is
+// returned and Error() can be queried for the exact failure.
+func (it *LagrangeStrategyRemovedFromQuorumIterator) Next() bool {
+	// If the iterator failed, stop iterating
+	if it.fail != nil {
+		return false
+	}
+	// If the iterator completed, deliver directly whatever's available
+	if it.done {
+		select {
+		case log := <-it.logs:
+			it.Event = new(LagrangeStrategyRemovedFromQuorum)
+			if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+				it.fail = err
+				return false
+			}
+			it.Event.Raw = log
+			return true
+
+		default:
+			return false
+		}
+	}
+	// Iterator still in progress, wait for either a data or an error event
+	select {
+	case log := <-it.logs:
+		it.Event = new(LagrangeStrategyRemovedFromQuorum)
+		if err := it.contract.UnpackLog(it.Event, it.event, log); err != nil {
+			it.fail = err
+			return false
+		}
+		it.Event.Raw = log
+		return true
+
+	case err := <-it.sub.Err():
+		it.done = true
+		it.fail = err
+		return it.Next()
+	}
+}
+
+// Error returns any retrieval or parsing error occurred during filtering.
+func (it *LagrangeStrategyRemovedFromQuorumIterator) Error() error {
+	return it.fail
+}
+
+// Close terminates the iteration process, releasing any pending underlying
+// resources.
+func (it *LagrangeStrategyRemovedFromQuorumIterator) Close() error {
+	it.sub.Unsubscribe()
+	return nil
+}
+
+// LagrangeStrategyRemovedFromQuorum represents a StrategyRemovedFromQuorum event raised by the Lagrange contract.
+type LagrangeStrategyRemovedFromQuorum struct {
+	QuorumNumber *big.Int
+	Strategy     common.Address
+	Raw          types.Log // Blockchain specific contextual infos
+}
+
+// FilterStrategyRemovedFromQuorum is a free log retrieval operation binding the contract event 0x327495b508542e8eeed9261ee4edc99d913ed525014a835e67fe5c1669c7c8b4.
+//
+// Solidity: event StrategyRemovedFromQuorum(uint256 indexed quorumNumber, address strategy)
+func (_Lagrange *LagrangeFilterer) FilterStrategyRemovedFromQuorum(opts *bind.FilterOpts, quorumNumber []*big.Int) (*LagrangeStrategyRemovedFromQuorumIterator, error) {
+
+	var quorumNumberRule []interface{}
+	for _, quorumNumberItem := range quorumNumber {
+		quorumNumberRule = append(quorumNumberRule, quorumNumberItem)
+	}
+
+	logs, sub, err := _Lagrange.contract.FilterLogs(opts, "StrategyRemovedFromQuorum", quorumNumberRule)
+	if err != nil {
+		return nil, err
+	}
+	return &LagrangeStrategyRemovedFromQuorumIterator{contract: _Lagrange.contract, event: "StrategyRemovedFromQuorum", logs: logs, sub: sub}, nil
+}
+
+// WatchStrategyRemovedFromQuorum is a free log subscription operation binding the contract event 0x327495b508542e8eeed9261ee4edc99d913ed525014a835e67fe5c1669c7c8b4.
+//
+// Solidity: event StrategyRemovedFromQuorum(uint256 indexed quorumNumber, address strategy)
+func (_Lagrange *LagrangeFilterer) WatchStrategyRemovedFromQuorum(opts *bind.WatchOpts, sink chan<- *LagrangeStrategyRemovedFromQuorum, quorumNumber []*big.Int) (event.Subscription, error) {
+
+	var quorumNumberRule []interface{}
+	for _, quorumNumberItem := range quorumNumber {
+		quorumNumberRule = append(quorumNumberRule, quorumNumberItem)
+	}
+
+	logs, sub, err := _Lagrange.contract.WatchLogs(opts, "StrategyRemovedFromQuorum", quorumNumberRule)
+	if err != nil {
+		return nil, err
+	}
+	return event.NewSubscription(func(quit <-chan struct{}) error {
+		defer sub.Unsubscribe()
+		for {
+			select {
+			case log := <-logs:
+				// New log arrived, parse the event and forward to the user
+				event := new(LagrangeStrategyRemovedFromQuorum)
+				if err := _Lagrange.contract.UnpackLog(event, "StrategyRemovedFromQuorum", log); err != nil {
+					return err
+				}
+				event.Raw = log
+
+				select {
+				case sink <- event:
+				case err := <-sub.Err():
+					return err
+				case <-quit:
+					return nil
+				}
+			case err := <-sub.Err():
+				return err
+			case <-quit:
+				return nil
+			}
+		}
+	}), nil
+}
+
+// ParseStrategyRemovedFromQuorum is a log parse operation binding the contract event 0x327495b508542e8eeed9261ee4edc99d913ed525014a835e67fe5c1669c7c8b4.
+//
+// Solidity: event StrategyRemovedFromQuorum(uint256 indexed quorumNumber, address strategy)
+func (_Lagrange *LagrangeFilterer) ParseStrategyRemovedFromQuorum(log types.Log) (*LagrangeStrategyRemovedFromQuorum, error) {
+	event := new(LagrangeStrategyRemovedFromQuorum)
+	if err := _Lagrange.contract.UnpackLog(event, "StrategyRemovedFromQuorum", log); err != nil {
 		return nil, err
 	}
 	event.Raw = log

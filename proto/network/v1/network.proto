@@ -45,7 +45,7 @@ message GetBlockResponse {
 // CommitBlockRequest is the request to commit the signature
 message CommitBlockRequest {
     sequencer.v1.BlsSignature bls_signature = 1;
-    uint64 epoch_number = 2;
+    uint64 epoch_block_number = 2;
     string pub_key = 3;
     string signature = 4;
 }

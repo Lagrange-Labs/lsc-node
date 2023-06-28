@@ -22,8 +22,8 @@ func TestCommitHash(t *testing.T) {
 			TotalVotingPower: 1000000,
 			Signature:        "0xb3ad75be8554f25871e395268a2aec2d1d65003e70d4cd5b1560f37a85c7917fb82d66e22829c333043b4d6c3434151b13fb6b60d06f150132390f177c7891e97213c34cc843937f5e372035dcbb8be32ba6bf61a1545bdc2aafabd0fb60c5a4",
 		},
-		EpochNumber: 1,
-		Signature:   "0x92d7f640e9b492e561046e4761438ce13ccc7bc4aa5d0d92ffc570cef559245a0c938002a0675a82eeb139cd60ddc7d2f2be232903d1d85a31f78b9c1230c62501",
+		EpochBlockNumber: 1,
+		Signature:        "0x92d7f640e9b492e561046e4761438ce13ccc7bc4aa5d0d92ffc570cef559245a0c938002a0675a82eeb139cd60ddc7d2f2be232903d1d85a31f78b9c1230c62501",
 	}
 	reqHash := GetCommitRequestHash(req)
 	require.Equal(t, common.Bytes2Hex(reqHash), "d482a890f80d0e890d6a3798b913f43fc1d2a5763480a90ed4e00f04aaf45e87")

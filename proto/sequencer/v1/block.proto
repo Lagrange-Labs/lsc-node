@@ -13,7 +13,7 @@ message ChainHeader {
 
 // BlockHeader is the block header structure
 message BlockHeader {
-    uint64 epoch_number = 1;
+    uint64 epoch_block_number = 1;
     string current_committee = 2;
     string next_committee = 3;
     uint64 total_voting_power = 4;

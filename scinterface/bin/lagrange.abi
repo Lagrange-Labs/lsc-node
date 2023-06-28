@@ -2,13 +2,36 @@
     {
         "inputs": [
             {
-                "internalType": "contract ISlasher",
-                "name": "_slasher",
+                "internalType": "contract IServiceManager",
+                "name": "_serviceManager",
+                "type": "address"
+            },
+            {
+                "internalType": "contract ILagrangeCommittee",
+                "name": "_committee",
+                "type": "address"
+            },
+            {
+                "internalType": "contract IStrategyManager",
+                "name": "_strategyManager",
                 "type": "address"
             }
         ],
         "stateMutability": "nonpayable",
         "type": "constructor"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": false,
+                "internalType": "uint8",
+                "name": "version",
+                "type": "uint8"
+            }
+        ],
+        "name": "Initialized",
+        "type": "event"
     },
     {
         "anonymous": false,
@@ -59,6 +82,44 @@
             }
         ],
         "name": "OwnershipTransferred",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "quorumNumber",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "contract IStrategy",
+                "name": "strategy",
+                "type": "address"
+            }
+        ],
+        "name": "StrategyAddedToQuorum",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "quorumNumber",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "contract IStrategy",
+                "name": "strategy",
+                "type": "address"
+            }
+        ],
+        "name": "StrategyRemovedFromQuorum",
         "type": "event"
     },
     {
@@ -123,19 +184,13 @@
         "type": "event"
     },
     {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            }
-        ],
-        "name": "isFrozen",
+        "inputs": [],
+        "name": "BLOCK_HEADER_EXTRADATA_INDEX",
         "outputs": [
             {
-                "internalType": "bool",
+                "internalType": "uint256",
                 "name": "",
-                "type": "bool"
+                "type": "uint256"
             }
         ],
         "stateMutability": "view",
@@ -143,12 +198,77 @@
     },
     {
         "inputs": [],
-        "name": "latestServeUntilBlock",
+        "name": "BLOCK_HEADER_NUMBER_INDEX",
         "outputs": [
             {
-                "internalType": "uint32",
+                "internalType": "uint256",
                 "name": "",
-                "type": "uint32"
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "CHAIN_ID_ARBITRUM_NITRO",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "CHAIN_ID_BASE",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "CHAIN_ID_MAINNET",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "CHAIN_ID_OPTIMISM",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "NUMBER_OF_QUORUMS",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
             }
         ],
         "stateMutability": "view",
@@ -157,30 +277,320 @@
     {
         "inputs": [
             {
-                "internalType": "address",
+                "internalType": "uint256",
+                "name": "quorumNumber",
+                "type": "uint256"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "contract IStrategy",
+                        "name": "strategy",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint96",
+                        "name": "multiplier",
+                        "type": "uint96"
+                    }
+                ],
+                "internalType": "struct VoteWeigherBaseStorage.StrategyAndWeightingMultiplier[]",
+                "name": "_newStrategiesConsideredAndMultipliers",
+                "type": "tuple[]"
+            }
+        ],
+        "name": "addStrategiesConsideredAndMultipliers",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes",
+                "name": "rlpData",
+                "type": "bytes"
+            }
+        ],
+        "name": "calculateBlockHash",
+        "outputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "bytes",
+                "name": "rlpData",
+                "type": "bytes"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "comparisonBlockHash",
+                "type": "bytes32"
+            }
+        ],
+        "name": "checkAndDecodeRLP",
+        "outputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "uint256",
+                        "name": "len",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "memPtr",
+                        "type": "uint256"
+                    }
+                ],
+                "internalType": "struct RLPReader.RLPItem[]",
+                "name": "",
+                "type": "tuple[]"
+            }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "operator",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "blockHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "correctBlockHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "currentCommitteeRoot",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "correctCurrentCommitteeRoot",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "nextCommitteeRoot",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "correctNextCommitteeRoot",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "blockNumber",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "epochBlockNumber",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "blockSignature",
+                        "type": "bytes"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "commitSignature",
+                        "type": "bytes"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "chainID",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "rawBlockHeader",
+                        "type": "bytes"
+                    }
+                ],
+                "internalType": "struct EvidenceVerifier.Evidence",
+                "name": "evidence",
+                "type": "tuple"
+            }
+        ],
+        "name": "checkCommitSignature",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "committee",
+        "outputs": [
+            {
+                "internalType": "contract ILagrangeCommittee",
                 "name": "",
                 "type": "address"
             }
         ],
-        "name": "operators",
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "delegation",
         "outputs": [
             {
-                "internalType": "uint256",
-                "name": "amount",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint32",
-                "name": "serveUntilBlock",
-                "type": "uint32"
-            },
-            {
-                "internalType": "bool",
-                "name": "slashed",
-                "type": "bool"
+                "internalType": "contract IDelegationManager",
+                "name": "",
+                "type": "address"
             }
         ],
         "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "operator",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "blockHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "correctBlockHash",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "currentCommitteeRoot",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "correctCurrentCommitteeRoot",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "nextCommitteeRoot",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "bytes32",
+                        "name": "correctNextCommitteeRoot",
+                        "type": "bytes32"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "blockNumber",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "epochBlockNumber",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "blockSignature",
+                        "type": "bytes"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "commitSignature",
+                        "type": "bytes"
+                    },
+                    {
+                        "internalType": "uint32",
+                        "name": "chainID",
+                        "type": "uint32"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "rawBlockHeader",
+                        "type": "bytes"
+                    }
+                ],
+                "internalType": "struct EvidenceVerifier.Evidence",
+                "name": "evidence",
+                "type": "tuple"
+            }
+        ],
+        "name": "getCommitHash",
+        "outputs": [
+            {
+                "internalType": "bytes32",
+                "name": "",
+                "type": "bytes32"
+            }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "initialOwner",
+                "type": "address"
+            }
+        ],
+        "name": "initialize",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "quorumNumber",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "strategyIndices",
+                "type": "uint256[]"
+            },
+            {
+                "internalType": "uint96[]",
+                "name": "newMultipliers",
+                "type": "uint96[]"
+            }
+        ],
+        "name": "modifyStrategyWeights",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -199,51 +609,34 @@
     {
         "inputs": [
             {
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "internalType": "uint32",
-                "name": "serveUntilBlock",
-                "type": "uint32"
-            }
-        ],
-        "name": "recordLastStakeUpdateAndRevokeSlashingAbility",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "internalType": "uint32",
-                "name": "updateBlock",
-                "type": "uint32"
-            },
-            {
-                "internalType": "uint32",
-                "name": "serveUntilBlock",
-                "type": "uint32"
-            },
-            {
                 "internalType": "uint256",
-                "name": "prevElement",
+                "name": "",
                 "type": "uint256"
             }
         ],
-        "name": "recordStakeUpdate",
-        "outputs": [],
-        "stateMutability": "nonpayable",
+        "name": "quorumBips",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
         "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "chainID",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes",
+                "name": "_blsPubKey",
+                "type": "bytes"
+            },
             {
                 "internalType": "uint32",
                 "name": "serveUntilBlock",
@@ -256,10 +649,46 @@
         "type": "function"
     },
     {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "quorumNumber",
+                "type": "uint256"
+            },
+            {
+                "internalType": "contract IStrategy[]",
+                "name": "_strategiesToRemove",
+                "type": "address[]"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "indicesToRemove",
+                "type": "uint256[]"
+            }
+        ],
+        "name": "removeStrategiesConsideredAndMultipliers",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
         "inputs": [],
         "name": "renounceOwnership",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "serviceManager",
+        "outputs": [
+            {
+                "internalType": "contract IServiceManager",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -276,13 +705,61 @@
         "type": "function"
     },
     {
-        "inputs": [],
-        "name": "taskNumber",
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "strategiesConsideredAndMultipliers",
         "outputs": [
             {
-                "internalType": "uint32",
+                "internalType": "contract IStrategy",
+                "name": "strategy",
+                "type": "address"
+            },
+            {
+                "internalType": "uint96",
+                "name": "multiplier",
+                "type": "uint96"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "quorumNumber",
+                "type": "uint256"
+            }
+        ],
+        "name": "strategiesConsideredAndMultipliersLength",
+        "outputs": [
+            {
+                "internalType": "uint256",
                 "name": "",
-                "type": "uint32"
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "strategyManager",
+        "outputs": [
+            {
+                "internalType": "contract IStrategyManager",
+                "name": "",
+                "type": "address"
             }
         ],
         "stateMutability": "view",
@@ -347,7 +824,7 @@
                     },
                     {
                         "internalType": "uint256",
-                        "name": "epochNumber",
+                        "name": "epochBlockNumber",
                         "type": "uint256"
                     },
                     {
@@ -364,15 +841,78 @@
                         "internalType": "uint32",
                         "name": "chainID",
                         "type": "uint32"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "rawBlockHeader",
+                        "type": "bytes"
                     }
                 ],
-                "internalType": "struct LagrangeService.Evidence",
+                "internalType": "struct EvidenceVerifier.Evidence",
                 "name": "evidence",
                 "type": "tuple"
             }
         ],
         "name": "uploadEvidence",
         "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "comparisonNumber",
+                "type": "uint256"
+            },
+            {
+                "internalType": "bytes",
+                "name": "rlpData",
+                "type": "bytes"
+            },
+            {
+                "internalType": "bytes32",
+                "name": "comparisonBlockHash",
+                "type": "bytes32"
+            },
+            {
+                "internalType": "uint256",
+                "name": "chainID",
+                "type": "uint256"
+            }
+        ],
+        "name": "verifyBlockNumber",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "operator",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "quorumNumber",
+                "type": "uint256"
+            }
+        ],
+        "name": "weightOfOperator",
+        "outputs": [
+            {
+                "internalType": "uint96",
+                "name": "",
+                "type": "uint96"
+            }
+        ],
         "stateMutability": "nonpayable",
         "type": "function"
     }
