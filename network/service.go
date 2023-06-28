@@ -65,6 +65,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 			StakeAddress: req.StakeAddress,
 			PublicKey:    req.PublicKey,
 			IPAddress:    ip,
+			ChainID:      s.chainID,
 		}); err != nil {
 		return nil, err
 	}
@@ -151,8 +152,8 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 	}
 
 	// check if the epoch number is matched
-	epochNumber := s.consensus.GetCurrentEpochNumber()
-	if epochNumber != req.EpochNumber {
+	epochNumber := s.consensus.GetCurrentEpochBlockNumber()
+	if epochNumber != req.EpochBlockNumber {
 		return &types.CommitBlockResponse{
 			Result:  false,
 			Message: fmt.Sprintf("The epoch number is not matched: %v", epochNumber),

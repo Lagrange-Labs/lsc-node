@@ -5,6 +5,7 @@ import (
 	"time"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
@@ -18,9 +19,10 @@ var _ types.Storage = (*MemDB)(nil)
 
 // DB is an in-memory database.
 type MemDB struct {
-	nodes     map[string]networktypes.ClientNode
-	blocks    []*sequencertypes.Block
-	evidences []*contypes.Evidence
+	nodes          map[string]networktypes.ClientNode
+	blocks         []*sequencertypes.Block
+	evidences      []*contypes.Evidence
+	committeeRoots []*govtypes.CommitteeRoot
 }
 
 // NewMemDB creates a new in-memory database.
@@ -110,7 +112,7 @@ func (d *MemDB) UpdateNode(ctx context.Context, node *networktypes.ClientNode) e
 }
 
 // GetNodesByStatuses returns the nodes with the given statuses.
-func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus) ([]networktypes.ClientNode, error) {
+func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error) {
 	res := make([]networktypes.ClientNode, 0)
 	for _, node := range d.nodes {
 		isBelonged := false
@@ -171,4 +173,20 @@ func (d *MemDB) GetEvidences(ctx context.Context) ([]*contypes.Evidence, error) 
 		}
 	}
 	return evidences, nil
+}
+
+// UpdateCommitteeRoot updates the committee root in the database.
+func (d *MemDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error {
+	d.committeeRoots = append(d.committeeRoots, committeeRoot)
+	return nil
+}
+
+// GetLastCommitteeRoot returns the last committee root for the given chainID.
+func (d *MemDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32) (*govtypes.CommitteeRoot, error) {
+	for i := len(d.committeeRoots) - 1; i >= 0; i-- {
+		if d.committeeRoots[i].ChainID == chainID {
+			return d.committeeRoots[i], nil
+		}
+	}
+	return nil, nil
 }
