@@ -65,14 +65,15 @@ localnet-start: stop
 	docker-compose -f docker-compose.yml up -d mongo
 	docker-compose -f docker-compose.yml up -d lagrangesc
 	sleep 3
-	go run ./testutil/registerops/
-	sleep 1
 	docker-compose -f docker-compose.yml up -d simserver
 	docker-compose -f docker-compose.yml up -d simsequencer
 	sleep 3
 	docker-compose -f docker-compose.yml up -d simnode0
 	docker-compose -f docker-compose.yml up -d simnode1
 	docker-compose -f docker-compose.yml up -d simnode2
+	docker-compose -f docker-compose.yml up -d simnode3
+	docker-compose -f docker-compose.yml up -d simnode4
+	docker-compose -f docker-compose.yml up -d simnode5
 	sleep 3
 	docker-compose -f docker-compose.yml up -d prover
 

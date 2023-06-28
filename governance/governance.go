@@ -3,11 +3,14 @@ package governance
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"time"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	"github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
+	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/lagrange"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 
@@ -21,20 +24,28 @@ type Governance struct {
 	stakingInterval  time.Duration
 	evidenceInterval time.Duration
 	lagrangeSC       *lagrange.Lagrange
-	storage          storageInterface
-	auth             *bind.TransactOpts
+	committeeSC      *committee.Committee
+	chainID          uint32
+
+	storage     storageInterface
+	etherClient *ethclient.Client
+	auth        *bind.TransactOpts
 
 	ctx    context.Context
 	cancel context.CancelFunc
 }
 
 // NewGovernance creates a new Governance instance.
-func NewGovernance(cfg *Config, storage storageInterface) (*Governance, error) {
+func NewGovernance(cfg *Config, chainID uint32, storage storageInterface) (*Governance, error) {
 	client, err := ethclient.Dial(cfg.EthereumURL)
 	if err != nil {
 		return nil, err
 	}
 	lagrangeSC, err := lagrange.NewLagrange(common.HexToAddress(cfg.StakingSCAddress), client)
+	if err != nil {
+		return nil, err
+	}
+	committeeSC, err := committee.NewCommittee(common.HexToAddress(cfg.CommitteeSCAddress), client)
 	if err != nil {
 		return nil, err
 	}
@@ -48,7 +59,10 @@ func NewGovernance(cfg *Config, storage storageInterface) (*Governance, error) {
 		stakingInterval:  time.Duration(cfg.StakingCheckInterval),
 		evidenceInterval: time.Duration(cfg.EvidenceUploadInterval),
 		lagrangeSC:       lagrangeSC,
+		committeeSC:      committeeSC,
+		chainID:          chainID,
 		storage:          storage,
+		etherClient:      client,
 		auth:             auth,
 		ctx:              ctx,
 		cancel:           cancel,
@@ -100,13 +114,13 @@ func (g *Governance) uploadEvidences() error {
 }
 
 func (g *Governance) updateNodeStatuses() error {
-	nodes, err := g.storage.GetNodesByStatuses(g.ctx, []networktypes.NodeStatus{networktypes.NodeJoined})
+	nodes, err := g.storage.GetNodesByStatuses(g.ctx, []networktypes.NodeStatus{networktypes.NodeJoined}, g.chainID)
 	logger.Infof("updating nodes %v", nodes)
 	if err != nil {
 		return err
 	}
 	for _, node := range nodes {
-		sNode, err := g.lagrangeSC.Operators(nil, common.HexToAddress(node.StakeAddress))
+		sNode, err := g.committeeSC.Operators(nil, common.HexToAddress(node.StakeAddress))
 		if err != nil {
 			return err
 		}
@@ -130,5 +144,27 @@ func (g *Governance) updateNodeStatuses() error {
 		}
 	}
 
-	return nil
+	return g.updateCommittee()
+}
+
+func (g *Governance) updateCommittee() error {
+	blockNumber, err := g.etherClient.BlockNumber(g.ctx)
+	if err != nil {
+		return err
+	}
+
+	committeeData, err := g.committeeSC.GetCommittee(nil, big.NewInt(int64(g.chainID)), big.NewInt(int64(blockNumber)))
+	if err != nil {
+		return err
+	}
+
+	committeeRoot := &types.CommitteeRoot{
+		ChainID:              g.chainID,
+		CurrentCommitteeRoot: common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes()),
+		NextCommitteeRoot:    common.Bytes2Hex(committeeData.NextRoot.Bytes()),
+		TotalVotingPower:     committeeData.CurrentCommittee.TotalVotingPower.Uint64(),
+		EpochBlockNumber:     blockNumber,
+	}
+
+	return g.storage.UpdateCommitteeRoot(g.ctx, committeeRoot)
 }

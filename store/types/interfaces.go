@@ -4,6 +4,7 @@ import (
 	"context"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 )
@@ -26,7 +27,7 @@ type Storage interface {
 	// GetLastFinalizedBlockNumber returns the last block number that was finalized.
 	GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
 	// GetNodesByStatuses returns the nodes with the given statuses.
-	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus) ([]networktypes.ClientNode, error)
+	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error)
 	// UpdateBlock updates the block in the database.
 	UpdateBlock(ctx context.Context, block *sequencertypes.Block) error
 	// AddEvidences adds new evidences to the database.
@@ -35,4 +36,8 @@ type Storage interface {
 	GetEvidences(ctx context.Context) ([]*contypes.Evidence, error)
 	// UpdateEvidence updates the evidence in the database.
 	UpdateEvidence(ctx context.Context, evidence *contypes.Evidence) error
+	// UpdateCommitteeRoot updates the committee root in the database.
+	UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error
+	// GetLastCommitteeRoot returns the last committee root for the given chainID.
+	GetLastCommitteeRoot(ctx context.Context, chainID uint32) (*govtypes.CommitteeRoot, error)
 }

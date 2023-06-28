@@ -10,6 +10,7 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/store/types"
@@ -155,12 +156,13 @@ func (db *MongoDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string) 
 }
 
 // GetNodesByStatuses returns the nodes with the given statuses.
-func (db *MongoDB) GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus) ([]networktypes.ClientNode, error) {
+func (db *MongoDB) GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error) {
 	collection := db.client.Database("state").Collection("nodes")
 	filter := bson.M{
 		"status": bson.M{
 			"$in": statuses,
 		},
+		"chain_id": chainID,
 	}
 
 	cursor, err := collection.Find(ctx, filter)
@@ -223,4 +225,26 @@ func (db *MongoDB) GetEvidences(ctx context.Context) ([]*contypes.Evidence, erro
 		evidences = append(evidences, evidence)
 	}
 	return evidences, nil
+}
+
+// UpdateCommitteeRoot updates the committee root in the database.
+func (db *MongoDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error {
+	collection := db.client.Database("state").Collection("committee_roots")
+	filter := bson.M{"chain_id": committeeRoot.ChainID, "epoch_block_number": committeeRoot.EpochBlockNumber}
+	update := bson.M{"$set": bson.M{"current_committee_root": committeeRoot.CurrentCommitteeRoot, "next_committee_root": committeeRoot.NextCommitteeRoot, "total_voting_power": committeeRoot.TotalVotingPower}}
+	_, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
+	return err
+}
+
+// GetLastCommitteeRoot returns the last committee root for the given chainID.
+func (db *MongoDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32) (*govtypes.CommitteeRoot, error) {
+	collection := db.client.Database("state").Collection("committee_roots")
+	sortOptions := options.FindOne().SetSort(bson.D{{"epoch_block_number", -1}}) //nolint:govet
+	filter := bson.M{"chain_id": chainID}
+	committeeRoot := &govtypes.CommitteeRoot{}
+	err := collection.FindOne(ctx, filter, sortOptions).Decode(committeeRoot)
+	if err == mongo.ErrNoDocuments {
+		return nil, nil
+	}
+	return committeeRoot, err
 }

@@ -4,11 +4,13 @@ import (
 	"context"
 	"crypto/ecdsa"
 	"fmt"
+	"math/big"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/umbracle/go-eth-consensus/bls"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
@@ -19,6 +21,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
+	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
@@ -26,7 +29,9 @@ import (
 // Client is a gRPC client to join the network
 type Client struct {
 	types.NetworkServiceClient
-	rpcClient       rpcclient.RpcClient
+	rpcClient   rpcclient.RpcClient
+	committeeSC *committee.Committee
+
 	chainID         uint32
 	blsPrivateKey   *bls.SecretKey
 	blsPublicKey    string
@@ -91,6 +96,15 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	if err != nil {
 		panic(err)
 	}
+	etherClient, err := ethclient.Dial(cfg.EthereumURL)
+	if err != nil {
+		panic(err)
+	}
+	committeeSC, err := committee.NewCommittee(common.HexToAddress(cfg.CommitteeSCAddress), etherClient)
+	if err != nil {
+		panic(err)
+	}
+
 	chainID, err := rpcClient.GetChainID()
 	if err != nil {
 		panic(err)
@@ -104,6 +118,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 		stakeAddress:         stakeAddress,
 		pullInterval:         time.Duration(cfg.PullInterval),
 		rpcClient:            rpcClient,
+		committeeSC:          committeeSC,
 		chainID:              chainID,
 		lastBlockNumber:      1,
 
@@ -211,7 +226,18 @@ func (c *Client) TryGetBlock() (*sequencertypes.Block, error) {
 	if blockHash != rBlockHash {
 		return nil, fmt.Errorf("the block hash %s is not equal to the rpc block hash %s", blockHash, rBlockHash)
 	}
-	// TODO verify the committee root with the current epoch number
+	// verify the committee root
+	committeeData, err := c.committeeSC.GetCommittee(nil, big.NewInt(int64(c.chainID)), big.NewInt(int64(res.Block.EpochBlockNumber())))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the committee root: %v", err)
+	}
+	if res.Block.CurrentCommittee() != common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes()) {
+		return nil, fmt.Errorf("the block committee root %s is not equal to the current root %v", res.Block.CurrentCommittee(), committeeData)
+	}
+	if res.Block.NextCommittee() != common.Bytes2Hex(committeeData.NextRoot.Bytes()) {
+		return nil, fmt.Errorf("the block committee root %s is not equal to the next root %v", res.Block.NextCommittee(), committeeData)
+	}
+
 	return res.Block, nil
 }
 
@@ -225,9 +251,9 @@ func (c *Client) TryCommitBlock(block *sequencertypes.Block) error {
 	blsSignature.Signature = utils.BlsSignatureToHex(blsSig)
 
 	req := &types.CommitBlockRequest{
-		BlsSignature: blsSignature,
-		EpochNumber:  block.EpochNumber(),
-		PubKey:       c.blsPublicKey,
+		BlsSignature:     blsSignature,
+		EpochBlockNumber: block.EpochBlockNumber(),
+		PubKey:           c.blsPublicKey,
 	}
 	// generate the ECDSA signature
 	msg := contypes.GetCommitRequestHash(req)

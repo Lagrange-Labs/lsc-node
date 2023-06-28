@@ -6,7 +6,7 @@ services:
     image: lagrange-node
     networks:
       localnet:
-        ipv4_address: 192.168.20.5
+        ipv4_address: 192.168.20.2
     command:
       - "/bin/sh"
       - "-c"
@@ -20,7 +20,7 @@ services:
     image: lagrange-node
     networks:
       localnet:
-        ipv4_address: 192.168.20.6
+        ipv4_address: 192.168.20.3
     ports:
       - 9090:9090
     command:
@@ -34,15 +34,16 @@ services:
     container_name: node0
     image: lagrange-node
     environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.6:9090
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=2.4s
       - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f654a
       - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429
       - LAGRANGE_NODE_CLIENT_RPCENDPOINT=http://192.168.20.100:8545
+      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_STORE_DBPATH=mongodb://192.168.20.101:27017
     networks:
       localnet:
-        ipv4_address: 192.168.20.2
+        ipv4_address: 192.168.20.4
     command:
       - "/bin/sh"
       - "-c"
@@ -51,15 +52,16 @@ services:
     container_name: node1
     image: lagrange-node
     environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.6:9090
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=2s
       - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x475e7dc95f40ba8e5af29adb745ae3ac5d3404575b0f853c73ed1efa46943fc2
       - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0x25f536330df3a72fa381bfb5ea5552b2731523f08580e7a0e2e69618a9643faa
       - LAGRANGE_NODE_CLIENT_RPCENDPOINT=http://192.168.20.100:8545
+      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_STORE_DBPATH=mongodb://192.168.20.101:27017
     networks:
       localnet:
-        ipv4_address: 192.168.20.3
+        ipv4_address: 192.168.20.5
     command:
       - "/bin/sh"
       - "-c"
@@ -68,15 +70,70 @@ services:
     container_name: node2
     image: lagrange-node
     environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.6:9090
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=1.8s
       - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x59ec5a675fa5a9805d791c58c97a3dcc0bc8def2029bd53aa33dc035f2b81404
       - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0xc262364335471942e02e79d760d1f5c5ad7a34463303851cacdd15d72e68b228
       - LAGRANGE_NODE_CLIENT_RPCENDPOINT=http://192.168.20.100:8545
+      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_STORE_DBPATH=mongodb://192.168.20.101:27017
     networks:
       localnet:
-        ipv4_address: 192.168.20.4
+        ipv4_address: 192.168.20.6
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"
+  simnode3:
+    container_name: node3
+    image: lagrange-node
+    environment:
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=1.8s
+      - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x5c6b993825da2b057ac6e0beb701bd13e53c71fa3766a243365967ec7c147746
+      - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0xb126ae5e3d88007081b76024477b854ca4f808d48be1e22fe763822bc0c17cb3
+      - LAGRANGE_NODE_CLIENT_RPCENDPOINT=http://192.168.20.100:8545
+      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
+      - LAGRANGE_NODE_STORE_DBPATH=mongodb://192.168.20.101:27017
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.7
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"
+  simnode4:
+    container_name: node4
+    image: lagrange-node
+    environment:
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=1.8s
+      - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x7326637644e7037fdbd42378b7f0ca685b882820e8f1c6aa87c73856aa6eb025
+      - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0x220ecb0a36b61b15a3af292c4520a528395edc51c8d41db30c74382a4af4328d
+      - LAGRANGE_NODE_CLIENT_RPCENDPOINT=http://192.168.20.100:8545
+      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
+      - LAGRANGE_NODE_STORE_DBPATH=mongodb://192.168.20.101:27017
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.8
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"
+  simnode5:
+    container_name: node5
+    image: lagrange-node
+    environment:
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=1.8s
+      - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x1eb32288c25d4e029dd03237b90c735281bf13c8cc9c70cc3eaa9e0fe1570e90
+      - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0x2a1b271106503777361139b2d28c3f360ce980e2dab0c18f4684d5b417ac46b3
+      - LAGRANGE_NODE_CLIENT_RPCENDPOINT=http://192.168.20.100:8545
+      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
+      - LAGRANGE_NODE_STORE_DBPATH=mongodb://192.168.20.101:27017
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.9
     command:
       - "/bin/sh"
       - "-c"
@@ -93,6 +150,7 @@ services:
   lagrangesc:
     container_name: lagrange-smart-contract
     image: lagrangelabs/lagrange-contracts:latest
+    # image: lagrange/contracts
     networks:
       localnet:
         ipv4_address: 192.168.20.100
