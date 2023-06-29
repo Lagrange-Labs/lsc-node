@@ -63,10 +63,22 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 
 // OnStart loads the first unverified block and starts the round.
 func (s *State) OnStart() {
-	lastBlockNumber, err := s.storage.GetLastFinalizedBlockNumber(context.Background(), s.chainID)
-	if err != nil {
-		logger.Errorf("failed to get the last finalized block number: %v", err)
-		return
+	var (
+		lastBlockNumber uint64
+		err             error
+	)
+
+	for {
+		lastBlockNumber, err = s.storage.GetLastFinalizedBlockNumber(context.Background(), s.chainID)
+		if err != nil {
+			logger.Errorf("failed to get the last finalized block number: %v", err)
+			return
+		}
+		if lastBlockNumber > 0 {
+			break
+		}
+		logger.Infof("the last finalized block number is %v, waiting for the first block", lastBlockNumber)
+		time.Sleep(CheckInterval)
 	}
 
 	for {

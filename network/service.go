@@ -12,6 +12,7 @@ import (
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
+	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -98,6 +99,9 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 	block := s.consensus.GetCurrentBlock()
 	if block == nil || block.BlockNumber() != req.BlockNumber {
 		sBlock, err := s.storage.GetBlock(ctx, s.chainID, req.BlockNumber)
+		if err == storetypes.ErrBlockNotFound {
+			err = nil
+		}
 		currentBlockNumber := uint64(0)
 		if block != nil {
 			currentBlockNumber = s.consensus.GetCurrentBlockNumber()
