@@ -546,6 +546,42 @@
     {
         "inputs": [
             {
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "addr",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint256",
+                        "name": "stake",
+                        "type": "uint256"
+                    },
+                    {
+                        "internalType": "bytes",
+                        "name": "blsPubKey",
+                        "type": "bytes"
+                    }
+                ],
+                "internalType": "struct ILagrangeCommittee.CommitteeLeaf",
+                "name": "leaf",
+                "type": "tuple"
+            }
+        ],
+        "name": "getLeafSlices",
+        "outputs": [
+            {
+                "internalType": "uint96[11]",
+                "name": "slices",
+                "type": "uint96[11]"
+            }
+        ],
+        "stateMutability": "pure",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
                 "internalType": "uint256",
                 "name": "chainID",
                 "type": "uint256"
@@ -609,6 +645,11 @@
             },
             {
                 "internalType": "address",
+                "name": "_poseidon1Elements",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
                 "name": "_poseidon2Elements",
                 "type": "address"
             },
@@ -620,6 +661,16 @@
             {
                 "internalType": "address",
                 "name": "_poseidon4Elements",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_poseidon5Elements",
+                "type": "address"
+            },
+            {
+                "internalType": "address",
+                "name": "_poseidon6Elements",
                 "type": "address"
             }
         ],
