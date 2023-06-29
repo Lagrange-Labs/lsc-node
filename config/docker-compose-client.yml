@@ -3,7 +3,7 @@ version: "3.5"
 services:
   {{.ChainName}}_node:
     container_name: {{.ChainName}}-node
-    image: lagrangelabs/lagrange-node:deploy
+    image: lagrangelabs/lagrange-node:develop
     environment:
       - LAGRANGE_NODE_CHAIN={{.ChainName}}
       - LAGRANGE_NODE_CLIENT_GRPCURL={{.SequencerGRPC}}

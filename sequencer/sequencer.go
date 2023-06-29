@@ -11,7 +11,7 @@ import (
 
 const (
 	// SyncInterval is the interval between two block syncs after fully synced.
-	SyncInterval = 1 * time.Second
+	SyncInterval = 500 * time.Millisecond
 )
 
 // Sequencer is the main component of the lagrange node.
@@ -71,7 +71,7 @@ func (s *Sequencer) Start() error {
 		case <-s.ctx.Done():
 			return nil
 		default:
-			lastBlockNumber := s.lastBlockNumber + 1
+			lastBlockNumber := s.lastBlockNumber
 			blockHash, err := s.rpcClient.GetBlockHashByNumber(lastBlockNumber)
 			if err != nil {
 				if err == rpcclient.ErrBlockNotFound {
@@ -90,7 +90,7 @@ func (s *Sequencer) Start() error {
 				return err
 			}
 
-			s.lastBlockNumber = lastBlockNumber
+			s.lastBlockNumber = lastBlockNumber + 1
 			time.Sleep(100 * time.Millisecond)
 		}
 	}
