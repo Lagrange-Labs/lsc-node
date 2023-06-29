@@ -149,7 +149,7 @@ services:
         ipv4_address: 192.168.20.102
   lagrangesc:
     container_name: lagrange-smart-contract
-    image: lagrangelabs/lagrange-contracts:latest
+    image: lagrangelabs/lagrange-contracts:mock
     # image: lagrange/contracts
     networks:
       localnet:

@@ -20,7 +20,7 @@ import (
 )
 
 const (
-	stakeAddr   = "0x98f07aB2d35638B79582b250C01444cEce0E517A"
+	stakeAddr   = "0xf32358f5C8FFfCF1a7bDb58b270a082abb7Ba1A6"
 	slasherAddr = "0x6Bf0fF4eBa00E3668c0241bb1C622CDBFE55bbE0"
 )
 

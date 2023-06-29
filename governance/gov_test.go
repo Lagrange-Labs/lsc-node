@@ -17,7 +17,7 @@ import (
 )
 
 const (
-	stakeAddr  = "0x880359D8789590cA07bBAb78c0AcCfD3b0a77E49"
+	stakeAddr  = "0xf32358f5C8FFfCF1a7bDb58b270a082abb7Ba1A6"
 	privateKEy = "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
 	chainID    = 1337
 )
@@ -34,7 +34,7 @@ func createTestGovernance(t *testing.T) (storetypes.Storage, *Governance, *ethcl
 		EthereumURL:            "http://localhost:8545",
 		PrivateKey:             "0x3e17bc938ec10c865fc4e2d049902716dc0712b5b0e688b7183c16807234a84c",
 		StakingSCAddress:       stakeAddr,
-		CommitteeSCAddress:     "0x928BD9d79f8f15af7E955b8cE174996c231D17C1",
+		CommitteeSCAddress:     "0x11b59cE6E2b4509218bf45AF3582dC7E2a1e8a57",
 		StakingCheckInterval:   utils.TimeDuration(time.Second * 1),
 		EvidenceUploadInterval: utils.TimeDuration(time.Second * 1),
 	}
