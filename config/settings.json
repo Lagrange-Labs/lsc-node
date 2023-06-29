@@ -1,0 +1,60 @@
+[
+    {
+        "chain_name": "arbitrum",
+        "sequencer_rpc_url": "http://127.0.0.1:8545",
+        "from_block_number": 1,
+        "db_path":  "mongodb://127.0.0.1:27017",
+        "ethereum_url": "http://127.0.0.1:8545",
+        "ecdsa_private_key": "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429",
+        "service_sc_addr": "0x880359D8789590cA07bBAb78c0AcCfD3b0a77E49",
+        "committee_sc_addr": "0x928BD9d79f8f15af7E955b8cE174996c231D17C1",
+        "staking_check_interval": "5s",
+        "evidence_upload_interval": "30s",
+        "operator_addr": "0x6E654b122377EA7f592bf3FD5bcdE9e8c1B1cEb9",
+        "proposer_private_key": "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "round_interval": "2s",
+        "round_limit": "60s",
+        "ip_address": "127.0.0.1",
+        "clients": [
+            {
+                "pull_interval": "1s",
+                "bls_private_key": "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                "ecdsa_private_key": "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
+            },
+            {
+                "pull_interval": "1s",
+                "bls_private_key": "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                "ecdsa_private_key": "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
+            }
+        ]
+    },
+    {
+        "chain_name": "optimism",
+        "sequencer_rpc_url": "http://127.0.0.1:8545",
+        "from_block_number": 1,
+        "db_path":  "mongodb://127.0.0.1:27017",
+        "ethereum_url": "http://127.0.0.1:8545",
+        "ecdsa_private_key": "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429",
+        "service_sc_addr": "0x880359D8789590cA07bBAb78c0AcCfD3b0a77E49",
+        "committee_sc_addr": "0x928BD9d79f8f15af7E955b8cE174996c231D17C1",
+        "staking_check_interval": "5s",
+        "evidence_upload_interval": "30s",
+        "operator_addr": "0x6E654b122377EA7f592bf3FD5bcdE9e8c1B1cEb9",
+        "proposer_private_key": "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+        "round_interval": "2s",
+        "round_limit": "60s",
+        "ip_address": "127.0.0.1",
+        "clients": [
+            {
+                "pull_interval": "1s",
+                "bls_private_key": "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                "ecdsa_private_key": "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
+            },
+            {
+                "pull_interval": "1s",
+                "bls_private_key": "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef",
+                "ecdsa_private_key": "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
+            }
+        ]
+    }
+]
