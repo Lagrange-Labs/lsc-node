@@ -22,7 +22,7 @@ DBPath = "mongodb://127.0.0.1:27017"
 [Sequencer]
 Chain = "arbitrum"
 RPCURL = "http://127.0.0.1:8545"
-FromBlockNumber = 1
+FromBlockNumber = 5
 
 [Governance]
 EthereumURL = "http://127.0.0.1:8545"
