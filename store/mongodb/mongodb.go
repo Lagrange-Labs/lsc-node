@@ -133,10 +133,10 @@ func (db *MongoDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint
 	collection := db.client.Database("state").Collection("blocks")
 	sortOptions := options.FindOne().SetSort(bson.D{{"chain_header.block_number", -1}}) //nolint:govet
 	block := bson.M{}
-	err := collection.FindOne(ctx, bson.M{"pub_keys": bson.M{"$ne": nil}}, sortOptions).Decode(&block)
+	err := collection.FindOne(ctx, bson.M{"pub_keys": bson.M{"$ne": nil}, "chain_header.chain_id": chainID}, sortOptions).Decode(&block)
 	if err == mongo.ErrNoDocuments {
 		sortOptions = options.FindOne().SetSort(bson.D{{"chain_header.block_number", 1}}) //nolint:govet
-		err = collection.FindOne(ctx, bson.M{}, sortOptions).Decode(&block)
+		err = collection.FindOne(ctx, bson.M{"chain_header.chain_id": chainID}, sortOptions).Decode(&block)
 		if err == mongo.ErrNoDocuments {
 			return 0, nil
 		}
