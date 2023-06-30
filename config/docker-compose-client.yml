@@ -12,6 +12,7 @@ services:
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL={{.PullInterval}}
       - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY={{.BLSPrivateKey}}
       - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY={{.ECDSAPrivateKey}}
+      - LAGRANGE_NODE_CLIENT_COMMITTEESCADDRESS={{.CommitteeSCAddress}}
     command:
       - "/bin/sh"
       - "-c"

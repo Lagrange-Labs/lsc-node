@@ -62,13 +62,14 @@ type SequencerConfig struct {
 }
 
 type ClientConfig struct {
-	ChainName       string `json:"chain_name"`
-	SequencerGRPC   string `json:"sequencer_grpc"`
-	EthereumURL     string `json:"ethereum_url"`
-	SequencerRPCURL string `json:"sequencer_rpc_url"`
-	PullInterval    string `json:"pull_interval"`
-	BLSPrivateKey   string `json:"bls_private_key"`
-	ECDSAPrivateKey string `json:"ecdsa_private_key"`
+	ChainName          string `json:"chain_name"`
+	SequencerGRPC      string `json:"sequencer_grpc"`
+	EthereumURL        string `json:"ethereum_url"`
+	SequencerRPCURL    string `json:"sequencer_rpc_url"`
+	PullInterval       string `json:"pull_interval"`
+	BLSPrivateKey      string `json:"bls_private_key"`
+	ECDSAPrivateKey    string `json:"ecdsa_private_key"`
+	CommitteeSCAddress string `json:"committee_sc_addr"`
 }
 
 func configGenerate(ctx *cli.Context) error {
@@ -112,6 +113,7 @@ func configGenerate(ctx *cli.Context) error {
 			clientConfig.SequencerGRPC = config.IPAddress + ":9090"
 			clientConfig.EthereumURL = config.EthereumURL
 			clientConfig.SequencerRPCURL = config.SequencerRPCURL
+			clientConfig.CommitteeSCAddress = config.CommitteeSCAddress
 			err = tmplClient.Execute(file, clientConfig)
 			if err != nil {
 				return fmt.Errorf("failed to execute client template: %w", err)
