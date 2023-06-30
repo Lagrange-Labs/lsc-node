@@ -101,7 +101,9 @@ func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32)
 			return d.blocks[i].BlockNumber(), nil
 		}
 	}
-
+	if len(d.blocks) > 0 {
+		return d.blocks[0].BlockNumber(), nil
+	}
 	return 0, nil
 }
 

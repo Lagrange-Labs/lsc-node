@@ -35,6 +35,9 @@ func (b *Block) NextCommittee() string {
 
 // ProposerPubKey returns the proposer public key of the block.
 func (b *Block) ProposerPubKey() string {
+	if b.BlockHeader == nil {
+		return ""
+	}
 	return b.BlockHeader.ProposerPubKey
 }
 
