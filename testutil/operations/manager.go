@@ -19,10 +19,17 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const (
-	stakeAddr   = "0xf32358f5C8FFfCF1a7bDb58b270a082abb7Ba1A6"
-	slasherAddr = "0x6Bf0fF4eBa00E3668c0241bb1C622CDBFE55bbE0"
+var (
+	stakeAddr = "0x"
 )
+
+func init() {
+	cfg, err := config.Default()
+	if err != nil {
+		panic(err)
+	}
+	stakeAddr = cfg.Governance.StakingSCAddress
+}
 
 // Manager is a struct for test operations.
 type Manager struct {
@@ -76,7 +83,7 @@ func (m *Manager) RegisterOperator(privateKey string) {
 		panic(fmt.Errorf("failed to get signer: %w", err))
 	}
 
-	if err := testutil.RegisterOperator(ethClient, auth, common.HexToAddress(stakeAddr), common.HexToAddress(slasherAddr)); err != nil {
+	if err := testutil.RegisterOperator(ethClient, auth, common.HexToAddress(stakeAddr), common.HexToAddress("0x")); err != nil {
 		panic(fmt.Errorf("failed to register operator: %w", err))
 	}
 }

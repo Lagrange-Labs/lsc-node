@@ -5,7 +5,9 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Lagrange-Labs/lagrange-node/config"
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	"github.com/Lagrange-Labs/lagrange-node/governance/types"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
@@ -17,24 +19,37 @@ import (
 )
 
 const (
-	stakeAddr  = "0xf32358f5C8FFfCF1a7bDb58b270a082abb7Ba1A6"
 	privateKEy = "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
 	chainID    = 1337
 )
 
+var (
+	stakeAddr     = "0x"
+	committeeAddr = "0x"
+)
+
+func init() {
+	cfg, err := config.Default()
+	if err != nil {
+		panic(err)
+	}
+	stakeAddr = cfg.Governance.StakingSCAddress
+	committeeAddr = cfg.Governance.CommitteeSCAddress
+}
+
 func createTestGovernance(t *testing.T) (storetypes.Storage, *Governance, *ethclient.Client, *bind.TransactOpts) {
 	storeCfg := store.Config{
 		BackendType: "mongodb",
-		DBPath:      "mongodb://localhost:27017",
+		DBPath:      "mongodb://127.0.0.1:27017",
 	}
 	storage, err := store.NewStorage(&storeCfg)
 	require.NoError(t, err)
 
-	govCfg := Config{
-		EthereumURL:            "http://localhost:8545",
+	govCfg := types.Config{
+		EthereumURL:            "http://127.0.0.1:8545",
 		PrivateKey:             "0x3e17bc938ec10c865fc4e2d049902716dc0712b5b0e688b7183c16807234a84c",
 		StakingSCAddress:       stakeAddr,
-		CommitteeSCAddress:     "0x11b59cE6E2b4509218bf45AF3582dC7E2a1e8a57",
+		CommitteeSCAddress:     committeeAddr,
 		StakingCheckInterval:   utils.TimeDuration(time.Second * 1),
 		EvidenceUploadInterval: utils.TimeDuration(time.Second * 1),
 	}

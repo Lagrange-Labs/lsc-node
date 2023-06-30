@@ -36,7 +36,7 @@ type Governance struct {
 }
 
 // NewGovernance creates a new Governance instance.
-func NewGovernance(cfg *Config, chainID uint32, storage storageInterface) (*Governance, error) {
+func NewGovernance(cfg *types.Config, chainID uint32, storage storageInterface) (*Governance, error) {
 	client, err := ethclient.Dial(cfg.EthereumURL)
 	if err != nil {
 		return nil, err

@@ -1,4 +1,4 @@
-package governance
+package types
 
 import (
 	"github.com/Lagrange-Labs/lagrange-node/utils"
