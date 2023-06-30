@@ -44,7 +44,11 @@ lint:
 	@ $$(go env GOPATH)/bin/golangci-lint run --timeout=10m
 .PHONY:	lint install-linter
 
-test: stop run-db-mongo run-lagrange-sc
+test: stop
+	docker-compose -f docker-compose.yml up -d mongo
+	docker-compose -f docker-compose.yml up -d lagrangesc
+	sleep 5
+	docker ps -a
 	go test ./... --timeout=10m
 .PHONY: test
 
