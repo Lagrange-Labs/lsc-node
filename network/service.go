@@ -104,7 +104,7 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 		}
 		currentBlockNumber := uint64(0)
 		if block != nil {
-			currentBlockNumber = s.consensus.GetCurrentBlockNumber()
+			currentBlockNumber = block.BlockNumber()
 		}
 		return &types.GetBlockResponse{
 			Block:              sBlock,
@@ -114,7 +114,7 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 
 	return &types.GetBlockResponse{
 		Block:              block,
-		CurrentBlockNumber: s.consensus.GetCurrentBlockNumber(),
+		CurrentBlockNumber: block.BlockNumber(),
 	}, nil
 }
 
