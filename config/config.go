@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
-	"github.com/Lagrange-Labs/lagrange-node/governance"
+	governance "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/store"
