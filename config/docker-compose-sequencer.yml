@@ -1,0 +1,39 @@
+version: "3.5"
+
+services:
+  sequencer:
+    container_name: {{.ChainName}}-sequencer
+    image: lagrangelabs/lagrange-node:develop
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-sequencer"
+    environment:
+      - LAGRANGE_NODE_SEQUENCER_RPCURL={{.SequencerRPCURL}}
+      - LAGRANGE_NODE_SEQUENCER_CHAIN={{.ChainName}}
+      - LAGRANGE_NODE_SEQUENCER_FROMBLOCKNUMBER={{.FromBlockNumber}}
+      - LAGRANGE_NODE_STORE_DBPATH={{.DBPath}}
+      - LAGRANGE_NODE_GOVERNANCE_ETHEREUMURL={{.EthereumURL}}
+      - LAGRANGE_NODE_GOVERNANCE_PRIVATEKEY={{.ECDSAPrivateKey}}
+      - LAGRANGE_NODE_GOVERNANCE_STAKINGSCADDRESS={{.ServiceSCAddress}}
+      - LAGRANGE_NODE_GOVERNANCE_COMMITTEESCADDRESS={{.CommitteeSCAddress}}
+      - LAGRANGE_NODE_GOVERNANCE_STAKINGCHECKINTERVAL={{.StakingCheckInterval}}
+      - LAGRANGE_NODE_GOVERNANCE_EVIDENCEUPLOADINTERVAL={{.EvidenceUploadInterval}}
+  server:
+    container_name: {{.ChainName}}-server
+    image: lagrangelabs/lagrange-node:develop
+    ports:
+      - 9090:9090
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-server"
+    environment:
+      - LAGRANGE_NODE_SEQUENCER_RPCURL={{.SequencerRPCURL}}
+      - LAGRANGE_NODE_SEQUENCER_CHAIN={{.ChainName}}
+      - LAGRANGE_NODE_SEQUENCER_FROMBLOCKNUMBER={{.FromBlockNumber}}
+      - LAGRANGE_NODE_CONSENSUS_OPERATORADDRESS={{.OperatorAddress}}
+      - LAGRANGE_NODE_CONSENSUS_PROPOSERPRIVATEKEY={{.ProposerPrivateKey}}
+      - LAGRANGE_NODE_CONSENSUS_ROUNDINTERVAL={{.RoundInterval}}
+      - LAGRANGE_NODE_CONSENSUS_ROUNDLIMIT={{.RoundLimit}}
+      - LAGRANGE_NODE_STORE_DBPATH={{.DBPath}}

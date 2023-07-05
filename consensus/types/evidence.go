@@ -21,7 +21,7 @@ type Evidence struct {
 	NextCommitteeRoot           [32]byte `json:"next_committee_root" bson:"next_committee_root"`
 	CorrectNextCommitteeRoot    [32]byte `json:"correct_next_committee_root" bson:"correct_next_committee_root"`
 	BlockNumber                 uint64   `json:"block_number" bson:"block_number"`
-	EpochNumber                 uint64   `json:"epoch_number" bson:"epoch_number"`
+	EpochBlockNumber            uint64   `json:"epoch_block_number" bson:"epoch_block_number"`
 	BlockSignature              []byte   `json:"block_signature" bson:"block_signature"`
 	CommitSignature             []byte   `json:"commit_signature" bson:"commit_signature"`
 	ChainID                     uint32   `json:"chain_id" bson:"chain_id"`
@@ -29,8 +29,8 @@ type Evidence struct {
 }
 
 // GetLagrangeServiceEvidence returns the lagrange service evidence.
-func GetLagrangeServiceEvidence(e *Evidence) lagrange.LagrangeServiceEvidence {
-	return lagrange.LagrangeServiceEvidence{
+func GetLagrangeServiceEvidence(e *Evidence) lagrange.EvidenceVerifierEvidence {
+	return lagrange.EvidenceVerifierEvidence{
 		Operator:                    common.HexToAddress(e.Operator),
 		BlockHash:                   e.BlockHash,
 		CorrectBlockHash:            e.CorrectBlockHash,
@@ -39,7 +39,7 @@ func GetLagrangeServiceEvidence(e *Evidence) lagrange.LagrangeServiceEvidence {
 		NextCommitteeRoot:           e.NextCommitteeRoot,
 		CorrectNextCommitteeRoot:    e.CorrectNextCommitteeRoot,
 		BlockNumber:                 big.NewInt(int64(e.BlockNumber)),
-		EpochNumber:                 big.NewInt(int64(e.EpochNumber)),
+		EpochBlockNumber:            big.NewInt(int64(e.EpochBlockNumber)),
 		BlockSignature:              e.BlockSignature,
 		CommitSignature:             e.CommitSignature,
 		ChainID:                     e.ChainID,
@@ -53,7 +53,7 @@ func GetCommitRequestHash(req *networktypes.CommitBlockRequest) []byte {
 	currentCommitteeRoot := common.FromHex(req.BlsSignature.CurrentCommittee)[:]
 	nextCommitteeRoot := common.FromHex(req.BlsSignature.NextCommittee)[:]
 	blockNumber := big.NewInt(int64(req.BlsSignature.ChainHeader.BlockNumber)).FillBytes(blockNumberBuf[:])
-	epochNumber := big.NewInt(int64(req.EpochNumber)).FillBytes(epochNumberBuf[:])
+	epochNumber := big.NewInt(int64(req.EpochBlockNumber)).FillBytes(epochNumberBuf[:])
 	tvp := big.NewInt(int64(req.BlsSignature.TotalVotingPower)).FillBytes(tvpBuf[:])
 	blockSignature := common.FromHex(req.BlsSignature.Signature)[:]
 	chainID := make([]byte, 4)
@@ -93,7 +93,7 @@ func GetEvidence(req *networktypes.CommitBlockRequest, correctBlockHash, correct
 		NextCommitteeRoot:           common.HexToHash(req.BlsSignature.NextCommittee),
 		CorrectNextCommitteeRoot:    common.HexToHash(correctNextCommitteeRoot),
 		BlockNumber:                 req.BlsSignature.ChainHeader.BlockNumber,
-		EpochNumber:                 req.EpochNumber,
+		EpochBlockNumber:            req.EpochBlockNumber,
 		BlockSignature:              common.FromHex(req.BlsSignature.Signature),
 		CommitSignature:             signature,
 		ChainID:                     req.BlsSignature.ChainHeader.ChainId,

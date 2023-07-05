@@ -1,0 +1,19 @@
+version: "3.5"
+
+services:
+  {{.ChainName}}_node:
+    container_name: {{.ChainName}}-node
+    image: lagrangelabs/lagrange-node:develop
+    environment:
+      - LAGRANGE_NODE_CHAIN={{.ChainName}}
+      - LAGRANGE_NODE_CLIENT_GRPCURL={{.SequencerGRPC}}
+      - LAGRANGE_NODE_CLIENT_ETHEREUMURL={{.EthereumURL}}
+      - LAGRANGE_NODE_CLIENT_RPCENDPOINT={{.SequencerRPCURL}}
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL={{.PullInterval}}
+      - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY={{.BLSPrivateKey}}
+      - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY={{.ECDSAPrivateKey}}
+      - LAGRANGE_NODE_CLIENT_COMMITTEESCADDRESS={{.CommitteeSCAddress}}
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"

@@ -13,7 +13,7 @@ import (
 func TestConvertProtobufToMongo(t *testing.T) {
 	block := &sequencertypes.Block{
 		BlockHeader: &sequencertypes.BlockHeader{
-			EpochNumber:       1,
+			EpochBlockNumber:  1,
 			CurrentCommittee:  utils.RandomHex(32),
 			NextCommittee:     utils.RandomHex(32),
 			ProposerPubKey:    utils.RandomHex(32),
@@ -32,7 +32,7 @@ func TestConvertProtobufToMongo(t *testing.T) {
 	}
 	mBlock, err := ConvertProtobufToMongo(block)
 	require.NoError(t, err)
-	require.Equal(t, block.BlockHeader.EpochNumber, mBlock["block_header"].(primitive.M)["epoch_number"])
+	require.Equal(t, block.BlockHeader.EpochBlockNumber, mBlock["block_header"].(primitive.M)["epoch_block_number"])
 	require.Equal(t, block.BlockHeader.CurrentCommittee, mBlock["block_header"].(primitive.M)["current_committee"])
 	require.Equal(t, block.BlockHeader.ProposerPubKey, mBlock["block_header"].(primitive.M)["proposer_pub_key"])
 	require.Equal(t, block.ChainHeader.BlockHash, mBlock["chain_header"].(primitive.M)["block_hash"])
@@ -46,7 +46,7 @@ func TestConvertProtobufToMongo(t *testing.T) {
 func TestConvertMongoToBlock(t *testing.T) {
 	m := bson.M{
 		"block_header": bson.M{
-			"epoch_number":       int64(1),
+			"epoch_block_number": int64(1),
 			"current_committee":  utils.RandomHex(32),
 			"next_committee":     utils.RandomHex(32),
 			"proposer_pub_key":   utils.RandomHex(32),
@@ -64,7 +64,7 @@ func TestConvertMongoToBlock(t *testing.T) {
 		"agg_signature": utils.RandomHex(96),
 	}
 	block := ConvertMongoToBlock(m)
-	require.Equal(t, m["block_header"].(bson.M)["epoch_number"], int64(block.BlockHeader.EpochNumber))
+	require.Equal(t, m["block_header"].(bson.M)["epoch_block_number"], int64(block.BlockHeader.EpochBlockNumber))
 	require.Equal(t, m["block_header"].(bson.M)["current_committee"], block.BlockHeader.CurrentCommittee)
 	require.Equal(t, m["block_header"].(bson.M)["proposer_pub_key"], block.BlockHeader.ProposerPubKey)
 	require.Equal(t, m["chain_header"].(bson.M)["block_hash"], block.ChainHeader.BlockHash)

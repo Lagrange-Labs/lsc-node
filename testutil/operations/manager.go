@@ -19,10 +19,17 @@ import (
 	"github.com/urfave/cli/v2"
 )
 
-const (
-	stakeAddr   = "0x98f07aB2d35638B79582b250C01444cEce0E517A"
-	slasherAddr = "0x6Bf0fF4eBa00E3668c0241bb1C622CDBFE55bbE0"
+var (
+	stakeAddr = "0x"
 )
+
+func init() {
+	cfg, err := config.Default()
+	if err != nil {
+		panic(err)
+	}
+	stakeAddr = cfg.Governance.StakingSCAddress
+}
 
 // Manager is a struct for test operations.
 type Manager struct {
@@ -76,7 +83,7 @@ func (m *Manager) RegisterOperator(privateKey string) {
 		panic(fmt.Errorf("failed to get signer: %w", err))
 	}
 
-	if err := testutil.RegisterOperator(ethClient, auth, common.HexToAddress(stakeAddr), common.HexToAddress(slasherAddr)); err != nil {
+	if err := testutil.RegisterOperator(ethClient, auth, common.HexToAddress(stakeAddr), common.HexToAddress("0x")); err != nil {
 		panic(fmt.Errorf("failed to register operator: %w", err))
 	}
 }
@@ -96,19 +103,16 @@ func (m *Manager) RunClients() {
 	clientCfg1 := m.cfg.Client
 	clientCfg1.BLSPrivateKey = "0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f654a"
 	clientCfg1.ECDSAPrivateKey = "0x220ecb0a36b61b15a3af292c4520a528395edc51c8d41db30c74382a4af4328d"
-	m.RegisterOperator(clientCfg1.ECDSAPrivateKey)
 	m.RunClient(&clientCfg1)
 	// client2
 	clientCfg2 := m.cfg.Client
 	clientCfg2.BLSPrivateKey = "0x475e7dc95f40ba8e5af29adb745ae3ac5d3404575b0f853c73ed1efa46943fc2"
 	clientCfg2.ECDSAPrivateKey = "0x25f536330df3a72fa381bfb5ea5552b2731523f08580e7a0e2e69618a9643faa"
-	m.RegisterOperator(clientCfg2.ECDSAPrivateKey)
 	m.RunClient(&clientCfg2)
 	// client3
 	clientCfg3 := m.cfg.Client
 	clientCfg3.BLSPrivateKey = "0x59ec5a675fa5a9805d791c58c97a3dcc0bc8def2029bd53aa33dc035f2b81404"
 	clientCfg3.ECDSAPrivateKey = "0xc262364335471942e02e79d760d1f5c5ad7a34463303851cacdd15d72e68b228"
-	m.RegisterOperator(clientCfg3.ECDSAPrivateKey)
 	m.RunClient(&clientCfg3)
 }
 
@@ -124,7 +128,7 @@ func (m *Manager) RunSequencer() {
 		}
 	}()
 
-	gov, err := governance.NewGovernance(&m.cfg.Governance, m.Storage)
+	gov, err := governance.NewGovernance(&m.cfg.Governance, sequencer.GetChainID(), m.Storage)
 	if err != nil {
 		panic(err)
 	}

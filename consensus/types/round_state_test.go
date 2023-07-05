@@ -24,7 +24,7 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey) {
 			TotalVotingPower: 10,
 			CurrentCommittee: utils.RandomHex(32),
 			NextCommittee:    utils.RandomHex(32),
-			EpochNumber:      1,
+			EpochBlockNumber: 1,
 		},
 		ChainHeader: chainHeader,
 	}

@@ -22,6 +22,8 @@ type ClientNode struct {
 	StakeAddress string `json:"stake_address" bson:"stake_address"`
 	// VotingPower is the voting power of the node.
 	VotingPower uint64 `json:"voting_power" bson:"voting_power"`
+	// ChainID is the chain id of the node.
+	ChainID uint32 `json:"chain_id" bson:"chain_id"`
 	// Status is the status of the node.
 	Status NodeStatus `json:"status" bson:"status"`
 }

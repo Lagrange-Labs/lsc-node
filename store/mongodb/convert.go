@@ -69,7 +69,7 @@ func ConvertMongoToBlock(m bson.M) *sequencertypes.Block {
 	if blockHeader, ok := m["block_header"]; ok {
 		mBlockHeader := blockHeader.(bson.M)
 		block.BlockHeader = &sequencertypes.BlockHeader{}
-		block.BlockHeader.EpochNumber = uint64(mBlockHeader["epoch_number"].(int64))
+		block.BlockHeader.EpochBlockNumber = uint64(mBlockHeader["epoch_block_number"].(int64))
 		block.BlockHeader.CurrentCommittee = mBlockHeader["current_committee"].(string)
 		block.BlockHeader.NextCommittee = mBlockHeader["next_committee"].(string)
 		block.BlockHeader.ProposerPubKey = mBlockHeader["proposer_pub_key"].(string)

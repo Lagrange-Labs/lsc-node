@@ -37,6 +37,16 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		logger.Fatalf("failed to parse the proposer private key: %v", err)
 	}
 
+	if err := storage.AddNode(context.Background(),
+		&networktypes.ClientNode{
+			StakeAddress: cfg.OperatorAddress,
+			PublicKey:    utils.BlsPubKeyToHex(privKey.GetPublicKey()),
+			ChainID:      chainID,
+		},
+	); err != nil {
+		logger.Fatalf("failed to add the proposer node: %v", err)
+	}
+
 	chStop := make(chan struct{}, 1)
 
 	return &State{
@@ -53,10 +63,22 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 
 // OnStart loads the first unverified block and starts the round.
 func (s *State) OnStart() {
-	lastBlockNumber, err := s.storage.GetLastFinalizedBlockNumber(context.Background(), s.chainID)
-	if err != nil {
-		logger.Errorf("failed to get the last finalized block number: %v", err)
-		return
+	var (
+		lastBlockNumber uint64
+		err             error
+	)
+
+	for {
+		lastBlockNumber, err = s.storage.GetLastFinalizedBlockNumber(context.Background(), s.chainID)
+		if err != nil {
+			logger.Errorf("failed to get the last finalized block number: %v", err)
+			return
+		}
+		if lastBlockNumber > 0 {
+			break
+		}
+		logger.Infof("the last finalized block number is %v, waiting for the first block", lastBlockNumber)
+		time.Sleep(CheckInterval)
 	}
 
 	for {
@@ -120,19 +142,6 @@ func (s *State) OnStop() {
 
 // startRound loads the next block and initializes the round state.
 func (s *State) startRound(blockNumber uint64) error {
-	nodes, err := s.storage.GetNodesByStatuses(context.Background(), []networktypes.NodeStatus{networktypes.NodeRegistered})
-	if err != nil {
-		return err
-	}
-
-	// TODO how to determince nodes status?
-	if len(nodes) == 0 {
-		return fmt.Errorf("no nodes are registered")
-	}
-
-	pubkey := utils.BlsPubKeyToHex(s.proposer.GetPublicKey())
-	validatorSet := types.NewValidatorSet(&types.Validator{PublicKey: pubkey}, nodes)
-
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.roundLimit))
 	defer cancel()
 	block, err := s.getNextBlock(ctx, blockNumber)
@@ -141,13 +150,34 @@ func (s *State) startRound(blockNumber uint64) error {
 		return fmt.Errorf("getting the block %d is failed: %v", blockNumber, err)
 	}
 
-	// TODO determine the current committee root and the next committee root, epoch number, total voting power
-	block.BlockHeader.CurrentCommittee = utils.RandomHex(32)
-	block.BlockHeader.NextCommittee = utils.RandomHex(32)
-	block.BlockHeader.EpochNumber = 1
-	for _, node := range nodes {
-		block.BlockHeader.TotalVotingPower += node.VotingPower
+	committee, err := s.storage.GetLastCommitteeRoot(context.Background(), s.chainID)
+	if err != nil {
+		return fmt.Errorf("failed to get the last committee root: %v", err)
 	}
+	if committee == nil {
+		return fmt.Errorf("the last committee root is nil")
+	}
+
+	block.BlockHeader.CurrentCommittee = committee.CurrentCommitteeRoot
+	block.BlockHeader.NextCommittee = committee.NextCommitteeRoot
+	block.BlockHeader.EpochBlockNumber = committee.EpochBlockNumber
+	block.BlockHeader.TotalVotingPower = committee.TotalVotingPower
+
+	nodes, err := s.storage.GetNodesByStatuses(context.Background(), []networktypes.NodeStatus{networktypes.NodeRegistered}, s.chainID)
+	if err != nil {
+		return err
+	}
+
+	votingPower := uint64(0)
+	for _, node := range nodes {
+		votingPower += node.VotingPower
+	}
+	if votingPower*3 < committee.TotalVotingPower*2 {
+		return fmt.Errorf("the voting power of the registered nodes is less than 2/3 of the total voting power")
+	}
+
+	pubkey := utils.BlsPubKeyToHex(s.proposer.GetPublicKey())
+	validatorSet := types.NewValidatorSet(&types.Validator{PublicKey: pubkey}, nodes)
 
 	// generate a proposer signature
 	blsSigHash := block.BlsSignature().Hash()

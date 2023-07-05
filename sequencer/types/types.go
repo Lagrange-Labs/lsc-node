@@ -35,6 +35,9 @@ func (b *Block) NextCommittee() string {
 
 // ProposerPubKey returns the proposer public key of the block.
 func (b *Block) ProposerPubKey() string {
+	if b.BlockHeader == nil {
+		return ""
+	}
 	return b.BlockHeader.ProposerPubKey
 }
 
@@ -43,9 +46,9 @@ func (b *Block) ProposerSignature() string {
 	return b.BlockHeader.ProposerSignature
 }
 
-// EpochNumber returns the epoch number of the block.
-func (b *Block) EpochNumber() uint64 {
-	return b.BlockHeader.EpochNumber
+// EpochBlockNumber returns the epoch block number of the block.
+func (b *Block) EpochBlockNumber() uint64 {
+	return b.BlockHeader.EpochBlockNumber
 }
 
 // BlsSignature returns the bls signature of the block.

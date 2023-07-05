@@ -12,6 +12,7 @@ import (
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
+	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -65,6 +66,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 			StakeAddress: req.StakeAddress,
 			PublicKey:    req.PublicKey,
 			IPAddress:    ip,
+			ChainID:      s.chainID,
 		}); err != nil {
 		return nil, err
 	}
@@ -97,9 +99,12 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 	block := s.consensus.GetCurrentBlock()
 	if block == nil || block.BlockNumber() != req.BlockNumber {
 		sBlock, err := s.storage.GetBlock(ctx, s.chainID, req.BlockNumber)
+		if err == storetypes.ErrBlockNotFound {
+			err = nil
+		}
 		currentBlockNumber := uint64(0)
 		if block != nil {
-			currentBlockNumber = s.consensus.GetCurrentBlockNumber()
+			currentBlockNumber = block.BlockNumber()
 		}
 		return &types.GetBlockResponse{
 			Block:              sBlock,
@@ -109,7 +114,7 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 
 	return &types.GetBlockResponse{
 		Block:              block,
-		CurrentBlockNumber: s.consensus.GetCurrentBlockNumber(),
+		CurrentBlockNumber: block.BlockNumber(),
 	}, nil
 }
 
@@ -151,8 +156,8 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 	}
 
 	// check if the epoch number is matched
-	epochNumber := s.consensus.GetCurrentEpochNumber()
-	if epochNumber != req.EpochNumber {
+	epochNumber := s.consensus.GetCurrentEpochBlockNumber()
+	if epochNumber != req.EpochBlockNumber {
 		return &types.CommitBlockResponse{
 			Result:  false,
 			Message: fmt.Sprintf("The epoch number is not matched: %v", epochNumber),

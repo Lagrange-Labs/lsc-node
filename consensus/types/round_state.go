@@ -93,12 +93,12 @@ func (rs *RoundState) GetCurrentBlockNumber() uint64 {
 	return rs.ProposalBlock.BlockNumber()
 }
 
-// GetCurrentEpochNumber returns the current epoch number.
-func (rs *RoundState) GetCurrentEpochNumber() uint64 {
+// GetCurrentEpochBlockNumber returns the current epoch block number.
+func (rs *RoundState) GetCurrentEpochBlockNumber() uint64 {
 	rs.rwMutex.RLock()
 	defer rs.rwMutex.RUnlock()
 
-	return rs.ProposalBlock.EpochNumber()
+	return rs.ProposalBlock.EpochBlockNumber()
 }
 
 // CheckEnoughVotingPower checks if there is enough voting power to finalize the block.
