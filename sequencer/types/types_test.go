@@ -1,7 +1,9 @@
 package types
 
 import (
+	"encoding/binary"
 	"encoding/json"
+	"math/big"
 	"testing"
 
 	"github.com/Lagrange-Labs/lagrange-node/utils"
@@ -16,6 +18,32 @@ type BlsSignatureVector struct {
 	BlsSecKey    string        `json:"bls_sec_key"`
 	BlsPubKey    string        `json:"bls_pub_key"`
 	BlsSigMsg    string        `json:"bls_sig"`
+}
+
+func TestBlsSignatureHash(t *testing.T) {
+	var blockNumberBuf common.Hash
+	chainIDBuf := make([]byte, 4)
+
+	blsSignature := &BlsSignature{
+		ChainHeader: &ChainHeader{
+			BlockHash:   "0x0257554703067ea1fe00f949e542f4a34074f67c457e00a1427d101b823f77fa",
+			BlockNumber: 13202389,
+			ChainId:     4321,
+		},
+		CurrentCommittee: "0x09f582a8133bb26ee103a78a78999466a84455f9a409c46b8599e1aebb95fc8e",
+		NextCommittee:    "0x22355f09a8afa99cd6c98e0169af50e87d9b7ec858abb60542d4d0139d9aa496",
+		TotalVotingPower: 10000000,
+	}
+
+	binary.BigEndian.PutUint32(chainIDBuf, uint32(blsSignature.ChainHeader.ChainId))
+	big.NewInt(int64(blsSignature.ChainHeader.BlockNumber)).FillBytes(blockNumberBuf[:])
+	t.Logf("blockNumberBuf: %s", common.Bytes2Hex(blockNumberBuf[:]))
+	t.Logf("chainIDBuf: %s", common.Bytes2Hex(chainIDBuf))
+	chainHash := utils.Hash(common.FromHex(blsSignature.ChainHeader.BlockHash), blockNumberBuf[:], chainIDBuf)
+	require.Equal(t, common.Bytes2Hex(chainHash), "06c3a68be875459bbc887f758c9d4aab01b7eb997daa25b91c99c9fb1e35f14a")
+
+	blsHash := blsSignature.Hash()
+	require.Equal(t, common.Bytes2Hex(blsHash), "0d367074837d88aa990d6f191486a36c5f13506772b6f8053c255ce663aab99c")
 }
 
 func TestGenerateVector(t *testing.T) {
