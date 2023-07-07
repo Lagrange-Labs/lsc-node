@@ -34,6 +34,5 @@ message BlsSignature {
     ChainHeader chain_header = 1;
     string current_committee = 2;
     string next_committee = 3;
-    uint64 total_voting_power = 4;
-    string signature = 5;
+    string signature = 4;
 }
