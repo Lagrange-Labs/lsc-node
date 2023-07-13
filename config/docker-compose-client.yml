@@ -4,6 +4,7 @@ services:
   {{.ChainName}}_node:
     container_name: {{.ChainName}}-node
     image: lagrangelabs/lagrange-node:develop
+    restart: on-failure
     environment:
       - LAGRANGE_NODE_CHAIN={{.ChainName}}
       - LAGRANGE_NODE_CLIENT_GRPCURL={{.SequencerGRPC}}
