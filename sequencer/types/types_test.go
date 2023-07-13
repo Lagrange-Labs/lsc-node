@@ -32,7 +32,6 @@ func TestBlsSignatureHash(t *testing.T) {
 		},
 		CurrentCommittee: "0x09f582a8133bb26ee103a78a78999466a84455f9a409c46b8599e1aebb95fc8e",
 		NextCommittee:    "0x22355f09a8afa99cd6c98e0169af50e87d9b7ec858abb60542d4d0139d9aa496",
-		TotalVotingPower: 10000000,
 	}
 
 	binary.BigEndian.PutUint32(chainIDBuf, uint32(blsSignature.ChainHeader.ChainId))
@@ -43,7 +42,7 @@ func TestBlsSignatureHash(t *testing.T) {
 	require.Equal(t, common.Bytes2Hex(chainHash), "06c3a68be875459bbc887f758c9d4aab01b7eb997daa25b91c99c9fb1e35f14a")
 
 	blsHash := blsSignature.Hash()
-	require.Equal(t, common.Bytes2Hex(blsHash), "0d367074837d88aa990d6f191486a36c5f13506772b6f8053c255ce663aab99c")
+	require.Equal(t, common.Bytes2Hex(blsHash), "0c6dd657c4fa2048bd8fc9d135207485bab7aad9fff6b70c17a2b787a8bcb52e")
 }
 
 func TestGenerateVector(t *testing.T) {
@@ -62,7 +61,6 @@ func TestGenerateVector(t *testing.T) {
 				},
 				CurrentCommittee: common.Bytes2Hex(utils.PoseidonHash(common.Hex2Bytes(utils.RandomHex(32)))),
 				NextCommittee:    common.Bytes2Hex(utils.PoseidonHash(common.Hex2Bytes(utils.RandomHex(32)))),
-				TotalVotingPower: 1000000,
 			},
 			BlsSecKey: utils.BlsPrivKeyToHex(sec),
 			BlsPubKey: utils.BlsPubKeyToHex(pubkey),
