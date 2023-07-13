@@ -48,13 +48,12 @@ func GetLagrangeServiceEvidence(e *Evidence) lagrange.EvidenceVerifierEvidence {
 
 // GetCommitRequestHash returns the hash of the commit block request.
 func GetCommitRequestHash(req *networktypes.CommitBlockRequest) []byte {
-	var blockNumberBuf, epochNumberBuf, tvpBuf common.Hash
+	var blockNumberBuf, epochNumberBuf common.Hash
 	blockHash := common.FromHex(req.BlsSignature.ChainHeader.BlockHash)[:]
 	currentCommitteeRoot := common.FromHex(req.BlsSignature.CurrentCommittee)[:]
 	nextCommitteeRoot := common.FromHex(req.BlsSignature.NextCommittee)[:]
 	blockNumber := big.NewInt(int64(req.BlsSignature.ChainHeader.BlockNumber)).FillBytes(blockNumberBuf[:])
 	epochNumber := big.NewInt(int64(req.EpochBlockNumber)).FillBytes(epochNumberBuf[:])
-	tvp := big.NewInt(int64(req.BlsSignature.TotalVotingPower)).FillBytes(tvpBuf[:])
 	blockSignature := common.FromHex(req.BlsSignature.Signature)[:]
 	chainID := make([]byte, 4)
 	binary.BigEndian.PutUint32(chainID, req.BlsSignature.ChainHeader.ChainId)
@@ -65,7 +64,6 @@ func GetCommitRequestHash(req *networktypes.CommitBlockRequest) []byte {
 		nextCommitteeRoot,
 		blockNumber,
 		epochNumber,
-		tvp,
 		blockSignature,
 		chainID,
 	)

@@ -4,6 +4,7 @@ services:
   sequencer:
     container_name: {{.ChainName}}-sequencer
     image: lagrangelabs/lagrange-node:develop
+    restart: on-failure
     command:
       - "/bin/sh"
       - "-c"
@@ -22,6 +23,7 @@ services:
   server:
     container_name: {{.ChainName}}-server
     image: lagrangelabs/lagrange-node:develop
+    restart: on-failure
     ports:
       - 9090:9090
     command:
