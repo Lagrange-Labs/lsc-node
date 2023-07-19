@@ -197,10 +197,9 @@ func (s *State) startRound(blockNumber uint64) error {
 func (s *State) getNextBlock(ctx context.Context, blockNumber uint64) (*sequencertypes.Block, error) {
 	block, err := s.storage.GetBlock(ctx, uint32(s.chainID), blockNumber+1)
 	if err == nil || err != storetypes.ErrBlockNotFound {
-		// TODO determine the current committee root and the next committee root
-		block.BlockHeader = &sequencertypes.BlockHeader{}
-		block.BlockHeader.CurrentCommittee = utils.RandomHex(32)
-		block.BlockHeader.NextCommittee = utils.RandomHex(32)
+		if block != nil {
+			block.BlockHeader = &sequencertypes.BlockHeader{}
+		}
 		return block, err
 	}
 	// in case the block is not found, wait for it to be added from the sequencer
@@ -218,10 +217,7 @@ func (s *State) getNextBlock(ctx context.Context, blockNumber uint64) (*sequence
 				}
 				return nil, err
 			}
-			// TODO determine the current committee root and the next committee root
 			block.BlockHeader = &sequencertypes.BlockHeader{}
-			block.BlockHeader.CurrentCommittee = utils.RandomHex(32)
-			block.BlockHeader.NextCommittee = utils.RandomHex(32)
 			return block, nil
 		}
 	}
