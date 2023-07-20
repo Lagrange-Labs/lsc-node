@@ -859,6 +859,11 @@
                 "internalType": "uint256",
                 "name": "chainID",
                 "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "epochNumber",
+                "type": "uint256"
             }
         ],
         "name": "update",

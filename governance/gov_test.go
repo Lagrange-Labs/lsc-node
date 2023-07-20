@@ -19,7 +19,7 @@ import (
 )
 
 const (
-	privateKEy = "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
+	privateKey = "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
 	chainID    = 1337
 )
 
@@ -55,7 +55,7 @@ func createTestGovernance(t *testing.T) (storetypes.Storage, *Governance, *ethcl
 	}
 	client, err := ethclient.Dial(govCfg.EthereumURL)
 	require.NoError(t, err)
-	auth, err := utils.GetSigner(context.Background(), client, privateKEy)
+	auth, err := utils.GetSigner(context.Background(), client, privateKey)
 	require.NoError(t, err)
 	gov, err := NewGovernance(&govCfg, chainID, storage)
 	require.NoError(t, err)
