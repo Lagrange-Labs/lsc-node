@@ -81,8 +81,6 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 
 // GetBlock is a method to get the last block with a proof.
 func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequest) (*types.GetBlockResponse, error) {
-	logger.Infof("GetBlock request: %v\n", req)
-
 	// verify the registered node
 	ip, err := getIPAddress(ctx)
 	if err != nil {
@@ -120,8 +118,6 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 
 // CommitBlock is a method to commit a block.
 func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlockRequest) (*types.CommitBlockResponse, error) {
-	logger.Infof("CommitBlock request: %v\n", req)
-
 	// verify the peer signature
 	signature := req.Signature
 	reqHash := contypes.GetCommitRequestHash(req)

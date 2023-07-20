@@ -1,7 +1,6 @@
 package types
 
 import (
-	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 )
 
@@ -29,7 +28,6 @@ func NewValidatorSet(proposer *Validator, nodes []networktypes.ClientNode) *Vali
 			PublicKey:   node.PublicKey,
 			VotingPower: node.VotingPower,
 		}
-		logger.Infof("validator: %s, voting power: %d", node.PublicKey, node.VotingPower)
 		votingPowerMap[node.PublicKey] = node.VotingPower
 	}
 

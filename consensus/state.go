@@ -157,6 +157,9 @@ func (s *State) startRound(blockNumber uint64) error {
 	if committee == nil {
 		return fmt.Errorf("the last committee root is nil")
 	}
+	if committee.TotalVotingPower == 0 {
+		return fmt.Errorf("the total voting power of the last committee is 0")
+	}
 
 	block.BlockHeader.CurrentCommittee = committee.CurrentCommitteeRoot
 	block.BlockHeader.NextCommittee = committee.NextCommitteeRoot
@@ -197,10 +200,9 @@ func (s *State) startRound(blockNumber uint64) error {
 func (s *State) getNextBlock(ctx context.Context, blockNumber uint64) (*sequencertypes.Block, error) {
 	block, err := s.storage.GetBlock(ctx, uint32(s.chainID), blockNumber+1)
 	if err == nil || err != storetypes.ErrBlockNotFound {
-		// TODO determine the current committee root and the next committee root
-		block.BlockHeader = &sequencertypes.BlockHeader{}
-		block.BlockHeader.CurrentCommittee = utils.RandomHex(32)
-		block.BlockHeader.NextCommittee = utils.RandomHex(32)
+		if block != nil {
+			block.BlockHeader = &sequencertypes.BlockHeader{}
+		}
 		return block, err
 	}
 	// in case the block is not found, wait for it to be added from the sequencer
@@ -218,10 +220,7 @@ func (s *State) getNextBlock(ctx context.Context, blockNumber uint64) (*sequence
 				}
 				return nil, err
 			}
-			// TODO determine the current committee root and the next committee root
 			block.BlockHeader = &sequencertypes.BlockHeader{}
-			block.BlockHeader.CurrentCommittee = utils.RandomHex(32)
-			block.BlockHeader.NextCommittee = utils.RandomHex(32)
 			return block, nil
 		}
 	}
@@ -268,7 +267,6 @@ func (s *State) processRound(ctx context.Context) (bool, error) {
 		case <-ctx.Done():
 			return false, ctx.Err()
 		case <-timer.C:
-			logger.Infof("check the commit after the round interval")
 			isAfterRoundInterval = true
 			isFinalized, err := checkCommit()
 			if err != nil || isFinalized {
