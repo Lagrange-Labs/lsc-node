@@ -198,12 +198,11 @@ func (c *Client) TryGetBlock() (*sequencertypes.Block, error) {
 		return res.Block, ErrBlockNotReady
 	}
 
-	logger.Infof("get the current block: %v\n", res.Block)
 	if res.CurrentBlockNumber != c.lastBlockNumber {
 		c.lastBlockNumber = res.CurrentBlockNumber
 		return nil, fmt.Errorf("the current block number %d is not equal to the last block number %d", res.CurrentBlockNumber, c.lastBlockNumber)
 	}
-	
+
 	// verify the proposer signature
 	if len(res.Block.ProposerPubKey()) == 0 {
 		return nil, fmt.Errorf("the block %d proposer key is empty", res.Block.BlockNumber())

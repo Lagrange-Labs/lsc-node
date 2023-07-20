@@ -157,6 +157,9 @@ func (s *State) startRound(blockNumber uint64) error {
 	if committee == nil {
 		return fmt.Errorf("the last committee root is nil")
 	}
+	if committee.TotalVotingPower == 0 {
+		return fmt.Errorf("the total voting power of the last committee is 0")
+	}
 
 	block.BlockHeader.CurrentCommittee = committee.CurrentCommitteeRoot
 	block.BlockHeader.NextCommittee = committee.NextCommitteeRoot
@@ -264,7 +267,6 @@ func (s *State) processRound(ctx context.Context) (bool, error) {
 		case <-ctx.Done():
 			return false, ctx.Err()
 		case <-timer.C:
-			logger.Infof("check the commit after the round interval")
 			isAfterRoundInterval = true
 			isFinalized, err := checkCommit()
 			if err != nil || isFinalized {
