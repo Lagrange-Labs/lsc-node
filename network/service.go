@@ -94,31 +94,53 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 		logger.Warnf("The IP address is not matched: %v, %v\n", node.IPAddress, ip)
 	}
 
-	block := s.consensus.GetCurrentBlock()
-	if block == nil || block.BlockNumber() != req.BlockNumber {
-		sBlock, err := s.storage.GetBlock(ctx, s.chainID, req.BlockNumber)
-		if err == storetypes.ErrBlockNotFound {
-			err = nil
-		}
-		currentBlockNumber := uint64(0)
-		if block != nil {
-			currentBlockNumber = block.BlockNumber()
-		}
-		return &types.GetBlockResponse{
-			Block:              sBlock,
-			CurrentBlockNumber: currentBlockNumber,
-		}, err
+	sBlock, err := s.storage.GetBlock(ctx, s.chainID, req.BlockNumber)
+	if err == storetypes.ErrBlockNotFound {
+		err = nil
 	}
 
 	return &types.GetBlockResponse{
-		Block:              block,
-		CurrentBlockNumber: block.BlockNumber(),
-	}, nil
+		Block: sBlock,
+	}, err
+}
+
+// GetCurrentBlock is a method to get the current proposed block.
+func (s *sequencerService) GetCurrentBlock(req *types.GetBlockRequest, stream types.NetworkService_GetCurrentBlockServer) error {
+	// verify the registered node
+	ip, err := getIPAddress(stream.Context())
+	if err != nil {
+		return err
+	}
+	node, err := s.storage.GetNodeByStakeAddr(context.Background(), req.StakeAddress)
+	if err != nil {
+		return err
+	}
+	if node.IPAddress != ip {
+		logger.Warnf("The IP address is not matched: %v, %v\n", node.IPAddress, ip)
+	}
+	if node.Status != types.NodeRegistered {
+		return fmt.Errorf("node is not registered: %v", node)
+	}
+
+	block := s.consensus.GetCurrentBlock()
+	if block != nil && req.BlockNumber <= block.BlockNumber() {
+		return stream.Send(&types.GetBlockResponse{Block: block})
+	}
+
+	for {
+		select {
+		case <-stream.Context().Done():
+			return stream.Context().Err()
+		case block := <-s.consensus.GetNextBlock():
+			return stream.Send(&types.GetBlockResponse{Block: block})
+		}
+	}
 }
 
 // CommitBlock is a method to commit a block.
 func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlockRequest) (*types.CommitBlockResponse, error) {
 	// verify the peer signature
+	logger.Infof("CommitBlock request: %v\n", req)
 	signature := req.Signature
 	reqHash := contypes.GetCommitRequestHash(req)
 	isVerified, addr, err := utils.VerifyECDSASignature(reqHash, common.FromHex(signature))
@@ -140,6 +162,9 @@ func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlo
 	}
 	if node.IPAddress != ip {
 		logger.Warnf("The IP address is not matched: %v, %v\n", node.IPAddress, ip)
+	}
+	if node.Status != types.NodeRegistered {
+		return nil, fmt.Errorf("the node is not registered: %v", node)
 	}
 
 	// check if the block number is matched

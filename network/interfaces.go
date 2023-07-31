@@ -17,6 +17,7 @@ type storageInterface interface {
 }
 
 type consensusInterface interface {
+	GetNextBlock() <-chan *sequencertypes.Block
 	GetCurrentBlock() *sequencertypes.Block
 	GetCurrentBlockNumber() uint64
 	GetCurrentEpochBlockNumber() uint64

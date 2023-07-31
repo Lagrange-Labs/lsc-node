@@ -26,6 +26,7 @@ type State struct {
 	roundInterval time.Duration
 	chainID       uint32
 
+	chBlocks []chan *sequencertypes.Block
 	chCommit <-chan *networktypes.CommitBlockRequest
 	chStop   chan struct{}
 }
@@ -48,6 +49,7 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 	}
 
 	chStop := make(chan struct{}, 1)
+	chBlocks := make([]chan *sequencertypes.Block, 0)
 
 	return &State{
 		proposer:      privKey,
@@ -57,6 +59,7 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		chCommit:      make(<-chan *networktypes.CommitBlockRequest, 1000),
 		chainID:       chainID,
 		chStop:        chStop,
+		chBlocks:      chBlocks,
 		RoundState:    types.NewEmptyRoundState(),
 	}
 }
@@ -99,6 +102,14 @@ func (s *State) OnStart() {
 		logger.Infof("the proposal block %v is ready", s.ProposalBlock)
 		logger.Infof("the validator set %v is set", s.Validators)
 
+		// broadcast the proposal block
+		for _, chBlock := range s.chBlocks {
+			chBlock <- s.ProposalBlock
+			close(chBlock)
+		}
+		s.chBlocks = make([]chan *sequencertypes.Block, 0)
+
+		// process the round
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.roundLimit))
 		defer cancel()
 		isVoted, err := s.processRound(ctx)
@@ -108,6 +119,7 @@ func (s *State) OnStart() {
 		}
 		if !isVoted {
 			logger.Errorf("the current block %d is not finalized", s.ProposalBlock.BlockNumber())
+			continue
 		}
 
 		// store the evidences
@@ -122,6 +134,7 @@ func (s *State) OnStart() {
 				continue
 			}
 		}
+
 		// store the finalized block
 		if err := s.storage.UpdateBlock(context.Background(), s.ProposalBlock); err != nil {
 			logger.Errorf("failed to update the block %v: %v", s.ProposalBlock, err)
@@ -138,6 +151,13 @@ func (s *State) OnStart() {
 func (s *State) OnStop() {
 	logger.Infof("OnStop() called")
 	s.chStop <- struct{}{}
+}
+
+// GetNextBlock returns the channel to receive the next block.
+func (s *State) GetNextBlock() <-chan *sequencertypes.Block {
+	chBlock := make(chan *sequencertypes.Block)
+	s.chBlocks = append(s.chBlocks, chBlock)
+	return chBlock
 }
 
 // startRound loads the next block and initializes the round state.

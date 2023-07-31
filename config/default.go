@@ -13,7 +13,7 @@ EthereumURL = "http://127.0.0.1:8545"
 CommitteeSCAddress = "0xC1dCca9f209BD61a154e85980dcaff3203e27c69"
 BLSPrivateKey = "0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f654a"
 ECDSAPrivateKey = "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
-PullInterval = "2s"
+PullInterval = "100ms"
 
 [Store]
 BackendType = "mongodb"
@@ -35,6 +35,6 @@ EvidenceUploadInterval = "2s"
 [Consensus]
 OperatorAddress = "0x6E654b122377EA7f592bf3FD5bcdE9e8c1B1cEb9"
 ProposerPrivateKey = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-RoundInterval = "5s"
-RoundLimit = "30s"
+RoundInterval = "200ms"
+RoundLimit = "10s"
 `

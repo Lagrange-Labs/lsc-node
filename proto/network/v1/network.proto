@@ -12,6 +12,8 @@ service NetworkService {
     rpc JoinNetwork(JoinNetworkRequest) returns (JoinNetworkResponse);
     // GetBlock is the rpc endpoint for getting the given block at the client node
     rpc GetBlock(GetBlockRequest) returns (GetBlockResponse);
+    // GetCurrentBlock is the rpc streaming endpoint for getting the current proposal block
+    rpc GetCurrentBlock(GetBlockRequest) returns (stream GetBlockResponse);
     // CommitBlock is the rpc endpoint for committing the given block with signature at the client node
     rpc CommitBlock(CommitBlockRequest) returns (CommitBlockResponse);
 }
@@ -32,14 +34,12 @@ message JoinNetworkResponse {
 // GetBlockRequest is the request to get the given block 
 message GetBlockRequest {
     uint64 block_number = 1;
-    uint32 chain_id = 2;
-    string stake_address = 3;
+    string stake_address = 2;
 }
 
 // GetBlockResponse is the response for getting the given block
 message GetBlockResponse {
     sequencer.v1.Block block = 1;
-    uint64 current_block_number = 2;
 }
 
 // CommitBlockRequest is the request to commit the signature

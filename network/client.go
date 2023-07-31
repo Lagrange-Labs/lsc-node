@@ -145,8 +145,8 @@ func (c *Client) Start() {
 		select {
 		case <-c.ctx.Done():
 			return
-		case <-time.After(c.pullInterval):
-			block, err := c.TryGetBlock()
+		default:
+			block, err := c.TryGetCurrentBlock()
 			if err != nil {
 				logger.Errorf("failed to get the current block: %v\n", err)
 				continue
@@ -159,6 +159,7 @@ func (c *Client) Start() {
 
 			c.lastBlockNumber += 1
 			logger.Info("uploaded the signature")
+			time.Sleep(c.pullInterval)
 		}
 	}
 }
@@ -178,7 +179,7 @@ func (c *Client) TryJoinNetwork() error {
 		return err
 	}
 	req.Signature = utils.BlsSignatureToHex(sig)
-	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
+	res, err := c.JoinNetwork(c.ctx, req)
 	if err != nil {
 		return err
 	}
@@ -188,20 +189,19 @@ func (c *Client) TryJoinNetwork() error {
 	return nil
 }
 
-// TryGetBlock tries to get the block from the network.
-func (c *Client) TryGetBlock() (*sequencertypes.Block, error) {
-	res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber, ChainId: c.chainID, StakeAddress: c.stakeAddress})
+// TryGetCurrentBlock tries to get the block from the network.
+func (c *Client) TryGetCurrentBlock() (*sequencertypes.Block, error) {
+	stream, err := c.GetCurrentBlock(c.ctx, &types.GetBlockRequest{BlockNumber: c.lastBlockNumber, StakeAddress: c.stakeAddress})
 	if err != nil {
-		return nil, err
-	}
-	if res.CurrentBlockNumber == 0 {
-		return res.Block, ErrBlockNotReady
+		return nil, fmt.Errorf("failed to get the stream: %v", err)
 	}
 
-	if res.CurrentBlockNumber != c.lastBlockNumber {
-		c.lastBlockNumber = res.CurrentBlockNumber
-		return nil, fmt.Errorf("the current block number %d is not equal to the last block number %d", res.CurrentBlockNumber, c.lastBlockNumber)
+	// receive the notification from the server via the stream
+	res, err := stream.Recv()
+	if err != nil {
+		return nil, fmt.Errorf("failed to receive the block: %v", err)
 	}
+	c.lastBlockNumber = res.Block.BlockNumber()
 
 	// verify the proposer signature
 	if len(res.Block.ProposerPubKey()) == 0 {

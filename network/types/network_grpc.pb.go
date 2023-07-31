@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	NetworkService_JoinNetwork_FullMethodName = "/network.v1.NetworkService/JoinNetwork"
-	NetworkService_GetBlock_FullMethodName    = "/network.v1.NetworkService/GetBlock"
-	NetworkService_CommitBlock_FullMethodName = "/network.v1.NetworkService/CommitBlock"
+	NetworkService_JoinNetwork_FullMethodName     = "/network.v1.NetworkService/JoinNetwork"
+	NetworkService_GetBlock_FullMethodName        = "/network.v1.NetworkService/GetBlock"
+	NetworkService_GetCurrentBlock_FullMethodName = "/network.v1.NetworkService/GetCurrentBlock"
+	NetworkService_CommitBlock_FullMethodName     = "/network.v1.NetworkService/CommitBlock"
 )
 
 // NetworkServiceClient is the client API for NetworkService service.
@@ -32,6 +33,8 @@ type NetworkServiceClient interface {
 	JoinNetwork(ctx context.Context, in *JoinNetworkRequest, opts ...grpc.CallOption) (*JoinNetworkResponse, error)
 	// GetBlock is the rpc endpoint for getting the given block at the client node
 	GetBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (*GetBlockResponse, error)
+	// GetCurrentBlock is the rpc streaming endpoint for getting the current proposal block
+	GetCurrentBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (NetworkService_GetCurrentBlockClient, error)
 	// CommitBlock is the rpc endpoint for committing the given block with signature at the client node
 	CommitBlock(ctx context.Context, in *CommitBlockRequest, opts ...grpc.CallOption) (*CommitBlockResponse, error)
 }
@@ -62,6 +65,38 @@ func (c *networkServiceClient) GetBlock(ctx context.Context, in *GetBlockRequest
 	return out, nil
 }
 
+func (c *networkServiceClient) GetCurrentBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (NetworkService_GetCurrentBlockClient, error) {
+	stream, err := c.cc.NewStream(ctx, &NetworkService_ServiceDesc.Streams[0], NetworkService_GetCurrentBlock_FullMethodName, opts...)
+	if err != nil {
+		return nil, err
+	}
+	x := &networkServiceGetCurrentBlockClient{stream}
+	if err := x.ClientStream.SendMsg(in); err != nil {
+		return nil, err
+	}
+	if err := x.ClientStream.CloseSend(); err != nil {
+		return nil, err
+	}
+	return x, nil
+}
+
+type NetworkService_GetCurrentBlockClient interface {
+	Recv() (*GetBlockResponse, error)
+	grpc.ClientStream
+}
+
+type networkServiceGetCurrentBlockClient struct {
+	grpc.ClientStream
+}
+
+func (x *networkServiceGetCurrentBlockClient) Recv() (*GetBlockResponse, error) {
+	m := new(GetBlockResponse)
+	if err := x.ClientStream.RecvMsg(m); err != nil {
+		return nil, err
+	}
+	return m, nil
+}
+
 func (c *networkServiceClient) CommitBlock(ctx context.Context, in *CommitBlockRequest, opts ...grpc.CallOption) (*CommitBlockResponse, error) {
 	out := new(CommitBlockResponse)
 	err := c.cc.Invoke(ctx, NetworkService_CommitBlock_FullMethodName, in, out, opts...)
@@ -79,6 +114,8 @@ type NetworkServiceServer interface {
 	JoinNetwork(context.Context, *JoinNetworkRequest) (*JoinNetworkResponse, error)
 	// GetBlock is the rpc endpoint for getting the given block at the client node
 	GetBlock(context.Context, *GetBlockRequest) (*GetBlockResponse, error)
+	// GetCurrentBlock is the rpc streaming endpoint for getting the current proposal block
+	GetCurrentBlock(*GetBlockRequest, NetworkService_GetCurrentBlockServer) error
 	// CommitBlock is the rpc endpoint for committing the given block with signature at the client node
 	CommitBlock(context.Context, *CommitBlockRequest) (*CommitBlockResponse, error)
 	mustEmbedUnimplementedNetworkServiceServer()
@@ -93,6 +130,9 @@ func (UnimplementedNetworkServiceServer) JoinNetwork(context.Context, *JoinNetwo
 }
 func (UnimplementedNetworkServiceServer) GetBlock(context.Context, *GetBlockRequest) (*GetBlockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method GetBlock not implemented")
+}
+func (UnimplementedNetworkServiceServer) GetCurrentBlock(*GetBlockRequest, NetworkService_GetCurrentBlockServer) error {
+	return status.Errorf(codes.Unimplemented, "method GetCurrentBlock not implemented")
 }
 func (UnimplementedNetworkServiceServer) CommitBlock(context.Context, *CommitBlockRequest) (*CommitBlockResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method CommitBlock not implemented")
@@ -146,6 +186,27 @@ func _NetworkService_GetBlock_Handler(srv interface{}, ctx context.Context, dec 
 	return interceptor(ctx, in, info, handler)
 }
 
+func _NetworkService_GetCurrentBlock_Handler(srv interface{}, stream grpc.ServerStream) error {
+	m := new(GetBlockRequest)
+	if err := stream.RecvMsg(m); err != nil {
+		return err
+	}
+	return srv.(NetworkServiceServer).GetCurrentBlock(m, &networkServiceGetCurrentBlockServer{stream})
+}
+
+type NetworkService_GetCurrentBlockServer interface {
+	Send(*GetBlockResponse) error
+	grpc.ServerStream
+}
+
+type networkServiceGetCurrentBlockServer struct {
+	grpc.ServerStream
+}
+
+func (x *networkServiceGetCurrentBlockServer) Send(m *GetBlockResponse) error {
+	return x.ServerStream.SendMsg(m)
+}
+
 func _NetworkService_CommitBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
 	in := new(CommitBlockRequest)
 	if err := dec(in); err != nil {
@@ -184,6 +245,12 @@ var NetworkService_ServiceDesc = grpc.ServiceDesc{
 			Handler:    _NetworkService_CommitBlock_Handler,
 		},
 	},
-	Streams:  []grpc.StreamDesc{},
+	Streams: []grpc.StreamDesc{
+		{
+			StreamName:    "GetCurrentBlock",
+			Handler:       _NetworkService_GetCurrentBlock_Handler,
+			ServerStreams: true,
+		},
+	},
 	Metadata: "network/v1/network.proto",
 }
