@@ -35,6 +35,7 @@ EvidenceUploadInterval = "2s"
 [Consensus]
 OperatorAddress = "0x6E654b122377EA7f592bf3FD5bcdE9e8c1B1cEb9"
 ProposerPrivateKey = "0x0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
-RoundInterval = "5s"
+BatchSize = 10
+RoundInterval = "1s"
 RoundLimit = "30s"
 `

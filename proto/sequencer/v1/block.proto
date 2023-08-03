@@ -34,5 +34,7 @@ message BlsSignature {
     ChainHeader chain_header = 1;
     string current_committee = 2;
     string next_committee = 3;
-    string signature = 4;
+    string bls_signature = 4;
+    uint64 epoch_block_number = 5;
+    string ecdsa_signature = 6;
 }

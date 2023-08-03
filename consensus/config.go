@@ -6,6 +6,8 @@ import "github.com/Lagrange-Labs/lagrange-node/utils"
 type Config struct {
 	// OperatorAddress is the address of the operator.
 	OperatorAddress string `mapstructure:"OperatorAddress"`
+	// BatchSize is the number of blocks in a batch.
+	BatchSize uint32 `mapstructure:"BatchSize"`
 	// ProposerPrivateKey is the private key of the proposer node.
 	ProposerPrivateKey string `mapstructure:"ProposerPrivateKey"`
 	// RoundLimit is the maximum time to wait for the block finalization.

@@ -12,14 +12,14 @@ type Validator struct {
 
 // ValidatorSet defines a set of validators.
 type ValidatorSet struct {
-	Validators []*Validator
-	Proposer   *Validator
+	validators []*Validator
 
-	votingPowerMap map[string]uint64
+	votingPowerMap   map[string]uint64
+	totalVotingPower uint64
 }
 
 // NewValidatorSet creates a new validator set.
-func NewValidatorSet(proposer *Validator, nodes []networktypes.ClientNode) *ValidatorSet {
+func NewValidatorSet(nodes []networktypes.ClientNode) *ValidatorSet {
 	validators := make([]*Validator, len(nodes))
 	votingPowerMap := make(map[string]uint64)
 
@@ -32,8 +32,7 @@ func NewValidatorSet(proposer *Validator, nodes []networktypes.ClientNode) *Vali
 	}
 
 	return &ValidatorSet{
-		Validators:     validators,
-		Proposer:       proposer,
+		validators:     validators,
 		votingPowerMap: votingPowerMap,
 	}
 }
@@ -41,4 +40,9 @@ func NewValidatorSet(proposer *Validator, nodes []networktypes.ClientNode) *Vali
 // GetVotingPower returns the voting power of a validator.
 func (vs *ValidatorSet) GetVotingPower(pubKey string) uint64 {
 	return vs.votingPowerMap[pubKey]
+}
+
+// GetTotalVotingPower returns the total voting power.
+func (vs *ValidatorSet) GetTotalVotingPower() uint64 {
+	return vs.totalVotingPower
 }

@@ -141,6 +141,11 @@ func (g *Governance) updateNodeStatuses() error {
 			continue
 		}
 
+		if node.PublicKey != common.Bytes2Hex(sNode.BlsPubKey) {
+			logger.Errorf("node %s has different public key", node.StakeAddress)
+			continue
+		}
+
 		if sNode.Slashed {
 			node.Status = networktypes.NodeSlashed
 			if err := g.storage.UpdateNode(g.ctx, &node); err != nil {

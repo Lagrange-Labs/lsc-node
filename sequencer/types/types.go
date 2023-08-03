@@ -15,7 +15,7 @@ func (b *Block) BlockHash() string {
 
 // BlockNumber returns the block number of the chain header.
 func (b *Block) BlockNumber() uint64 {
-	return b.ChainHeader.BlockNumber
+	return b.BlockNumber()
 }
 
 // TotalVotingPower returns the total voting power of the block.
@@ -66,7 +66,7 @@ func (b *BlsSignature) Hash() []byte {
 	blockHash := common.FromHex(b.ChainHeader.BlockHash)[:]
 	currentCommitteeRoot := common.FromHex(b.CurrentCommittee)[:]
 	nextCommitteeRoot := common.FromHex(b.NextCommittee)[:]
-	blockNumber := big.NewInt(int64(b.ChainHeader.BlockNumber)).FillBytes(blockNumberBuf[:])
+	blockNumber := big.NewInt(int64(b.BlockNumber())).FillBytes(blockNumberBuf[:])
 	chainID := make([]byte, 4)
 	binary.BigEndian.PutUint32(chainID, b.ChainHeader.ChainId)
 	chainHash := utils.Hash(blockHash, blockNumber, chainID)
@@ -76,7 +76,7 @@ func (b *BlsSignature) Hash() []byte {
 
 // BlockNumber returns the block number of the bls signature.
 func (b *BlsSignature) BlockNumber() uint64 {
-	return b.ChainHeader.BlockNumber
+	return b.BlockNumber()
 }
 
 // Clone returns a clone of the bls signature.
