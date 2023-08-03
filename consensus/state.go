@@ -220,6 +220,9 @@ func (s *State) IsFinalized(blockNumber uint64) bool {
 
 // startRound loads the next block batch and initializes the round state.
 func (s *State) startRound(blockNumber uint64) error {
+	s.rwMutex.Lock()
+	defer s.rwMutex.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.roundLimit))
 	defer cancel()
 	blocks, err := s.getNextBlocks(ctx, blockNumber)
@@ -243,9 +246,11 @@ func (s *State) startRound(blockNumber uint64) error {
 		return err
 	}
 
-	s.validators = types.NewValidatorSet(nodes)
+	logger.Infof("the registered nodes are loaded: %v", nodes)
+
+	s.validators = types.NewValidatorSet(nodes, committee.TotalVotingPower)
 	if s.validators.GetTotalVotingPower()*3 < committee.TotalVotingPower*2 {
-		return fmt.Errorf("the voting power of the registered nodes is less than 2/3 of the total voting power")
+		return fmt.Errorf("the voting power of the registered nodes voting power %d is less than 2/3 of the total voting power %d", s.validators.GetTotalVotingPower(), committee.TotalVotingPower)
 	}
 
 	pubKey := utils.BlsPubKeyToHex(s.proposer.GetPublicKey())

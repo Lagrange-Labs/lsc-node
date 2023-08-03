@@ -130,10 +130,8 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 		lastBlockNumber = signature.BlockNumber()
 		go func(signature *sequencertypes.BlsSignature) {
 			// verify the peer signature
-			ecdsaSignature := signature.EcdsaSignature
-			signature.EcdsaSignature = ""
 			reqHash := contypes.GetCommitRequestHash(signature)
-			isVerified, addr, err := utils.VerifyECDSASignature(reqHash, common.FromHex(ecdsaSignature))
+			isVerified, addr, err := utils.VerifyECDSASignature(reqHash, common.FromHex(signature.EcdsaSignature))
 			if err != nil || !isVerified {
 				chError <- fmt.Errorf("failed to verify the ECDSA signature: %v, %v\n", err, isVerified)
 				return

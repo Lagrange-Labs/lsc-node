@@ -113,7 +113,7 @@ func (rs *RoundState) CheckEnoughVotingPower(vs *ValidatorSet) bool {
 	}
 
 	totalVotingPower := vs.GetTotalVotingPower()
-	logger.Infof("voting power: %v, total voting power: %v", votingPower, totalVotingPower)
+	logger.Infof("committed voting power: %v, committee voting power: %v", votingPower, totalVotingPower)
 	return votingPower*3 > totalVotingPower*2
 }
 

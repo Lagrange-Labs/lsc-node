@@ -15,7 +15,7 @@ func (b *Block) BlockHash() string {
 
 // BlockNumber returns the block number of the chain header.
 func (b *Block) BlockNumber() uint64 {
-	return b.BlockNumber()
+	return b.ChainHeader.BlockNumber
 }
 
 // TotalVotingPower returns the total voting power of the block.
@@ -76,7 +76,7 @@ func (b *BlsSignature) Hash() []byte {
 
 // BlockNumber returns the block number of the bls signature.
 func (b *BlsSignature) BlockNumber() uint64 {
-	return b.BlockNumber()
+	return b.ChainHeader.BlockNumber
 }
 
 // Clone returns a clone of the bls signature.
