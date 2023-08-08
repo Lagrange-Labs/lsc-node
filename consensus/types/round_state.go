@@ -38,6 +38,9 @@ func (rs *RoundState) UpdateRoundState(proposalBlock *sequencertypes.Block) {
 
 	rs.proposalBlock = proposalBlock
 	rs.commitSignatures = make(map[string]*sequencertypes.BlsSignature)
+	blsSignature := proposalBlock.BlsSignature()
+	blsSignature.BlsSignature = proposalBlock.ProposerSignature()
+	rs.commitSignatures[proposalBlock.ProposerPubKey()] = blsSignature
 	rs.isBlocked = false
 }
 
@@ -112,9 +115,8 @@ func (rs *RoundState) CheckEnoughVotingPower(vs *ValidatorSet) bool {
 		votingPower += vs.GetVotingPower(pubKey)
 	}
 
-	totalVotingPower := vs.GetTotalVotingPower()
-	logger.Infof("voting power: %v, committee voting power: %v", votingPower, totalVotingPower)
-	return votingPower*3 > totalVotingPower*2
+	logger.Infof("committed voting power: %v, validator set voting power: %v", votingPower, vs.GetTotalVotingPower())
+	return votingPower*3 > vs.GetCommitteeVotingPower()*2
 }
 
 // CheckAggregatedSignature checks if the aggregated signature is valid.

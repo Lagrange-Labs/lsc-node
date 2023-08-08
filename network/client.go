@@ -290,6 +290,7 @@ func (c *Client) TryCommitBlocks(blocks []*sequencertypes.Block) error {
 
 	wg.Wait()
 	close(chError)
+	close(sigs)
 	for err := range chError {
 		logger.Errorf("failed to sign the block: %v", err)
 		return err
@@ -303,6 +304,7 @@ func (c *Client) TryCommitBlocks(blocks []*sequencertypes.Block) error {
 
 	req := &types.CommitBatchRequest{
 		BlsSignatures: blsSignatures,
+		StakeAddress:  c.stakeAddress,
 	}
 	stream, err := c.CommitBatch(c.ctx, req)
 	if err != nil {
@@ -311,7 +313,7 @@ func (c *Client) TryCommitBlocks(blocks []*sequencertypes.Block) error {
 
 	res, err := stream.Recv()
 	if err != nil {
-		return fmt.Errorf("failed to get the response from ther stream: %v", err)
+		return fmt.Errorf("failed to get the response from the stream: %v", err)
 	}
 	if !res.Result {
 		return fmt.Errorf("the current batch is not finalized yet")

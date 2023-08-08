@@ -3,6 +3,7 @@ package consensus
 import (
 	"context"
 	"fmt"
+	"sort"
 	"sync"
 	"time"
 
@@ -135,6 +136,7 @@ func (s *State) OnStart() {
 
 		// store the finalized block
 		failedRounds := make(map[uint64]*types.RoundState)
+		lastBlockNumber := uint64(0)
 		for blockNumber, round := range s.rounds {
 			if !round.IsFinalized() {
 				logger.Errorf("the block %d is not finalized", round.GetCurrentBlockNumber())
@@ -145,13 +147,14 @@ func (s *State) OnStart() {
 				logger.Errorf("failed to update the block %d: %v", round.GetCurrentBlockNumber(), err)
 				continue
 			}
-
-			logger.Infof("the block %d is finalized", round.GetCurrentBlockNumber())
+			if lastBlockNumber < blockNumber {
+				lastBlockNumber = blockNumber
+			}
+			logger.Infof("the block %d is finalized", blockNumber)
 		}
 
 		// update the last block number
 		s.rwMutex.Lock()
-		s.lastBlockNumber += uint64(len(s.rounds))
 		s.rounds = failedRounds
 		s.rwMutex.Unlock()
 
@@ -168,6 +171,10 @@ func (s *State) OnStart() {
 				logger.Infof("the block %d is finalized", round.GetCurrentBlockNumber())
 			}
 		}
+
+		s.rwMutex.Lock()
+		s.lastBlockNumber = lastBlockNumber + 1
+		s.rwMutex.Unlock()
 	}
 }
 
@@ -206,6 +213,11 @@ func (s *State) GetOpenRoundBlocks(blockNumber uint64) []*sequencertypes.Block {
 			blocks = append(blocks, round.GetCurrentBlock())
 		}
 	}
+
+	// sort the blocks by the block number
+	sort.Slice(blocks, func(i, j int) bool {
+		return blocks[i].BlockNumber() < blocks[j].BlockNumber()
+	})
 
 	return blocks
 }

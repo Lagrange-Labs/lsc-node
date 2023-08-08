@@ -105,6 +105,7 @@ func (s *sequencerService) GetBatch(ctx context.Context, req *types.GetBatchRequ
 
 // CommitBatch is a method to commit the proposed batch.
 func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream types.NetworkService_CommitBatchServer) error {
+	logger.Infof("CommitBatch request from %v\n", req.StakeAddress)
 	// verify the registered node
 	ip, err := getIPAddress(stream.Context())
 	if err != nil {
@@ -127,8 +128,11 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 	lastBlockNumber := uint64(0)
 
 	for _, signature := range req.BlsSignatures {
-		lastBlockNumber = signature.BlockNumber()
+		if signature.BlockNumber() > lastBlockNumber {
+			lastBlockNumber = signature.BlockNumber()
+		}
 		go func(signature *sequencertypes.BlsSignature) {
+			defer wg.Done()
 			// verify the peer signature
 			reqHash := contypes.GetCommitRequestHash(signature)
 			isVerified, addr, err := utils.VerifyECDSASignature(reqHash, common.FromHex(signature.EcdsaSignature))
