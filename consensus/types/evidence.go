@@ -4,8 +4,8 @@ import (
 	"encoding/binary"
 	"math/big"
 
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/lagrange"
+	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -47,16 +47,16 @@ func GetLagrangeServiceEvidence(e *Evidence) lagrange.EvidenceVerifierEvidence {
 }
 
 // GetCommitRequestHash returns the hash of the commit block request.
-func GetCommitRequestHash(req *networktypes.CommitBlockRequest) []byte {
+func GetCommitRequestHash(sig *sequencertypes.BlsSignature) []byte {
 	var blockNumberBuf, epochNumberBuf common.Hash
-	blockHash := common.FromHex(req.BlsSignature.ChainHeader.BlockHash)[:]
-	currentCommitteeRoot := common.FromHex(req.BlsSignature.CurrentCommittee)[:]
-	nextCommitteeRoot := common.FromHex(req.BlsSignature.NextCommittee)[:]
-	blockNumber := big.NewInt(int64(req.BlsSignature.ChainHeader.BlockNumber)).FillBytes(blockNumberBuf[:])
-	epochNumber := big.NewInt(int64(req.EpochBlockNumber)).FillBytes(epochNumberBuf[:])
-	blockSignature := common.FromHex(req.BlsSignature.Signature)[:]
+	blockHash := common.FromHex(sig.ChainHeader.BlockHash)[:]
+	currentCommitteeRoot := common.FromHex(sig.CurrentCommittee)[:]
+	nextCommitteeRoot := common.FromHex(sig.NextCommittee)[:]
+	blockNumber := big.NewInt(int64(sig.BlockNumber())).FillBytes(blockNumberBuf[:])
+	epochNumber := big.NewInt(int64(sig.EpochBlockNumber)).FillBytes(epochNumberBuf[:])
+	blockSignature := common.FromHex(sig.BlsSignature)[:]
 	chainID := make([]byte, 4)
-	binary.BigEndian.PutUint32(chainID, req.BlsSignature.ChainHeader.ChainId)
+	binary.BigEndian.PutUint32(chainID, sig.ChainHeader.ChainId)
 
 	return utils.Hash(
 		blockHash,
@@ -70,9 +70,9 @@ func GetCommitRequestHash(req *networktypes.CommitBlockRequest) []byte {
 }
 
 // GetEvidence returns the evidence from the commit block request.
-func GetEvidence(req *networktypes.CommitBlockRequest, correctBlockHash, correctCurrentCommitteeRoot, correctNextCommitteeRoot string) (*Evidence, error) {
-	hash := GetCommitRequestHash(req)
-	signature := common.FromHex(req.Signature)
+func GetEvidence(sig *sequencertypes.BlsSignature, correctBlockHash, correctCurrentCommitteeRoot, correctNextCommitteeRoot string) (*Evidence, error) {
+	hash := GetCommitRequestHash(sig)
+	signature := common.FromHex(sig.EcdsaSignature)
 	pubKey, err := crypto.SigToPub(hash, signature)
 	if err != nil {
 		return nil, err
@@ -84,16 +84,16 @@ func GetEvidence(req *networktypes.CommitBlockRequest, correctBlockHash, correct
 	addr := crypto.PubkeyToAddress(*pubKey).Hex()
 	return &Evidence{
 		Operator:                    addr,
-		BlockHash:                   common.HexToHash(req.BlsSignature.ChainHeader.BlockHash),
+		BlockHash:                   common.HexToHash(sig.ChainHeader.BlockHash),
 		CorrectBlockHash:            common.HexToHash(correctBlockHash),
-		CurrentCommitteeRoot:        common.HexToHash(req.BlsSignature.CurrentCommittee),
+		CurrentCommitteeRoot:        common.HexToHash(sig.CurrentCommittee),
 		CorrectCurrentCommitteeRoot: common.HexToHash(correctCurrentCommitteeRoot),
-		NextCommitteeRoot:           common.HexToHash(req.BlsSignature.NextCommittee),
+		NextCommitteeRoot:           common.HexToHash(sig.NextCommittee),
 		CorrectNextCommitteeRoot:    common.HexToHash(correctNextCommitteeRoot),
-		BlockNumber:                 req.BlsSignature.ChainHeader.BlockNumber,
-		EpochBlockNumber:            req.EpochBlockNumber,
-		BlockSignature:              common.FromHex(req.BlsSignature.Signature),
+		BlockNumber:                 sig.BlockNumber(),
+		EpochBlockNumber:            sig.EpochBlockNumber,
+		BlockSignature:              common.FromHex(sig.BlsSignature),
 		CommitSignature:             signature,
-		ChainID:                     req.BlsSignature.ChainHeader.ChainId,
+		ChainID:                     sig.ChainHeader.ChainId,
 	}, nil
 }

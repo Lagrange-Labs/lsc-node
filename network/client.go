@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -146,19 +147,19 @@ func (c *Client) Start() {
 		case <-c.ctx.Done():
 			return
 		case <-time.After(c.pullInterval):
-			block, err := c.TryGetBlock()
+			blocks, err := c.TryGetBlocks()
 			if err != nil {
 				logger.Errorf("failed to get the current block: %v\n", err)
 				continue
 			}
 
-			if err := c.TryCommitBlock(block); err != nil {
+			if err := c.TryCommitBlocks(blocks); err != nil {
 				logger.Errorf("failed to commit the block: %v\n", err)
 				continue
 			}
 
-			c.lastBlockNumber += 1
-			logger.Info("uploaded the signature")
+			c.lastBlockNumber = blocks[len(blocks)-1].BlockNumber() + 1
+			logger.Infof("uploaded the signature up to block %d\n", c.lastBlockNumber-1)
 		}
 	}
 }
@@ -188,85 +189,134 @@ func (c *Client) TryJoinNetwork() error {
 	return nil
 }
 
-// TryGetBlock tries to get the block from the network.
-func (c *Client) TryGetBlock() (*sequencertypes.Block, error) {
-	res, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: c.lastBlockNumber, ChainId: c.chainID, StakeAddress: c.stakeAddress})
+// TryGetBlocks tries to get the block batch from the network.
+func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
+	res, err := c.GetBatch(context.Background(), &types.GetBatchRequest{BlockNumber: c.lastBlockNumber, StakeAddress: c.stakeAddress})
 	if err != nil {
 		return nil, err
 	}
-	if res.CurrentBlockNumber == 0 {
-		return res.Block, ErrBlockNotReady
+
+	if len(res.Batch) == 0 {
+		return nil, ErrBlockNotReady
 	}
 
-	if res.CurrentBlockNumber != c.lastBlockNumber {
-		c.lastBlockNumber = res.CurrentBlockNumber
-		return nil, fmt.Errorf("the current block number %d is not equal to the last block number %d", res.CurrentBlockNumber, c.lastBlockNumber)
+	wg := sync.WaitGroup{}
+	wg.Add(len(res.Batch))
+	chError := make(chan error, len(res.Batch))
+
+	for _, block := range res.Batch {
+		go func(block *sequencertypes.Block) {
+			defer wg.Done()
+			// verify the proposer signature
+			if len(block.ProposerPubKey()) == 0 {
+				chError <- fmt.Errorf("the block %d proposer key is empty", block.BlockNumber())
+				return
+			}
+			blsSigHash := block.BlsSignature().Hash()
+			// verify the proposer signature
+			verified, err := utils.VerifySignature(common.FromHex(block.ProposerPubKey()), blsSigHash, common.FromHex(block.ProposerSignature()))
+			if err != nil || !verified {
+				chError <- fmt.Errorf("failed to verify the proposer signature: %v", err)
+				return
+			}
+			// verify if the block hash is correct
+			blockHash := block.BlockHash()
+			rBlockHash, err := c.rpcClient.GetBlockHashByNumber(block.BlockNumber())
+			if err != nil {
+				chError <- fmt.Errorf("failed to fetch the block hash by number: %v", err)
+				return
+			}
+			if blockHash != rBlockHash {
+				chError <- fmt.Errorf("the block hash %s is not equal to the rpc block hash %s", blockHash, rBlockHash)
+				return
+			}
+			// verify the committee root
+			committeeData, err := c.committeeSC.GetCommittee(nil, big.NewInt(int64(c.chainID)), big.NewInt(int64(block.EpochBlockNumber())))
+			if err != nil {
+				chError <- fmt.Errorf("failed to get the committee root: %v", err)
+				return
+			}
+			if block.CurrentCommittee() != common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes()) {
+				chError <- fmt.Errorf("the block committee root %s is not equal to the current root %v", block.CurrentCommittee(), committeeData)
+				return
+			}
+			if block.NextCommittee() != common.Bytes2Hex(committeeData.NextRoot.Bytes()) {
+				chError <- fmt.Errorf("the block committee root %s is not equal to the next root %v", block.NextCommittee(), committeeData)
+				return
+			}
+		}(block)
+	}
+	wg.Wait()
+
+	close(chError)
+	for err := range chError {
+		logger.Errorf("failed to verify the block: %v", err)
+		return nil, err
 	}
 
-	// verify the proposer signature
-	if len(res.Block.ProposerPubKey()) == 0 {
-		return nil, fmt.Errorf("the block %d proposer key is empty", res.Block.BlockNumber())
-	}
-	blsSigHash := res.Block.BlsSignature().Hash()
-	if err != nil {
-		return nil, fmt.Errorf("failed to marshal the BLS signature: %v", err)
-	}
-	// verify the proposer signature
-	verified, err := utils.VerifySignature(common.FromHex(res.Block.ProposerPubKey()), blsSigHash, common.FromHex(res.Block.ProposerSignature()))
-	if err != nil || !verified {
-		return nil, fmt.Errorf("failed to verify the proposer signature: %v", err)
-	}
-	// verify if the block hash is correct
-	blockHash := res.Block.BlockHash()
-	rBlockHash, err := c.rpcClient.GetBlockHashByNumber(c.lastBlockNumber)
-	if err != nil {
-		return nil, fmt.Errorf("failed to fetch the block hash by number: %v", err)
-	}
-	if blockHash != rBlockHash {
-		return nil, fmt.Errorf("the block hash %s is not equal to the rpc block hash %s", blockHash, rBlockHash)
-	}
-	// verify the committee root
-	committeeData, err := c.committeeSC.GetCommittee(nil, big.NewInt(int64(c.chainID)), big.NewInt(int64(res.Block.EpochBlockNumber())))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get the committee root: %v", err)
-	}
-	if res.Block.CurrentCommittee() != common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes()) {
-		return nil, fmt.Errorf("the block committee root %s is not equal to the current root %v", res.Block.CurrentCommittee(), committeeData)
-	}
-	if res.Block.NextCommittee() != common.Bytes2Hex(committeeData.NextRoot.Bytes()) {
-		return nil, fmt.Errorf("the block committee root %s is not equal to the next root %v", res.Block.NextCommittee(), committeeData)
-	}
-
-	return res.Block, nil
+	return res.Batch, nil
 }
 
-// TryCommitBlock tries to commit the signature to the network.
-func (c *Client) TryCommitBlock(block *sequencertypes.Block) error {
-	blsSignature := block.BlsSignature()
-	blsSig, err := c.blsPrivateKey.Sign(blsSignature.Hash())
-	if err != nil {
-		return fmt.Errorf("failed to sign the BLS signature: %v", err)
-	}
-	blsSignature.Signature = utils.BlsSignatureToHex(blsSig)
+// TryCommitBlocks tries to commit the signature to the network.
+func (c *Client) TryCommitBlocks(blocks []*sequencertypes.Block) error {
 
-	req := &types.CommitBlockRequest{
-		BlsSignature:     blsSignature,
-		EpochBlockNumber: block.EpochBlockNumber(),
-		PubKey:           c.blsPublicKey,
+	wg := sync.WaitGroup{}
+	wg.Add(len(blocks))
+	chError := make(chan error, len(blocks))
+
+	sigs := make(chan *sequencertypes.BlsSignature, len(blocks))
+	for _, block := range blocks {
+		go func(block *sequencertypes.Block) {
+			defer wg.Done()
+			blsSignature := block.BlsSignature()
+			blsSig, err := c.blsPrivateKey.Sign(blsSignature.Hash())
+			if err != nil {
+				chError <- fmt.Errorf("failed to sign the BLS signature: %v", err)
+				return
+			}
+			blsSignature.BlsSignature = utils.BlsSignatureToHex(blsSig)
+
+			// generate the ECDSA signature
+			msg := contypes.GetCommitRequestHash(blsSignature)
+			sig, err := crypto.Sign(msg, c.ecdsaPrivateKey)
+			if err != nil {
+				chError <- fmt.Errorf("failed to ecdsa sign the block: %v", err)
+				return
+			}
+			blsSignature.EcdsaSignature = common.Bytes2Hex(sig)
+			sigs <- blsSignature
+		}(block)
 	}
-	// generate the ECDSA signature
-	msg := contypes.GetCommitRequestHash(req)
-	sig, err := crypto.Sign(msg, c.ecdsaPrivateKey)
-	if err != nil {
-		return fmt.Errorf("failed to ecdsa sign the block: %v", err)
+
+	wg.Wait()
+	close(chError)
+	close(sigs)
+	for err := range chError {
+		logger.Errorf("failed to sign the block: %v", err)
+		return err
 	}
-	req.Signature = common.Bytes2Hex(sig)
-	resS, err := c.CommitBlock(c.ctx, req)
+
+	// upload the signature
+	blsSignatures := make([]*sequencertypes.BlsSignature, 0, len(blocks))
+	for blsSignature := range sigs {
+		blsSignatures = append(blsSignatures, blsSignature)
+	}
+
+	req := &types.CommitBatchRequest{
+		BlsSignatures: blsSignatures,
+		StakeAddress:  c.stakeAddress,
+	}
+	stream, err := c.CommitBatch(c.ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to upload signature: %v", err)
 	}
-	if !resS.Result {
-		return fmt.Errorf("failed to upload signature with message : %s", resS.Message)
+
+	res, err := stream.Recv()
+	if err != nil {
+		return fmt.Errorf("failed to get the response from the stream: %v", err)
+	}
+	if !res.Result {
+		return fmt.Errorf("the current batch is not finalized yet")
 	}
 
 	return nil
