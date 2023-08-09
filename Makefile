@@ -15,6 +15,7 @@ LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.GitRev=$(GITREV)'
 LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.GitBranch=$(GITBRANCH)'
 LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.BuildDate=$(DATE)'
 
+STOP := docker-compose down --remove-orphans
 
 # Building the docker image and the binary
 build: ## Builds the binary locally into ./dist
@@ -49,7 +50,7 @@ test: stop
 	docker-compose -f docker-compose.yml up -d lagrangesc
 	sleep 5
 	docker ps -a
-	go test ./... --timeout=10m
+	trap '$(STOP)' EXIT; go test ./... --timeout=10m
 .PHONY: test
 
 run-db-mongo:
@@ -82,7 +83,7 @@ localnet-start: stop
 	docker-compose -f docker-compose.yml up -d prover
 
 stop:
-	docker-compose down --remove-orphans
+	$(STOP)
 
 .PHONY: localnet-start stop
 

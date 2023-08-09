@@ -11,7 +11,7 @@ import (
 	"github.com/umbracle/go-eth-consensus/bls"
 )
 
-func createTestRoundState() (*RoundState, []*bls.SecretKey) {
+func createTestRoundState() (*RoundState, []*bls.SecretKey, *ValidatorSet) {
 	chainHeader := &sequencertypes.ChainHeader{
 		ChainId:     1,
 		BlockNumber: 1,
@@ -33,11 +33,6 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey) {
 	proposerSigMsg, _ := proposerSecKey.Sign(blsSigHash)
 	pBlock.BlockHeader.ProposerSignature = utils.BlsSignatureToHex(proposerSigMsg)
 
-	proposer := &Validator{
-		PublicKey:   proposerPubKey,
-		VotingPower: 0,
-	}
-
 	secKeys := []*bls.SecretKey{}
 
 	nodes := []networktypes.ClientNode{}
@@ -51,34 +46,31 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey) {
 		nodes = append(nodes, node)
 	}
 
-	validatorSet := NewValidatorSet(proposer, nodes)
-	rs := NewEmptyRoundState()
-	rs.UpdateRoundState(validatorSet, pBlock)
+	vs := NewValidatorSet(nodes, uint64(len(nodes)))
 
-	return rs, secKeys
+	rs := NewEmptyRoundState()
+	rs.UpdateRoundState(pBlock)
+
+	return rs, secKeys, vs
 }
 
 func TestCheckVotingPower(t *testing.T) {
-	rs, _ := createTestRoundState()
+	rs, _, vs := createTestRoundState()
 
 	// Test 1: not enough case
 	for i := 0; i < 6; i++ {
-		rs.AddCommit(&networktypes.CommitBlockRequest{
-			PubKey: rs.Validators.Validators[i].PublicKey,
-		})
+		rs.AddCommit(&sequencertypes.BlsSignature{}, vs.validators[i].PublicKey)
 	}
-	require.False(t, rs.CheckEnoughVotingPower())
+	require.False(t, rs.CheckEnoughVotingPower(vs))
 	// Test 2: enough case
-	rs.AddCommit(&networktypes.CommitBlockRequest{
-		PubKey: rs.Validators.Validators[6].PublicKey,
-	})
-	require.True(t, rs.CheckEnoughVotingPower())
+	rs.AddCommit(&sequencertypes.BlsSignature{}, vs.validators[6].PublicKey)
+	require.True(t, rs.CheckEnoughVotingPower(vs))
 }
 
 func TestCheckAggregatedSignature(t *testing.T) {
-	rs, secKeys := createTestRoundState()
+	rs, secKeys, vs := createTestRoundState()
 
-	blsSignature := rs.ProposalBlock.BlsSignature()
+	blsSignature := rs.GetCurrentBlock().BlsSignature()
 	sigHash := blsSignature.Hash()
 
 	// Test 1: valid case
@@ -87,28 +79,25 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		signature, err := secKeys[i].Sign(sigHash)
 		require.NoError(t, err)
 		signatureMsg := signature.Serialize()
-		blsSign.Signature = common.Bytes2Hex(signatureMsg[:])
+		blsSign.BlsSignature = common.Bytes2Hex(signatureMsg[:])
 
 		pubKey := new(bls.PublicKey)
-		require.NoError(t, pubKey.Deserialize(common.FromHex(rs.Validators.Validators[i].PublicKey)))
+		require.NoError(t, pubKey.Deserialize(common.FromHex(vs.validators[i].PublicKey)))
 
 		verified, err := signature.VerifyByte(pubKey, sigHash)
 		require.NoError(t, err)
 		require.True(t, verified)
 
-		rs.AddCommit(&networktypes.CommitBlockRequest{
-			PubKey:       rs.Validators.Validators[i].PublicKey,
-			BlsSignature: blsSign,
-		})
+		rs.AddCommit(blsSign, vs.validators[i].PublicKey)
 	}
-	_, _, err := rs.CheckAggregatedSignature()
+	err := rs.CheckAggregatedSignature()
 	require.NoError(t, err)
 
 	// Test 2: invalid case
 	wrongSignature := ""
-	rs, secKeys = createTestRoundState()
+	rs, secKeys, vs = createTestRoundState()
 
-	blsSignature = rs.ProposalBlock.BlsSignature()
+	blsSignature = rs.GetCurrentBlock().BlsSignature()
 	sigHash = blsSignature.Hash()
 
 	for i := 0; i < len(secKeys); i++ {
@@ -119,27 +108,24 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		signature, err := secKeys[i].Sign(sigHash)
 		require.NoError(t, err)
 		signatureMsg := signature.Serialize()
-		blsSign.Signature = common.Bytes2Hex(signatureMsg[:])
+		blsSign.BlsSignature = common.Bytes2Hex(signatureMsg[:])
 		if i == 7 {
-			blsSign.Signature = "0x000" // invalid signature
+			blsSign.BlsSignature = "0x000" // invalid signature
 		} else if i == 8 {
-			wrongSignature = blsSign.Signature
+			wrongSignature = blsSign.BlsSignature
 		} else if i == 9 {
-			blsSign.Signature = wrongSignature // wrong signature
+			blsSign.BlsSignature = wrongSignature // wrong signature
 		}
 		pubKey := new(bls.PublicKey)
-		require.NoError(t, pubKey.Deserialize(common.FromHex(rs.Validators.Validators[i].PublicKey)))
+		require.NoError(t, pubKey.Deserialize(common.FromHex(vs.validators[i].PublicKey)))
 
 		verified, err := signature.VerifyByte(pubKey, sigHash)
 		require.NoError(t, err)
 		require.True(t, verified)
 
-		rs.AddCommit(&networktypes.CommitBlockRequest{
-			PubKey:       rs.Validators.Validators[i].PublicKey,
-			BlsSignature: &blsSign,
-		})
+		rs.AddCommit(&blsSign, vs.validators[i].PublicKey)
 	}
-	_, _, err = rs.CheckAggregatedSignature()
+	err = rs.CheckAggregatedSignature()
 	require.Error(t, err)
 	require.Len(t, rs.evidences, 3)
 }

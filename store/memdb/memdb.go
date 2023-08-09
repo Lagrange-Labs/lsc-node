@@ -64,6 +64,17 @@ func (d *MemDB) GetBlock(ctx context.Context, chainID uint32, blockNumber uint64
 	return d.blocks[blockNumber-1], nil
 }
 
+// GetBlocks returns the `count` blocks starting from `fromBlockNumber`.
+func (d *MemDB) GetBlocks(ctx context.Context, chainID uint32, fromBlockNumber uint64, count uint32) ([]*sequencertypes.Block, error) {
+	if fromBlockNumber > uint64(len(d.blocks)) {
+		return nil, types.ErrBlockNotFound
+	}
+	if fromBlockNumber+uint64(count) > uint64(len(d.blocks)) {
+		return d.blocks[fromBlockNumber-1:], nil
+	}
+	return d.blocks[fromBlockNumber-1 : fromBlockNumber+uint64(count)-1], nil
+}
+
 // AddBlock adds a new block to the database.
 func (d *MemDB) AddBlock(ctx context.Context, block *sequencertypes.Block) error {
 	blockNumber := uint64(len(d.blocks)) + 1
@@ -95,16 +106,16 @@ func (d *MemDB) UpdateBlock(ctx context.Context, block *sequencertypes.Block) er
 }
 
 // GetLastFinalizedBlockNumber returns the last finalized block number.
-func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, error) {
+func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, bool, error) {
 	for i := len(d.blocks) - 1; i >= 0; i-- {
 		if len(d.blocks[i].AggSignature) != 0 {
-			return d.blocks[i].BlockNumber(), nil
+			return d.blocks[i].BlockNumber(), true, nil
 		}
 	}
 	if len(d.blocks) > 0 {
-		return d.blocks[0].BlockNumber(), nil
+		return d.blocks[0].BlockNumber(), false, nil
 	}
-	return 0, nil
+	return 0, false, nil
 }
 
 // UpdateNode updates the node status in the database.

@@ -35,7 +35,7 @@ func TestBlsSignatureHash(t *testing.T) {
 	}
 
 	binary.BigEndian.PutUint32(chainIDBuf, uint32(blsSignature.ChainHeader.ChainId))
-	big.NewInt(int64(blsSignature.ChainHeader.BlockNumber)).FillBytes(blockNumberBuf[:])
+	big.NewInt(int64(blsSignature.BlockNumber())).FillBytes(blockNumberBuf[:])
 	t.Logf("blockNumberBuf: %s", common.Bytes2Hex(blockNumberBuf[:]))
 	t.Logf("chainIDBuf: %s", common.Bytes2Hex(chainIDBuf))
 	chainHash := utils.Hash(common.FromHex(blsSignature.ChainHeader.BlockHash), blockNumberBuf[:], chainIDBuf)

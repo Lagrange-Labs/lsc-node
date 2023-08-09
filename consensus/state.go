@@ -3,6 +3,8 @@ package consensus
 import (
 	"context"
 	"fmt"
+	"sort"
+	"sync"
 	"time"
 
 	"github.com/Lagrange-Labs/lagrange-node/consensus/types"
@@ -14,20 +16,24 @@ import (
 	"github.com/umbracle/go-eth-consensus/bls"
 )
 
-const CheckInterval = 500 * time.Millisecond
+const CheckInterval = 1 * time.Second
 
 // State handles the consensus process.
 type State struct {
-	*types.RoundState
+	validators *types.ValidatorSet
+
+	rounds          map[uint64]*types.RoundState
+	lastBlockNumber uint64
+	rwMutex         *sync.RWMutex
 
 	proposer      *bls.SecretKey
 	storage       storageInterface
 	roundLimit    time.Duration
 	roundInterval time.Duration
+	batchSize     uint32
 	chainID       uint32
 
-	chCommit <-chan *networktypes.CommitBlockRequest
-	chStop   chan struct{}
+	chStop chan struct{}
 }
 
 // NewState returns a new State.
@@ -47,37 +53,47 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		logger.Fatalf("failed to add the proposer node: %v", err)
 	}
 
-	chStop := make(chan struct{}, 1)
+	chStop := make(chan struct{})
 
 	return &State{
 		proposer:      privKey,
 		storage:       storage,
 		roundLimit:    time.Duration(cfg.RoundLimit),
 		roundInterval: time.Duration(cfg.RoundInterval),
-		chCommit:      make(<-chan *networktypes.CommitBlockRequest, 1000),
 		chainID:       chainID,
+		batchSize:     cfg.BatchSize,
 		chStop:        chStop,
-		RoundState:    types.NewEmptyRoundState(),
+		rwMutex:       &sync.RWMutex{},
 	}
 }
 
 // OnStart loads the first unverified block and starts the round.
 func (s *State) OnStart() {
-	var (
-		lastBlockNumber uint64
-		err             error
-	)
+	var err error
+	logger.Info("Consensus process is started with the batch size: ", s.batchSize)
 
 	for {
-		lastBlockNumber, err = s.storage.GetLastFinalizedBlockNumber(context.Background(), s.chainID)
+		// check if chStop is triggered
+		select {
+		case <-s.chStop:
+			return
+		default:
+		}
+
+		isFinalized := false
+		s.lastBlockNumber, isFinalized, err = s.storage.GetLastFinalizedBlockNumber(context.Background(), s.chainID)
 		if err != nil {
 			logger.Errorf("failed to get the last finalized block number: %v", err)
 			return
 		}
-		if lastBlockNumber > 0 {
+		if s.lastBlockNumber > 0 {
+			if isFinalized {
+				// the last block is not finalized yet
+				s.lastBlockNumber = s.lastBlockNumber + 1
+			}
 			break
 		}
-		logger.Infof("the last finalized block number is %v, waiting for the first block", lastBlockNumber)
+		logger.Info("waiting for the first block")
 		time.Sleep(CheckInterval)
 	}
 
@@ -89,48 +105,76 @@ func (s *State) OnStart() {
 		default:
 		}
 
-		logger.Infof("start the round for the block number %v", lastBlockNumber+1)
-		if err := s.startRound(lastBlockNumber); err != nil {
+		logger.Infof("start the batch rounds from the block number %v", s.lastBlockNumber)
+		if err := s.startRound(s.lastBlockNumber); err != nil {
 			logger.Errorf("failed to start the round: %v", err)
 			time.Sleep(s.roundInterval)
 			continue
 		}
 
-		logger.Infof("the proposal block %v is ready", s.ProposalBlock)
-		logger.Infof("the validator set %v is set", s.Validators)
-
 		ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.roundLimit))
 		defer cancel()
-		isVoted, err := s.processRound(ctx)
-		if err != nil {
-			logger.Errorf("failed to process the round: %v", err)
-			continue
-		}
+		isVoted := s.processRound(ctx)
 		if !isVoted {
-			logger.Errorf("the current block %d is not finalized", s.ProposalBlock.BlockNumber())
+			logger.Error("the current batch is not finalized within the round limit")
 		}
 
 		// store the evidences
-		evidences, err := s.GetEvidences()
-		if err != nil {
-			logger.Errorf("failed to get the evidences: %v", err)
-			continue
-		}
-		if len(evidences) > 0 {
-			if err := s.storage.AddEvidences(ctx, evidences); err != nil {
-				logger.Errorf("failed to add the evidences: %v", err)
+		for _, round := range s.rounds {
+			evidences, err := round.GetEvidences()
+			if err != nil {
+				logger.Errorf("failed to get the evidences: %v", err)
 				continue
 			}
+			if len(evidences) > 0 {
+				if err := s.storage.AddEvidences(ctx, evidences); err != nil {
+					logger.Errorf("failed to add the evidences: %v", err)
+					continue
+				}
+			}
 		}
+
 		// store the finalized block
-		if err := s.storage.UpdateBlock(context.Background(), s.ProposalBlock); err != nil {
-			logger.Errorf("failed to update the block %v: %v", s.ProposalBlock, err)
-			continue
+		failedRounds := make(map[uint64]*types.RoundState)
+		lastBlockNumber := uint64(0)
+		for blockNumber, round := range s.rounds {
+			if !round.IsFinalized() {
+				logger.Errorf("the block %d is not finalized", round.GetCurrentBlockNumber())
+				failedRounds[blockNumber] = round
+				continue
+			}
+			if err := s.storage.UpdateBlock(context.Background(), round.GetCurrentBlock()); err != nil {
+				logger.Errorf("failed to update the block %d: %v", round.GetCurrentBlockNumber(), err)
+				continue
+			}
+			if lastBlockNumber < blockNumber {
+				lastBlockNumber = blockNumber
+			}
+			logger.Infof("the block %d is finalized", blockNumber)
 		}
 
-		logger.Infof("the block %d is finalized", s.ProposalBlock.BlockNumber())
+		// update the last block number
+		s.rwMutex.Lock()
+		s.rounds = failedRounds
+		s.rwMutex.Unlock()
 
-		lastBlockNumber++
+		if !isVoted {
+			// TODO: handle the case when the batch is not finalized, now it will be run forever
+			logger.Error("the infinite loop is started!")
+			_ = s.processRound(context.Background())
+			for _, round := range s.rounds {
+				if err := s.storage.UpdateBlock(context.Background(), round.GetCurrentBlock()); err != nil {
+					logger.Errorf("failed to update the block %d: %v", round.GetCurrentBlockNumber(), err)
+					continue
+				}
+
+				logger.Infof("the block %d is finalized", round.GetCurrentBlockNumber())
+			}
+		}
+
+		s.rwMutex.Lock()
+		s.lastBlockNumber = lastBlockNumber + 1
+		s.rwMutex.Unlock()
 	}
 }
 
@@ -138,16 +182,64 @@ func (s *State) OnStart() {
 func (s *State) OnStop() {
 	logger.Infof("OnStop() called")
 	s.chStop <- struct{}{}
+	close(s.chStop)
 }
 
-// startRound loads the next block and initializes the round state.
+// AddCommit adds the commit to the round.
+func (s *State) AddCommit(commit *sequencertypes.BlsSignature, pubKey string) error {
+	s.rwMutex.Lock()
+	defer s.rwMutex.Unlock()
+
+	round, ok := s.rounds[commit.BlockNumber()]
+	if !ok {
+		return fmt.Errorf("the round for the block %d is not found", commit.BlockNumber())
+	}
+	round.AddCommit(commit, pubKey)
+	return nil
+}
+
+// GetOpenRoundBlocks returns the blocks that are not finalized yet.
+func (s *State) GetOpenRoundBlocks(blockNumber uint64) []*sequencertypes.Block {
+	s.rwMutex.RLock()
+	defer s.rwMutex.RUnlock()
+
+	if blockNumber > s.lastBlockNumber {
+		return nil
+	}
+
+	blocks := make([]*sequencertypes.Block, 0)
+	for _, round := range s.rounds {
+		if !round.IsFinalized() {
+			blocks = append(blocks, round.GetCurrentBlock())
+		}
+	}
+
+	// sort the blocks by the block number
+	sort.Slice(blocks, func(i, j int) bool {
+		return blocks[i].BlockNumber() < blocks[j].BlockNumber()
+	})
+
+	return blocks
+}
+
+// IsFinalized returns true if all batch blocks are finalized.
+func (s *State) IsFinalized(blockNumber uint64) bool {
+	s.rwMutex.RLock()
+	defer s.rwMutex.RUnlock()
+
+	return blockNumber < s.lastBlockNumber
+}
+
+// startRound loads the next block batch and initializes the round state.
 func (s *State) startRound(blockNumber uint64) error {
+	s.rwMutex.Lock()
+	defer s.rwMutex.Unlock()
+
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.roundLimit))
 	defer cancel()
-	block, err := s.getNextBlock(ctx, blockNumber)
+	blocks, err := s.getNextBlocks(ctx, blockNumber)
 	if err != nil {
-		// TODO handle timeout error
-		return fmt.Errorf("getting the block %d is failed: %v", blockNumber, err)
+		return fmt.Errorf("getting the next block batch from %d is failed: %v", blockNumber, err)
 	}
 
 	committee, err := s.storage.GetLastCommitteeRoot(context.Background(), s.chainID)
@@ -161,51 +253,60 @@ func (s *State) startRound(blockNumber uint64) error {
 		return fmt.Errorf("the total voting power of the last committee is 0")
 	}
 
-	block.BlockHeader.CurrentCommittee = committee.CurrentCommitteeRoot
-	block.BlockHeader.NextCommittee = committee.NextCommitteeRoot
-	block.BlockHeader.EpochBlockNumber = committee.EpochBlockNumber
-	block.BlockHeader.TotalVotingPower = committee.TotalVotingPower
-
 	nodes, err := s.storage.GetNodesByStatuses(context.Background(), []networktypes.NodeStatus{networktypes.NodeRegistered}, s.chainID)
 	if err != nil {
 		return err
 	}
 
-	votingPower := uint64(0)
-	for _, node := range nodes {
-		votingPower += node.VotingPower
-	}
-	if votingPower*3 < committee.TotalVotingPower*2 {
-		return fmt.Errorf("the voting power of the registered nodes is less than 2/3 of the total voting power")
+	logger.Infof("the registered nodes are loaded: %v", nodes)
+
+	s.validators = types.NewValidatorSet(nodes, committee.TotalVotingPower)
+	if s.validators.GetTotalVotingPower()*3 < committee.TotalVotingPower*2 {
+		return fmt.Errorf("the voting power of the registered nodes voting power %d is less than 2/3 of the total voting power %d", s.validators.GetTotalVotingPower(), committee.TotalVotingPower)
 	}
 
-	pubkey := utils.BlsPubKeyToHex(s.proposer.GetPublicKey())
-	validatorSet := types.NewValidatorSet(&types.Validator{PublicKey: pubkey}, nodes)
+	pubKey := utils.BlsPubKeyToHex(s.proposer.GetPublicKey())
+	s.rounds = make(map[uint64]*types.RoundState)
 
-	// generate a proposer signature
-	blsSigHash := block.BlsSignature().Hash()
-	signature, err := s.proposer.Sign(blsSigHash)
-	if err != nil {
-		return err
+	blockNumbers := make([]uint64, 0)
+	for _, block := range blocks {
+		block.BlockHeader = &sequencertypes.BlockHeader{}
+		block.BlockHeader.CurrentCommittee = committee.CurrentCommitteeRoot
+		block.BlockHeader.NextCommittee = committee.NextCommitteeRoot
+		block.BlockHeader.EpochBlockNumber = committee.EpochBlockNumber
+		block.BlockHeader.TotalVotingPower = committee.TotalVotingPower
+
+		// generate a proposer signature
+		blsSigHash := block.BlsSignature().Hash()
+		signature, err := s.proposer.Sign(blsSigHash)
+		if err != nil {
+			return err
+		}
+		block.BlockHeader.ProposerSignature = utils.BlsSignatureToHex(signature)
+		block.BlockHeader.ProposerPubKey = pubKey
+
+		round := types.NewEmptyRoundState()
+		round.UpdateRoundState(block)
+		s.rounds[block.BlockNumber()] = round
+		blockNumbers = append(blockNumbers, block.BlockNumber())
 	}
-	block.BlockHeader.ProposerSignature = utils.BlsSignatureToHex(signature)
-	block.BlockHeader.ProposerPubKey = pubkey
 
-	s.UpdateRoundState(validatorSet, block)
+	logger.Infof("the next block batch is loaded: %v", blockNumbers)
 
 	return nil
 }
 
-// getNextBlock returns the next block from the storage.
-func (s *State) getNextBlock(ctx context.Context, blockNumber uint64) (*sequencertypes.Block, error) {
-	block, err := s.storage.GetBlock(ctx, uint32(s.chainID), blockNumber+1)
-	if err == nil || err != storetypes.ErrBlockNotFound {
-		if block != nil {
-			block.BlockHeader = &sequencertypes.BlockHeader{}
-		}
-		return block, err
+// getNextBlocks returns the next block batch from the storage.
+// NOTE: it will return blocks more than 1 to parallelize.
+func (s *State) getNextBlocks(ctx context.Context, blockNumber uint64) ([]*sequencertypes.Block, error) {
+	blocks, err := s.storage.GetBlocks(ctx, uint32(s.chainID), blockNumber, s.batchSize)
+	if err != nil && err != storetypes.ErrBlockNotFound {
+		return nil, err
 	}
-	// in case the block is not found, wait for it to be added from the sequencer
+	if len(blocks) > 1 {
+		return blocks, err
+	}
+	// in case the number of blocks is less than 2, wait for it to be added from the sequencer
 	ticker := time.NewTicker(CheckInterval)
 	defer ticker.Stop()
 	for {
@@ -213,73 +314,74 @@ func (s *State) getNextBlock(ctx context.Context, blockNumber uint64) (*sequence
 		case <-ctx.Done():
 			return nil, ctx.Err()
 		case <-ticker.C:
-			block, err := s.storage.GetBlock(context.Background(), s.chainID, blockNumber+1)
+			blocks, err := s.storage.GetBlocks(context.Background(), s.chainID, blockNumber, s.batchSize)
 			if err != nil {
 				if err == storetypes.ErrBlockNotFound {
 					continue
 				}
 				return nil, err
 			}
-			block.BlockHeader = &sequencertypes.BlockHeader{}
-			return block, nil
+			if len(blocks) < 2 {
+				continue
+			}
+			return blocks, nil
 		}
 	}
 }
 
 // processRound processes the round.
-func (s *State) processRound(ctx context.Context) (bool, error) {
-	isAfterRoundInterval := false
-	isBlocked := false
-
-	checkCommit := func() (bool, error) {
-		if s.CheckEnoughVotingPower() {
-			pubkeys, aggSignature, err := s.CheckAggregatedSignature()
+func (s *State) processRound(ctx context.Context) bool {
+	checkCommit := func(round *types.RoundState) (bool, error) {
+		if round.CheckEnoughVotingPower(s.validators) {
+			round.BlockCommit()
+			err := round.CheckAggregatedSignature()
 			if err != nil {
+				round.UnblockCommit()
 				if err == types.ErrInvalidAggregativeSignature {
-					logger.Warnf("the aggregated signature is invalid")
+					logger.Warnf("the aggregated signature is invalid for the block %d", round.GetCurrentBlockNumber())
 					return false, nil
 				}
 				return false, err
 			}
-			isBlocked = true
-			s.BlockCommit()
-
-			pubKeys := make([]string, 0)
-			for _, pubkey := range pubkeys {
-				pubKeys = append(pubKeys, utils.BlsPubKeyToHex(pubkey))
-			}
-			s.UpdateAggregatedSignature(pubKeys, utils.BlsSignatureToHex(aggSignature))
 			return true, nil
-		} else if isBlocked {
-			isBlocked = false
-			s.UnblockCommit()
 		}
-
 		return false, nil
 	}
 
-	timer := time.NewTimer(s.roundInterval)
-	defer timer.Stop()
-	ticker := time.NewTicker(CheckInterval)
-	defer ticker.Stop()
-	for {
-		select {
-		case <-ctx.Done():
-			return false, ctx.Err()
-		case <-timer.C:
-			isAfterRoundInterval = true
-			isFinalized, err := checkCommit()
-			if err != nil || isFinalized {
-				return isFinalized, err
-			}
-			logger.Warnf("the current block %d is not finalized for the round interval", s.ProposalBlock.BlockNumber())
-		case <-ticker.C:
-			if isAfterRoundInterval {
-				isFinalized, err := checkCommit()
-				if err != nil || isFinalized {
-					return isFinalized, err
+	wg := sync.WaitGroup{}
+	wg.Add(len(s.rounds))
+
+	for _, round := range s.rounds {
+		go func(round *types.RoundState) {
+			ticker := time.NewTicker(s.roundInterval)
+			defer ticker.Stop()
+			defer wg.Done()
+
+			for {
+				select {
+				case <-ctx.Done():
+					return
+				case <-ticker.C:
+					isFinalized, err := checkCommit(round)
+					if err != nil {
+						logger.Errorf("failed to check the commit for the block %d: %v", round.GetCurrentBlockNumber(), err)
+						return
+					}
+					if isFinalized {
+						return
+					}
 				}
 			}
+		}(round)
+	}
+	wg.Wait()
+
+	isAllFinalized := true
+	for _, round := range s.rounds {
+		if !round.IsFinalized() {
+			isAllFinalized = false
 		}
 	}
+
+	return isAllFinalized
 }

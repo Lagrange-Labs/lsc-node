@@ -13,8 +13,9 @@ import (
 var _ storageInterface = (storetypes.Storage)(nil)
 
 type storageInterface interface {
-	GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
+	GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, bool, error)
 	GetBlock(ctx context.Context, chainID uint32, blockNumber uint64) (*sequencertypes.Block, error)
+	GetBlocks(ctx context.Context, chainID uint32, fromBlockNumber uint64, count uint32) ([]*sequencertypes.Block, error)
 	UpdateBlock(ctx context.Context, block *sequencertypes.Block) error
 	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error)
 	AddEvidences(ctx context.Context, evidences []*types.Evidence) error
