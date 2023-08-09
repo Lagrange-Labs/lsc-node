@@ -10,10 +10,10 @@ option go_package = "github.com/Lagrange-Labs/lagrange-node/network/types";
 service NetworkService {
     // JoinNetwork is the rpc endpoint for joining the network
     rpc JoinNetwork(JoinNetworkRequest) returns (JoinNetworkResponse);
-    // GetBlock is the rpc endpoint for getting the given block at the client node
-    rpc GetBlock(GetBlockRequest) returns (GetBlockResponse);
-    // CommitBlock is the rpc endpoint for committing the given block with signature at the client node
-    rpc CommitBlock(CommitBlockRequest) returns (CommitBlockResponse);
+    // GetBatch is the rpc endpoint for getting the given block batch
+    rpc GetBatch(GetBatchRequest) returns (GetBatchResponse);
+    // CommitBatch is the rpc endpoint for committing the given block batch with signature at the client node
+    rpc CommitBatch(CommitBatchRequest) returns (stream CommitBatchResponse);
 }
 
 // JoinNetworkRequest is the request to join the network
@@ -29,29 +29,24 @@ message JoinNetworkResponse {
     string message = 2;
 }
 
-// GetBlockRequest is the request to get the given block 
-message GetBlockRequest {
+// GetBatchRequest is the request to get the given block batch
+message GetBatchRequest {
     uint64 block_number = 1;
-    uint32 chain_id = 2;
-    string stake_address = 3;
+    string stake_address = 2;
 }
 
-// GetBlockResponse is the response for getting the given block
-message GetBlockResponse {
-    sequencer.v1.Block block = 1;
-    uint64 current_block_number = 2;
+// GetBlockResponse is the response for getting the given block batch
+message GetBatchResponse {
+    repeated sequencer.v1.Block batch = 1;
 }
 
-// CommitBlockRequest is the request to commit the signature
-message CommitBlockRequest {
-    sequencer.v1.BlsSignature bls_signature = 1;
-    uint64 epoch_block_number = 2;
-    string pub_key = 3;
-    string signature = 4;
+// CommitBatchRequest is the request to commit the signature
+message CommitBatchRequest {
+    repeated sequencer.v1.BlsSignature bls_signatures = 1;
+    string stake_address = 2;
 }
 
-// CommitBlockResponse is the response for uploading the signature
-message CommitBlockResponse {
+// CommitBatchResponse is the response for uploading the signature for the given block batch
+message CommitBatchResponse {
     bool result = 1;
-    string message = 2;
 }
