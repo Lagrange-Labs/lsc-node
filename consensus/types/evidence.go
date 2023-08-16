@@ -5,10 +5,12 @@ import (
 	"math/big"
 
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
+	evm "github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/lagrange"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/common/hexutil"
 )
 
 // Evidence defines an evidence.
@@ -26,6 +28,10 @@ type Evidence struct {
 	CommitSignature             []byte   `json:"commit_signature" bson:"commit_signature"`
 	ChainID                     uint32   `json:"chain_id" bson:"chain_id"`
 	Status                      bool     `json:"status" bson:"status"`
+	CorrectRawHeader	    []byte   
+	CheckpointBlockHash	    [32]byte
+	HeaderProof		    []byte
+	ExtraData                   []byte     // network-specific data
 }
 
 // GetLagrangeServiceEvidence returns the lagrange service evidence.
@@ -82,6 +88,25 @@ func GetEvidence(req *networktypes.CommitBlockRequest, correctBlockHash, correct
 		signature[64] += 27
 	}
 	addr := crypto.PubkeyToAddress(*pubKey).Hex()
+
+	rawHeader,err := evm.GetRawAttestBlockHeader(int(req.EpochBlockNumber))
+	if err != nil {
+	    return nil,err
+	}
+
+	hex, l2hash, err := evm.GetExtraDataByNetwork(int(req.EpochBlockNumber))
+	if err != nil {
+	    return nil,err
+	}
+	hexbytes, err := hexutil.Decode(hex)
+	if err != nil {
+	    return nil,err
+	}
+	headerbytes, err := hexutil.Decode(rawHeader)
+	if err != nil {
+	    return nil,err
+	}
+
 	return &Evidence{
 		Operator:                    addr,
 		BlockHash:                   common.HexToHash(req.BlsSignature.ChainHeader.BlockHash),
@@ -95,5 +120,10 @@ func GetEvidence(req *networktypes.CommitBlockRequest, correctBlockHash, correct
 		BlockSignature:              common.FromHex(req.BlsSignature.Signature),
 		CommitSignature:             signature,
 		ChainID:                     req.BlsSignature.ChainHeader.ChainId,
+		Status:			     false, //TODO
+		CorrectRawHeader:	     headerbytes,
+		CheckpointBlockHash:	     l2hash,
+		HeaderProof:    	     []byte(""),
+		ExtraData:      	     hexbytes,
 	}, nil
 }

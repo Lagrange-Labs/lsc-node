@@ -30,6 +30,7 @@ import (
 type Client struct {
 	types.NetworkServiceClient
 	rpcClient   rpcclient.RpcClient
+	rpcClient   rpcclient.RpcClient
 	committeeSC *committee.Committee
 
 	chainID         uint32
@@ -118,6 +119,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 		stakeAddress:         stakeAddress,
 		pullInterval:         time.Duration(cfg.PullInterval),
 		rpcClient:            rpcClient,
+		etherClient:	      etherClient,
 		committeeSC:          committeeSC,
 		chainID:              chainID,
 		lastBlockNumber:      1,

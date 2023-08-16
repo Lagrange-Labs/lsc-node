@@ -31,6 +31,8 @@ StakingSCAddress = "0x4e61b4f5C24441C5f7c1e912595794a06C14906f"
 CommitteeSCAddress = "0xC1dCca9f209BD61a154e85980dcaff3203e27c69"
 StakingCheckInterval = "2s"
 EvidenceUploadInterval = "2s"
+L2OutputOracle = "0xe6dfba0953616bacab0c9a8ecb3a9bba77fc15c0"
+Outbox = "0x45Af9Ed1D03703e480CE7d328fB684bb67DA5049"
 
 [Consensus]
 OperatorAddress = "0x6E654b122377EA7f592bf3FD5bcdE9e8c1B1cEb9"
