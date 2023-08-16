@@ -1,6 +1,7 @@
 package rpcclient
 
 import (
+        "os"
 	"context"
 	"math/big"
         "errors"
@@ -11,8 +12,8 @@ import (
         common "github.com/ethereum/go-ethereum/common"
         hexutil "github.com/ethereum/go-ethereum/common/hexutil"
 
-	_ "github.com/Lagrange-Labs/lagrange-node/governance/arbitrum"
-	_ "github.com/Lagrange-Labs/lagrange-node/governance/optimism"
+	"github.com/Lagrange-Labs/lagrange-node/governance/arbitrum"
+	"github.com/Lagrange-Labs/lagrange-node/governance/optimism"
 	//"github.com/Lagrange-Labs/lagrange-node/config"
 )
 
@@ -87,15 +88,10 @@ func (c *EvmClient) GetChainID() (uint32, error) {
 }
 
 func GetRawAttestBlockHeader(blockNum int) (string, error) {
-        return "0x00",nil
-/*
-	cfg,err := config.Default()
-	if err != nil { panic(err) }
-	optClient,err := NewEvmClient(cfg.RPCEndpoint)
-	if err != nil { panic(err) }
+	optClient,err := NewEvmClient(os.Getenv("RPCEndpoint"))
+	if err != nil { return "0x00",nil }
 	hex,err := optClient.GetRawBlockHeader(blockNum)
 	return hex,err
-*/
 }
 
 func (c *EvmClient) GetRawBlockHeader(blockNum int) (string, error) {
@@ -123,28 +119,24 @@ func (c *EvmClient) GetRawBlockHeaders(startblock *big.Int, endblock *big.Int) (
 }
 
 func GetExtraDataByNetwork(blockNum int) (string, common.Hash, error) {
-	    return "", common.HexToHash("0x00"),errors.New("GetExtraDataByNetwork(): Unsupported network")
-	    /*
-	cfg,err := config.Default()
-	network := cfg.Chain
+	network := os.Getenv("Chain")
 	if network == "arbitrum" {
-	    proofCfg := arbitrum.ProofConfig{cfg.EthereumURL, cfg.RPCendpoint, cfg.Outbox}
+	    proofCfg := arbitrum.ProofConfig{os.Getenv("EthereumURL"), os.Getenv("RPCendpoint"), os.Getenv("Outbox")}
 	    l2Hash,err := arbitrum.GetL2Hash(proofCfg, blockNum)
-	    if err != nil { panic(err) }
-	    eth,err := NewEvmClient(cfg.EthereumURL)
-	    if err != nil { panic(err) }
+	    if err != nil { return "0x00", common.HexToHash("0x00"), err }
+	    eth,err := NewEvmClient(os.Getenv("EthereumURL"))
+	    if err != nil { return "0x00", common.HexToHash("0x00"), err }
 	    extra,err := eth.GetExtraDataByNumber(uint64(blockNum))
-	    if err != nil { panic(err) }
+	    if err != nil { return "0x00", common.HexToHash("0x00"), err }
 	    return extra, common.HexToHash(l2Hash), nil
 	} else if network == "optimism" {
-	    proofCfg := optimism.ProofConfig{cfg.EthereumURL, cfg.RPCendpoint, cfg.L2OutputOracle}
+	    proofCfg := optimism.ProofConfig{os.Getenv("EthereumURL"), os.Getenv("RPCendpoint"), os.Getenv("L2OutputOracle")}
 	    proof, err := optimism.GetProof(proofCfg, blockNum)
-	    if err != nil { panic(err) }
+	    if err != nil { return "0x00", common.HexToHash("0x00"), err }
 	    proofHex, err := proof.Hex()
-	    if err != nil { panic(err) }
+	    if err != nil { return "0x00", common.HexToHash("0x00"), err }
 	    return proofHex, proof.LatestBlockhash, nil
 	} else {
-	    return "", common.HexToHash("0x00"),errors.New("GetExtraDataByNetwork(): Unsupported network")
+	    return "0x00", common.HexToHash("0x00"),errors.New("GetExtraDataByNetwork(): Unsupported network")
 	}
-	*/
 }
