@@ -111,10 +111,4 @@ func TestUploadEvidence(t *testing.T) {
 	evidences, err := storage.GetEvidences(context.Background())
 	require.NoError(t, err)
 	require.Equal(t, 1, len(evidences))
-	// upload the evidence
-	// require.NoError(t, gov.uploadEvidences())
-	// // check the evidence status
-	// evidences, err = storage.GetEvidences(context.Background())
-	// require.NoError(t, err)
-	// require.Equal(t, 0, len(evidences))
 }

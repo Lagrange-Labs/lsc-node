@@ -50,7 +50,7 @@ test: stop
 	docker-compose -f docker-compose.yml up -d lagrangesc
 	sleep 5
 	docker ps -a
-	trap '$(STOP)' EXIT; go test -p 1 ./... --timeout=10m
+	trap '$(STOP)' EXIT; go test ./... --timeout=10m
 .PHONY: test
 
 run-db-mongo:

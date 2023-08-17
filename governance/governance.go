@@ -100,10 +100,13 @@ func (g *Governance) Start() {
 		case <-ticker.C:
 			go func() {
 				if err := g.uploadEvidences(); err != nil {
-					logger.Fatalf("failed to upload evidences: %w", err)
+					logger.Errorf("failed to upload evidences: %w", err)
 				}
 			}()
 		case <-time.After(g.stakingInterval):
+			if err := g.updateCommittee(); err != nil {
+				logger.Errorf("failed to update committee root: %w", err)
+			}
 			if err := g.updateNodeStatuses(); err != nil {
 				logger.Errorf("failed to update node status: %w", err)
 			}
@@ -135,11 +138,6 @@ func (g *Governance) uploadEvidences() error {
 }
 
 func (g *Governance) updateNodeStatuses() error {
-	err := g.updateCommittee()
-	if err != nil {
-		return fmt.Errorf("failed to update committee root: %w", err)
-	}
-
 	nodeStatuses := []networktypes.NodeStatus{networktypes.NodeJoined}
 
 	nodes, err := g.storage.GetNodesByStatuses(g.ctx, nodeStatuses, g.chainID)
