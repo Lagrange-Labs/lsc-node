@@ -50,7 +50,7 @@ test: stop
 	docker-compose -f docker-compose.yml up -d lagrangesc
 	sleep 5
 	docker ps -a
-	trap '$(STOP)' EXIT; go test ./... --timeout=10m
+	trap '$(STOP)' EXIT; go test -p 1 ./... --timeout=10m
 .PHONY: test
 
 run-db-mongo:
@@ -79,6 +79,7 @@ localnet-start: stop
 	docker-compose -f docker-compose.yml up -d simnode3
 	docker-compose -f docker-compose.yml up -d simnode4
 	docker-compose -f docker-compose.yml up -d simnode5
+	docker-compose -f docker-compose.yml up -d simnode6
 	sleep 3
 	docker-compose -f docker-compose.yml up -d prover
 

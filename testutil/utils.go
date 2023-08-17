@@ -52,6 +52,6 @@ func RegisterOperator(client *ethclient.Client, auth *bind.TransactOpts, stakeAd
 	if err != nil {
 		return err
 	}
-	_, err = service.Register(auth, big.NewInt(0), []byte{}, math.MaxUint32)
+	_, err = service.Register(auth, 0, []byte{}, math.MaxUint32)
 	return err
 }
