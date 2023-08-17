@@ -74,7 +74,7 @@ func TestUpdateNodeStatus(t *testing.T) {
 	}
 	require.NoError(t, storage.AddNode(context.Background(), &clientNode))
 	// update the node status
-	time.Sleep(time.Second * 3)
+	time.Sleep(time.Second * 5)
 	require.NoError(t, gov.updateNodeStatuses())
 	// check the node status
 	node, err := storage.GetNodeByStakeAddr(context.Background(), clientNode.StakeAddress)
