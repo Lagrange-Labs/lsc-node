@@ -109,12 +109,12 @@ func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
         log.Fatalf("Failed to connect to the Ethereum client: %v", err)
     }
     
-    optClient, err := rpc.Dial(cfg.OptEndpoint)
+    optRPC, err := rpc.Dial(cfg.OptEndpoint)
     if err != nil {
         log.Fatalf("Failed to connect to the Optimism client: %v", err)
     }
     
-    optClient := ethclient.NewClient(optClient)
+    optClient := ethclient.NewClient(optRPC)
 
     // Get L2 Output Proposal for block, process
     output, err := getL2OutputAfter(ethClient, common.HexToAddress(cfg.L2OutputOracleAddr), blockNum);
