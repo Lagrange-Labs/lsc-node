@@ -13,23 +13,25 @@ import (
     "github.com/ethereum/go-ethereum/common/hexutil"
 )
 
+// ProofConfig is the endpoint/address config for retrieving outbox sendroots
 type ProofConfig struct {
     EthEndpoint		string
     ArbEndpoint		string
     OutboxAddr		string
 }
 
+// GetL2Hash - Returns L2Hash associated with blockNumber's sendRoot
 func GetL2Hash(cfg ProofConfig, blockNumber int) (string, error) {
     blockNum := big.NewInt(int64(blockNumber))
 
     // Initialize RPC clients
-    eth_rpc, err := rpc.Dial(cfg.EthEndpoint)
+    ethRPC, err := rpc.Dial(cfg.EthEndpoint)
     if err != nil { return "", err }
-    arb_client, err := ethclient.Dial(cfg.ArbEndpoint)
+    arbClient, err := ethclient.Dial(cfg.ArbEndpoint)
     if err != nil { return "", err }
 
     // Get SendRoot from L2 block header
-    header, err := arb_client.HeaderByNumber(context.Background(), blockNum)
+    header, err := arbClient.HeaderByNumber(context.Background(), blockNum)
     if err != nil { return "", err }
     extraData := header.Extra
 
@@ -37,12 +39,12 @@ func GetL2Hash(cfg ProofConfig, blockNumber int) (string, error) {
     abiPath := "../../scinterface/bin/goerli/Outbox.json"
     abiJSON, err := ioutil.ReadFile(abiPath)
     if err != nil { return "",err }
-    outbox_abi, err := abi.JSON(strings.NewReader(string(abiJSON)))
+    outboxAbi, err := abi.JSON(strings.NewReader(string(abiJSON)))
     if err != nil { return "",err }
 
     // Prepare and make RPC request to outbox for checkpoint block hash
     f := "roots"
-    data, err := outbox_abi.Pack(f, common.BytesToHash(extraData))
+    data, err := outboxAbi.Pack(f, common.BytesToHash(extraData))
     if err != nil { return "",err }
     
     type request struct {
@@ -53,13 +55,13 @@ func GetL2Hash(cfg ProofConfig, blockNumber int) (string, error) {
     call := request{addr,hexutil.Encode(data)}
 
     var res string
-    err = eth_rpc.Call(&res, "eth_call", call, "latest")
+    err = ethRPC.Call(&res, "eth_call", call, "latest")
     if err != nil { return "",err }
     
     resBytes,err := hexutil.Decode(res)
     if err != nil { return "",err }
 
-    values, err := outbox_abi.Unpack("roots", resBytes)
+    values, err := outboxAbi.Unpack("roots", resBytes)
     if err != nil { return "",err }
     
     op := values[0]
