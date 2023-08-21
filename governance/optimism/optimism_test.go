@@ -15,12 +15,12 @@ var opt = os.Getenv("RPCEndpoint")
 var addr = "0xe6dfba0953616bacab0c9a8ecb3a9bba77fc15c0"
 
 func TestL2Output(t *testing.T) {
-    eth_client, err := rpc.Dial(eth)
+    ethClient, err := rpc.Dial(eth)
     if err != nil {
         log.Fatalf("Failed to connect to the Ethereum client: %v", err)
     }
 
-    output,err := getL2OutputAfter(eth_client, common.HexToAddress(addr), big.NewInt(11991348))
+    output,err := getL2OutputAfter(ethClient, common.HexToAddress(addr), big.NewInt(11991348))
     _ = output
     require.NoError(t, err)
  }

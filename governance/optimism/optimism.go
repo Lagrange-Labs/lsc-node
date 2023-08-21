@@ -20,6 +20,7 @@ import (
     rlp "github.com/ethereum/go-ethereum/rlp"
 )
 
+// OutputRootProof is derived from from Optimism L1 Contract Types
 type OutputRootProof struct {
     Version			*big.Int
     StateRoot			common.Hash
@@ -27,12 +28,14 @@ type OutputRootProof struct {
     LatestBlockhash		common.Hash
 }
 
+// OutputProposal is derived from from Optimism L1 Contract Types
 type OutputProposal struct {
     OutputRoot		[32]byte
     Timestamp		*big.Int
     L2BlockNumber	*big.Int
 }
 
+// ProofConfig is the endpoint/address config for reconstructing and verifying outputs
 type ProofConfig struct {
     EthEndpoint		string
     OptEndpoint		string
@@ -44,12 +47,12 @@ func getL2OutputAfter(rpc *rpc.Client, addr common.Address, blockNum *big.Int) (
     abiPath := "../../scinterface/bin/goerli/L2OutputOracle.json"
     abiJSON, err := ioutil.ReadFile(abiPath)
     if err != nil { return OutputProposal{},err }
-    l2oo_abi, err := abi.JSON(strings.NewReader(string(abiJSON)))
+    l2ooAbi, err := abi.JSON(strings.NewReader(string(abiJSON)))
 
     // Make RPC Request for L2 Output Proposal
     f := "getL2OutputAfter"
     args := []interface{}{blockNum}
-    data, err := l2oo_abi.Pack(f, args...)
+    data, err := l2ooAbi.Pack(f, args...)
     if err != nil { return OutputProposal{},err }
 
     type request struct {
@@ -68,7 +71,7 @@ func getL2OutputAfter(rpc *rpc.Client, addr common.Address, blockNum *big.Int) (
     resBytes,err := hexutil.Decode(res)
     if err != nil { return OutputProposal{},err }
 
-    values, err := l2oo_abi.Unpack("getL2OutputAfter", resBytes)
+    values, err := l2ooAbi.Unpack("getL2OutputAfter", resBytes)
     if err != nil { return OutputProposal{},err }
     
     op := values[0]
@@ -80,6 +83,7 @@ func getL2OutputAfter(rpc *rpc.Client, addr common.Address, blockNum *big.Int) (
         outputProposal.L2BlockNumber }, nil
 }
 
+// Hex - converts output root proof to hex string
 func (orp *OutputRootProof) Hex() (string,error) {
         proofABI, err := abi.JSON(strings.NewReader(`[{"type": "function", "name": "bytes32[4]", "inputs": [{"name": "a", "type": "uint256"},{"name": "b", "type": "bytes32"},{"name": "c", "type": "bytes32"},{"name": "d", "type": "bytes32"}]}]`))
         if err != nil { return "",err }
@@ -90,29 +94,30 @@ func (orp *OutputRootProof) Hex() (string,error) {
 	    orp.MessagePasserStorageRoot,
 	    orp.LatestBlockhash,
 	)
-        encoded_cleaned := encoded[4:] // strip signature prefix
-	return hexutil.Encode(encoded_cleaned),nil
+        encodedCleaned := encoded[4:] // strip signature prefix
+	return hexutil.Encode(encodedCleaned),nil
 }
 
+// GetProof - Reconstructs nearet OutputRootProof immediately following provided blockNumber
 func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
     blockNum := big.NewInt(int64(blockNumber));
     _ = blockNum
 
     // Initialize RPC and ETH Clients    
-    eth_client, err := rpc.Dial(cfg.EthEndpoint)
+    ethClient, err := rpc.Dial(cfg.EthEndpoint)
     if err != nil {
         log.Fatalf("Failed to connect to the Ethereum client: %v", err)
     }
     
-    opt_client, err := rpc.Dial(cfg.OptEndpoint)
+    optClient, err := rpc.Dial(cfg.OptEndpoint)
     if err != nil {
         log.Fatalf("Failed to connect to the Optimism client: %v", err)
     }
     
-    optClient := ethclient.NewClient(opt_client)
+    optClient := ethclient.NewClient(optClient)
 
     // Get L2 Output Proposal for block, process
-    output, err := getL2OutputAfter(eth_client, common.HexToAddress(cfg.L2OutputOracleAddr), blockNum);
+    output, err := getL2OutputAfter(ethClient, common.HexToAddress(cfg.L2OutputOracleAddr), blockNum);
     if err != nil { return OutputRootProof{},err }
 
     outputRoot := output.OutputRoot;
@@ -164,9 +169,9 @@ func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
         proofABI, err := abi.JSON(strings.NewReader(`[{"type": "function", "name": "bytes32[4]", "inputs": [{"name": "a", "type": "uint256"},{"name": "b", "type": "bytes32"},{"name": "c", "type": "bytes32"},{"name": "d", "type": "bytes32"}]}]`))
         if err != nil { return OutputRootProof{},err }
         encoded, err := proofABI.Pack("bytes32[4]", big.NewInt(int64(version)), stateRoot, common.HexToHash(storageRoot.(string)), common.HexToHash(hash))
-        encoded_cleaned := encoded[4:] // strip signature prefix
+        encodedCleaned := encoded[4:] // strip signature prefix
         if err != nil { return OutputRootProof{},err }
-        reProof := crypto.Keccak256(encoded_cleaned)
+        reProof := crypto.Keccak256(encodedCleaned)
         
         if hexutil.Encode(reProof) != outputRootStr {
             return OutputRootProof{},errors.New("Output roots do not match")
@@ -179,7 +184,6 @@ func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
             common.HexToHash(storageRoot.(string)),
             common.HexToHash(hash) }
         return proof,nil
-    } else {
-        return OutputRootProof{},errors.New(fmt.Sprintf("Failed to parse storage proof: %s",jsonStr))
     }
+    return OutputRootProof{},fmt.Errorf("Failed to parse storage proof: %s",jsonStr)
 }
