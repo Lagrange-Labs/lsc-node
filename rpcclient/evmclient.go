@@ -17,6 +17,7 @@ import (
 	//"github.com/Lagrange-Labs/lagrange-node/config"
 )
 
+// EvmClient - Wrapper for go-Eehereum ethclient
 type EvmClient struct {
 	ethClient *ethclient.Client
 }
@@ -68,7 +69,7 @@ func (c *EvmClient) GetExtraDataByNumber(blockNumber uint64) (string, error) {
 	return hexutil.Encode(extraData), err
 }
 
-// GetBlockHashByNumber returns the block number by the given block hash.
+// GetBlockNumberByHash returns the block number by the given block hash.
 func (c *EvmClient) GetBlockNumberByHash(blockHash string) (int, error) {
 	header, err := c.ethClient.HeaderByHash(context.Background(), common.HexToHash(blockHash))
 	if err == ethereum.NotFound {
@@ -87,6 +88,7 @@ func (c *EvmClient) GetChainID() (uint32, error) {
 	return uint32(chainID.Int64()), err
 }
 
+// GetRawAttestBlockHeader returns the raw block header hex string associated with blockNum w/o implicit client
 func GetRawAttestBlockHeader(blockNum int) (string, error) {
 	optClient,err := NewEvmClient(os.Getenv("RPCEndpoint"))
 	if err != nil { return "0x00",nil }
@@ -94,6 +96,7 @@ func GetRawAttestBlockHeader(blockNum int) (string, error) {
 	return hex,err
 }
 
+// GetRawBlockHeader returns the raw block header hex string associated with blockNum
 func (c *EvmClient) GetRawBlockHeader(blockNum int) (string, error) {
         header, err := c.ethClient.HeaderByNumber(context.Background(), big.NewInt(int64(blockNum)))
 	if err != nil { return "",err }
@@ -103,7 +106,7 @@ func (c *EvmClient) GetRawBlockHeader(blockNum int) (string, error) {
 	return hex,nil
 }
 
-// Retrieve RLP-encoded block headers, boundary-inclusive.
+// GetRawBlockHeaders retrieves RLP-encoded block headers, boundary-inclusive.
 func (c *EvmClient) GetRawBlockHeaders(startblock *big.Int, endblock *big.Int) (map[*big.Int]string, error) {
     headers := make(map[*big.Int]string)
     // Iterate block numbers
@@ -118,6 +121,7 @@ func (c *EvmClient) GetRawBlockHeaders(startblock *big.Int, endblock *big.Int) (
     return headers,nil
 }
 
+// GetExtraDataByNetwork returns blockNum header's extradata field as hex string
 func GetExtraDataByNetwork(blockNum int) (string, common.Hash, error) {
 	network := os.Getenv("Chain")
 	if network == "arbitrum" {
