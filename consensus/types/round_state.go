@@ -6,7 +6,6 @@ import (
 	"sync"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
@@ -15,13 +14,10 @@ import (
 
 // RoundState defines the internal consensus state.
 type RoundState struct {
-	Height        uint64
-	Validators    *ValidatorSet
-	ProposalBlock *sequencertypes.Block
+	proposalBlock *sequencertypes.Block
 
-	totalVotingPower uint64
-	commitSignatures map[string]*networktypes.CommitBlockRequest
-	evidences        []*networktypes.CommitBlockRequest // to determine slashing
+	commitSignatures map[string]*sequencertypes.BlsSignature
+	evidences        []*sequencertypes.BlsSignature // to determine slashing
 
 	rwMutex   *sync.RWMutex // to protect the round state updates
 	isBlocked bool          // to prevent the block commit
@@ -36,29 +32,29 @@ func NewEmptyRoundState() *RoundState {
 }
 
 // UpdateRoundState updates a new round state.
-func (rs *RoundState) UpdateRoundState(validators *ValidatorSet, proposalBlock *sequencertypes.Block) {
+func (rs *RoundState) UpdateRoundState(proposalBlock *sequencertypes.Block) {
 	rs.rwMutex.Lock()
 	defer rs.rwMutex.Unlock()
 
-	rs.Height = proposalBlock.BlockNumber()
-	rs.Validators = validators
-	rs.ProposalBlock = proposalBlock
-	rs.commitSignatures = make(map[string]*networktypes.CommitBlockRequest)
-	rs.totalVotingPower = proposalBlock.TotalVotingPower()
+	rs.proposalBlock = proposalBlock
+	rs.commitSignatures = make(map[string]*sequencertypes.BlsSignature)
+	blsSignature := proposalBlock.BlsSignature()
+	blsSignature.BlsSignature = proposalBlock.ProposerSignature()
+	rs.commitSignatures[proposalBlock.ProposerPubKey()] = blsSignature
 	rs.isBlocked = false
 }
 
 // AddCommit adds a commit to the round state.
-func (rs *RoundState) AddCommit(commit *networktypes.CommitBlockRequest) {
+func (rs *RoundState) AddCommit(commit *sequencertypes.BlsSignature, pubKey string) {
 	rs.rwMutex.Lock()
 	defer rs.rwMutex.Unlock()
 
 	if rs.isBlocked {
-		logger.Warnf("the add commit is blocked")
+		logger.Info("the add commit is blocked")
 		return
 	}
 
-	rs.commitSignatures[commit.PubKey] = commit
+	rs.commitSignatures[pubKey] = commit
 }
 
 // BlockCommit blocks adds a commit to the round state.
@@ -77,12 +73,12 @@ func (rs *RoundState) UnblockCommit() {
 	rs.isBlocked = false
 }
 
-// GetCurrentBlock returns the current proposal block.
-func (rs *RoundState) GetCurrentBlock() *sequencertypes.Block {
+// IsFinalized checks if the block is finalized.
+func (rs *RoundState) IsFinalized() bool {
 	rs.rwMutex.RLock()
 	defer rs.rwMutex.RUnlock()
 
-	return rs.ProposalBlock
+	return len(rs.proposalBlock.PubKeys) > 0
 }
 
 // GetCurrentBlockNumber returns the current block number.
@@ -90,7 +86,15 @@ func (rs *RoundState) GetCurrentBlockNumber() uint64 {
 	rs.rwMutex.RLock()
 	defer rs.rwMutex.RUnlock()
 
-	return rs.ProposalBlock.BlockNumber()
+	return rs.proposalBlock.BlockNumber()
+}
+
+// GetCurrentBlock returns the current block.
+func (rs *RoundState) GetCurrentBlock() *sequencertypes.Block {
+	rs.rwMutex.RLock()
+	defer rs.rwMutex.RUnlock()
+
+	return rs.proposalBlock
 }
 
 // GetCurrentEpochBlockNumber returns the current epoch block number.
@@ -98,103 +102,91 @@ func (rs *RoundState) GetCurrentEpochBlockNumber() uint64 {
 	rs.rwMutex.RLock()
 	defer rs.rwMutex.RUnlock()
 
-	return rs.ProposalBlock.EpochBlockNumber()
+	return rs.proposalBlock.EpochBlockNumber()
 }
 
 // CheckEnoughVotingPower checks if there is enough voting power to finalize the block.
-func (rs *RoundState) CheckEnoughVotingPower() bool {
+func (rs *RoundState) CheckEnoughVotingPower(vs *ValidatorSet) bool {
 	rs.rwMutex.RLock()
 	defer rs.rwMutex.RUnlock()
 
-	votingPower := rs.Validators.GetVotingPower(rs.Validators.Proposer.PublicKey)
-	for _, signature := range rs.commitSignatures {
-		votingPower += rs.Validators.GetVotingPower(signature.PubKey)
+	votingPower := uint64(0)
+	for pubKey := range rs.commitSignatures {
+		votingPower += vs.GetVotingPower(pubKey)
 	}
 
-	logger.Infof("voting power: %v, total voting power: %v", votingPower, rs.totalVotingPower)
-	return votingPower*3 > rs.totalVotingPower*2
+	logger.Infof("committed voting power: %v, validator set voting power: %v", votingPower, vs.GetTotalVotingPower())
+	return votingPower*3 > vs.GetCommitteeVotingPower()*2
 }
 
 // CheckAggregatedSignature checks if the aggregated signature is valid.
-func (rs *RoundState) CheckAggregatedSignature() ([]*bls.PublicKey, *bls.Signature, error) {
+func (rs *RoundState) CheckAggregatedSignature() error {
 	rs.rwMutex.Lock()
 	defer rs.rwMutex.Unlock()
 
-	blsSignature := rs.ProposalBlock.BlsSignature()
+	blsSignature := rs.proposalBlock.BlsSignature()
 	sigHash := blsSignature.Hash()
 	signatures := make([]*bls.Signature, 0)
-	pubkeys := make([]*bls.PublicKey, 0)
+	pubKeys := make([]*bls.PublicKey, 0)
+	pubKeyRaws := make([]string, 0)
 	invalid_keys := make([]string, 0)
 
-	// add the proposer signature
-	pubkey, err := utils.HexToBlsPubKey(rs.Validators.Proposer.PublicKey)
-	if err != nil {
-		return nil, nil, err
-	}
-	pubkeys = append(pubkeys, pubkey)
-	sig, err := utils.HexToBlsSignature(rs.ProposalBlock.ProposerSignature())
-	if err != nil {
-		logger.Errorf("failed to deserialize the proposer signature %v: %v", rs.ProposalBlock.ProposerSignature(), err)
-		return nil, nil, err
-	}
-	signatures = append(signatures, sig)
-
 	// aggregate the signatures of client nodes
-	for _, commit := range rs.commitSignatures {
-		pubkey, err = utils.HexToBlsPubKey(commit.PubKey)
+	for pubKeyRaw, commit := range rs.commitSignatures {
+		pubKey, err := utils.HexToBlsPubKey(pubKeyRaw)
 		if err != nil {
-			return nil, nil, err
+			// it is a critical error if the public key is not valid because it is from the database
+			return err
 		}
-		sig, err = utils.HexToBlsSignature(commit.BlsSignature.Signature)
+		sig, err := utils.HexToBlsSignature(commit.BlsSignature)
 		if err != nil {
 			logger.Errorf("failed to deserialize signature %v: %v", commit, err)
-			invalid_keys = append(invalid_keys, commit.PubKey)
+			invalid_keys = append(invalid_keys, pubKeyRaw)
 			continue
 		}
 		signatures = append(signatures, sig)
-		pubkeys = append(pubkeys, pubkey)
+		pubKeys = append(pubKeys, pubKey)
+		pubKeyRaws = append(pubKeyRaws, pubKeyRaw)
 	}
 
 	aggSig := bls.AggregateSignatures(signatures)
-	verified, err := aggSig.FastAggregateVerify(pubkeys, sigHash)
-	if err != nil || !verified {
-		// find the invalid signature
-		// skip the proposer signature
-		for i, pubkey := range pubkeys[1:] {
-			pubkey_raw := utils.BlsPubKeyToHex(pubkey)
-			commit := rs.commitSignatures[pubkey_raw]
-			commitHash := commit.BlsSignature.Hash()
-			if !bytes.Equal(commitHash, sigHash) {
-				logger.Errorf("wrong commit message: %v, original: %v", common.Bytes2Hex(commitHash), common.Bytes2Hex(sigHash))
-				invalid_keys = append(invalid_keys, pubkey_raw)
-				continue
-			}
-			verified, err := signatures[i+1].VerifyByte(pubkey, commitHash) // because the first signature is the proposer signature
-			if err != nil {
-				return nil, nil, err
-			}
-			if !verified {
-				logger.Errorf("invalid signature: %v", commit)
-				invalid_keys = append(invalid_keys, pubkey_raw)
-			}
-		}
-		err = ErrInvalidAggregativeSignature
+	verified, err := aggSig.FastAggregateVerify(pubKeys, sigHash)
+	if verified && len(invalid_keys) == 0 {
+		rs.proposalBlock.AggSignature = utils.BlsSignatureToHex(aggSig)
+		rs.proposalBlock.PubKeys = pubKeyRaws
+		return nil
 	}
+
+	if err != nil {
+		logger.Errorf("failed to verify the aggregated signature: %v", err)
+	}
+
+	// find the invalid signature
+	for i, pubKeyRaw := range pubKeyRaws {
+		commit := rs.commitSignatures[pubKeyRaw]
+		commitHash := commit.Hash()
+		if !bytes.Equal(commitHash, sigHash) {
+			logger.Errorf("wrong commit message: %v, original: %v", common.Bytes2Hex(commitHash), common.Bytes2Hex(sigHash))
+			invalid_keys = append(invalid_keys, pubKeyRaw)
+			continue
+		}
+		verified, err := signatures[i].VerifyByte(pubKeys[i], commitHash)
+		if err != nil {
+			return err
+		}
+		if !verified {
+			logger.Errorf("invalid signature: %v", commit)
+			invalid_keys = append(invalid_keys, pubKeyRaw)
+		}
+	}
+
 	// add invalid signatures to evidences
 	for _, key := range invalid_keys {
 		rs.evidences = append(rs.evidences, rs.commitSignatures[key])
 		delete(rs.commitSignatures, key)
 	}
-	return pubkeys, aggSig, err
-}
 
-// UpdateAggregatedSignature updates the aggregated signature.
-func (rs *RoundState) UpdateAggregatedSignature(pubkeys []string, aggSig string) {
-	rs.rwMutex.Lock()
-	defer rs.rwMutex.Unlock()
-
-	rs.ProposalBlock.PubKeys = pubkeys
-	rs.ProposalBlock.AggSignature = aggSig
+	return ErrInvalidAggregativeSignature
 }
 
 // GetEvidences returns the evidences.
@@ -204,7 +196,7 @@ func (rs *RoundState) GetEvidences() ([]*Evidence, error) {
 	var evidences []*Evidence
 
 	for _, req := range rs.evidences {
-		evidence, err := GetEvidence(req, rs.ProposalBlock.BlockHash(), rs.ProposalBlock.CurrentCommittee(), rs.ProposalBlock.NextCommittee())
+		evidence, err := GetEvidence(req, rs.proposalBlock.BlockHash(), rs.proposalBlock.CurrentCommittee(), rs.proposalBlock.NextCommittee())
 		if err != nil {
 			return nil, err
 		}

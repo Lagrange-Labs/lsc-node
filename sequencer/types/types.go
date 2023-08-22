@@ -66,7 +66,7 @@ func (b *BlsSignature) Hash() []byte {
 	blockHash := common.FromHex(b.ChainHeader.BlockHash)[:]
 	currentCommitteeRoot := common.FromHex(b.CurrentCommittee)[:]
 	nextCommitteeRoot := common.FromHex(b.NextCommittee)[:]
-	blockNumber := big.NewInt(int64(b.ChainHeader.BlockNumber)).FillBytes(blockNumberBuf[:])
+	blockNumber := big.NewInt(int64(b.BlockNumber())).FillBytes(blockNumberBuf[:])
 	chainID := make([]byte, 4)
 	binary.BigEndian.PutUint32(chainID, b.ChainHeader.ChainId)
 	chainHash := utils.Hash(blockHash, blockNumber, chainID)
