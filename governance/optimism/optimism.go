@@ -154,7 +154,10 @@ func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
     
     jsonStr := string(scres)
     var result map[string]interface{}
-    json.Unmarshal([]byte(jsonStr), &result)
+    err = json.Unmarshal([]byte(jsonStr), &result)
+    if err != nil {
+        fmt.Errorf("%s",err)
+    }
     
     if curlResult, ok := result["result"].(map[string]interface{}); ok {
         storageRoot := curlResult["storageHash"]
