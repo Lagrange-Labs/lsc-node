@@ -125,7 +125,11 @@ func (c *EvmClient) GetRawBlockHeaders(startblock *big.Int, endblock *big.Int) (
 func GetExtraDataByNetwork(blockNum int) (string, common.Hash, error) {
 	network := os.Getenv("Chain")
 	if network == "arbitrum" {
-	    proofCfg := arbitrum.ProofConfig{os.Getenv("EthereumURL"), os.Getenv("RPCendpoint"), os.Getenv("Outbox")}
+	    proofCfg := arbitrum.ProofConfig{
+	        EthEndpoint: os.Getenv("EthereumURL"),
+		ArbEndpoint: os.Getenv("RPCendpoint"),
+		OutboxAddr: os.Getenv("Outbox"),
+	    }
 	    l2Hash,err := arbitrum.GetL2Hash(proofCfg, blockNum)
 	    if err != nil { return "0x00", common.HexToHash("0x00"), err }
 	    eth,err := NewEvmClient(os.Getenv("EthereumURL"))
@@ -134,7 +138,11 @@ func GetExtraDataByNetwork(blockNum int) (string, common.Hash, error) {
 	    if err != nil { return "0x00", common.HexToHash("0x00"), err }
 	    return extra, common.HexToHash(l2Hash), nil
 	} else if network == "optimism" {
-	    proofCfg := optimism.ProofConfig{os.Getenv("EthereumURL"), os.Getenv("RPCendpoint"), os.Getenv("L2OutputOracle")}
+	    proofCfg := optimism.ProofConfig{
+	        EthEndpoint: os.Getenv("EthereumURL"),
+		OptEndpoint: os.Getenv("RPCendpoint"),
+		L2OutputOracleAddr: os.Getenv("L2OutputOracle"),
+	    }
 	    proof, err := optimism.GetProof(proofCfg, blockNum)
 	    if err != nil { return "0x00", common.HexToHash("0x00"), err }
 	    proofHex, err := proof.Hex()
