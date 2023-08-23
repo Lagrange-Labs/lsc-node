@@ -146,7 +146,7 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 			}
 
 			// upload the commit to the consensus layer
-			err = s.consensus.AddCommit(signature, node.PublicKey)
+			err = s.consensus.AddCommit(signature, node.PublicKey, node.StakeAddress)
 			if err != nil {
 				chError <- err
 			}

@@ -18,6 +18,6 @@ type storageInterface interface {
 
 type consensusInterface interface {
 	GetOpenRoundBlocks(blockNumber uint64) []*sequencertypes.Block
-	AddCommit(commit *sequencertypes.BlsSignature, pubKey string) error
+	AddCommit(commit *sequencertypes.BlsSignature, pubKey string, stakeAddr string) error
 	IsFinalized(blockNumber uint64) bool
 }
