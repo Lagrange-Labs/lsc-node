@@ -17,16 +17,16 @@ type RoundState struct {
 	proposalBlock *sequencertypes.Block
 
 	commitSignatures map[string]*sequencertypes.BlsSignature
+	stakeAddresses   map[string]bool
 	evidences        []*sequencertypes.BlsSignature // to determine slashing
 
-	rwMutex   *sync.RWMutex // to protect the round state updates
-	isBlocked bool          // to prevent the block commit
+	rwMutex   sync.RWMutex // to protect the round state updates
+	isBlocked bool         // to prevent the block commit
 }
 
 // NewEmptyRoundState creates a new empty round state for rwMutex.
 func NewEmptyRoundState() *RoundState {
 	return &RoundState{
-		rwMutex:   &sync.RWMutex{},
 		isBlocked: true,
 	}
 }
@@ -41,11 +41,12 @@ func (rs *RoundState) UpdateRoundState(proposalBlock *sequencertypes.Block) {
 	blsSignature := proposalBlock.BlsSignature()
 	blsSignature.BlsSignature = proposalBlock.ProposerSignature()
 	rs.commitSignatures[proposalBlock.ProposerPubKey()] = blsSignature
+	rs.stakeAddresses = make(map[string]bool)
 	rs.isBlocked = false
 }
 
 // AddCommit adds a commit to the round state.
-func (rs *RoundState) AddCommit(commit *sequencertypes.BlsSignature, pubKey string) {
+func (rs *RoundState) AddCommit(commit *sequencertypes.BlsSignature, pubKey, stakeAddr string) {
 	rs.rwMutex.Lock()
 	defer rs.rwMutex.Unlock()
 
@@ -55,6 +56,7 @@ func (rs *RoundState) AddCommit(commit *sequencertypes.BlsSignature, pubKey stri
 	}
 
 	rs.commitSignatures[pubKey] = commit
+	rs.stakeAddresses[stakeAddr] = true
 }
 
 // BlockCommit blocks adds a commit to the round state.
@@ -111,8 +113,8 @@ func (rs *RoundState) CheckEnoughVotingPower(vs *ValidatorSet) bool {
 	defer rs.rwMutex.RUnlock()
 
 	votingPower := uint64(0)
-	for pubKey := range rs.commitSignatures {
-		votingPower += vs.GetVotingPower(pubKey)
+	for stakeADdr := range rs.stakeAddresses {
+		votingPower += vs.GetVotingPower(stakeADdr)
 	}
 
 	logger.Infof("committed voting power: %v, validator set voting power: %v", votingPower, vs.GetTotalVotingPower())
