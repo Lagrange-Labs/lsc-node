@@ -123,9 +123,11 @@ func (g *Governance) uploadEvidences() error {
 
 func (g *Governance) updateNodeStatuses() error {
 	nodes, err := g.storage.GetNodesByStatuses(g.ctx, []networktypes.NodeStatus{networktypes.NodeJoined}, g.chainID)
-	logger.Infof("updating nodes %v", nodes)
 	if err != nil {
 		return err
+	}
+	if len(nodes) > 0 {
+		logger.Infof("updating nodes %v", nodes)
 	}
 	// TODO - we need to update node status in case of new adding and removing in real time
 	for _, node := range nodes {

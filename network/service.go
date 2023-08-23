@@ -4,6 +4,8 @@ import (
 	context "context"
 	"fmt"
 	"strings"
+	"sync"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/grpc/peer"
@@ -12,7 +14,7 @@ import (
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
-	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
+	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -79,8 +81,8 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	}, nil
 }
 
-// GetBlock is a method to get the last block with a proof.
-func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequest) (*types.GetBlockResponse, error) {
+// GetBatch is a method to get the proposed batch.
+func (s *sequencerService) GetBatch(ctx context.Context, req *types.GetBatchRequest) (*types.GetBatchResponse, error) {
 	// verify the registered node
 	ip, err := getIPAddress(ctx)
 	if err != nil {
@@ -94,79 +96,86 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 		logger.Warnf("The IP address is not matched: %v, %v\n", node.IPAddress, ip)
 	}
 
-	block := s.consensus.GetCurrentBlock()
-	if block == nil || block.BlockNumber() != req.BlockNumber {
-		sBlock, err := s.storage.GetBlock(ctx, s.chainID, req.BlockNumber)
-		if err == storetypes.ErrBlockNotFound {
-			err = nil
-		}
-		currentBlockNumber := uint64(0)
-		if block != nil {
-			currentBlockNumber = block.BlockNumber()
-		}
-		return &types.GetBlockResponse{
-			Block:              sBlock,
-			CurrentBlockNumber: currentBlockNumber,
-		}, err
-	}
+	blocks := s.consensus.GetOpenRoundBlocks(req.BlockNumber)
 
-	return &types.GetBlockResponse{
-		Block:              block,
-		CurrentBlockNumber: block.BlockNumber(),
+	return &types.GetBatchResponse{
+		Batch: blocks,
 	}, nil
 }
 
-// CommitBlock is a method to commit a block.
-func (s *sequencerService) CommitBlock(ctx context.Context, req *types.CommitBlockRequest) (*types.CommitBlockResponse, error) {
-	// verify the peer signature
-	signature := req.Signature
-	reqHash := contypes.GetCommitRequestHash(req)
-	isVerified, addr, err := utils.VerifyECDSASignature(reqHash, common.FromHex(signature))
-	if err != nil || !isVerified {
-		return &types.CommitBlockResponse{
-			Result:  false,
-			Message: fmt.Sprintf("Failed to verify the signature: %v", err),
-		}, nil
-	}
-
+// CommitBatch is a method to commit the proposed batch.
+func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream types.NetworkService_CommitBatchServer) error {
+	logger.Infof("CommitBatch request from %v\n", req.StakeAddress)
 	// verify the registered node
-	ip, err := getIPAddress(ctx)
+	ip, err := getIPAddress(stream.Context())
 	if err != nil {
-		return nil, err
+		return err
 	}
-	node, err := s.storage.GetNodeByStakeAddr(ctx, addr.Hex())
+	node, err := s.storage.GetNodeByStakeAddr(context.Background(), req.StakeAddress)
 	if err != nil {
-		return nil, err
+		return err
 	}
 	if node.IPAddress != ip {
 		logger.Warnf("The IP address is not matched: %v, %v\n", node.IPAddress, ip)
 	}
-
-	// check if the block number is matched
-	blockNumber := s.consensus.GetCurrentBlockNumber()
-	if blockNumber != req.BlsSignature.BlockNumber() {
-		return &types.CommitBlockResponse{
-			Result:  false,
-			Message: fmt.Sprintf("The block number is not matched: %v", blockNumber),
-		}, nil
+	if node.Status != types.NodeRegistered {
+		return fmt.Errorf("the node is not registered: %v", node.Status)
 	}
 
-	// check if the epoch number is matched
-	epochNumber := s.consensus.GetCurrentEpochBlockNumber()
-	if epochNumber != req.EpochBlockNumber {
-		return &types.CommitBlockResponse{
-			Result:  false,
-			Message: fmt.Sprintf("The epoch number is not matched: %v", epochNumber),
-		}, nil
+	wg := sync.WaitGroup{}
+	wg.Add(len(req.BlsSignatures))
+	chError := make(chan error, len(req.BlsSignatures))
+	lastBlockNumber := uint64(0)
+
+	for _, signature := range req.BlsSignatures {
+		if signature.BlockNumber() > lastBlockNumber {
+			lastBlockNumber = signature.BlockNumber()
+		}
+		go func(signature *sequencertypes.BlsSignature) {
+			defer wg.Done()
+			// verify the peer signature
+			reqHash := contypes.GetCommitRequestHash(signature)
+			isVerified, addr, err := utils.VerifyECDSASignature(reqHash, common.FromHex(signature.EcdsaSignature))
+			if err != nil || !isVerified {
+				chError <- fmt.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)
+				return
+			}
+			if addr != common.HexToAddress(node.StakeAddress) {
+				chError <- fmt.Errorf("the stake address is not matched in ECDSA signature: %v, %v", addr, node.StakeAddress)
+				return
+			}
+
+			// upload the commit to the consensus layer
+			err = s.consensus.AddCommit(signature, node.PublicKey)
+			if err != nil {
+				chError <- err
+			}
+		}(signature)
 	}
 
-	// upload the commit to the consensus layer
-	s.consensus.AddCommit(req)
+	wg.Wait()
+	close(chError)
 
-	return &types.CommitBlockResponse{
-		Result:  true,
-		Message: "Uploaded successfully",
-	}, nil
+	for err := range chError {
+		return err
+	}
+
+	timeoutCtx, cancel := context.WithTimeout(stream.Context(), 5*time.Second)
+	defer cancel()
+
+	for {
+		select {
+		case <-timeoutCtx.Done():
+			return fmt.Errorf("failed to commit the batch: %v", timeoutCtx.Err())
+		default:
+			if s.consensus.IsFinalized(lastBlockNumber) {
+				return stream.Send(&types.CommitBatchResponse{
+					Result: true,
+				})
+			}
+			time.Sleep(200 * time.Millisecond)
+		}
+	}
 }
 
 func getIPAddress(ctx context.Context) (string, error) {
