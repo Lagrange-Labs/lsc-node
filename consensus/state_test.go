@@ -7,7 +7,6 @@ import (
 	"testing"
 	"time"
 
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
@@ -15,7 +14,7 @@ import (
 	"github.com/umbracle/go-eth-consensus/bls"
 )
 
-func createTestState(t *testing.T) (*State, chan *networktypes.CommitBlockRequest) {
+func createTestState(t *testing.T) (*State, chan *sequencertypes.BlsSignature) {
 	priv, _ := utils.RandomBlsKey()
 	cfg := &Config{
 		ProposerPrivateKey: utils.BlsPrivKeyToHex(priv),
@@ -27,7 +26,7 @@ func createTestState(t *testing.T) (*State, chan *networktypes.CommitBlockReques
 	require.NoError(t, err)
 	require.NoError(t, memDB.AddBlock(context.Background(), nil))
 
-	chCommit := make(chan *networktypes.CommitBlockRequest)
+	chCommit := make(chan *sequencertypes.BlsSignature)
 	return NewState(cfg, memDB, 1), chCommit
 }
 

@@ -17,8 +17,7 @@ type storageInterface interface {
 }
 
 type consensusInterface interface {
-	GetCurrentBlock() *sequencertypes.Block
-	GetCurrentBlockNumber() uint64
-	GetCurrentEpochBlockNumber() uint64
-	AddCommit(commit *types.CommitBlockRequest)
+	GetOpenRoundBlocks(blockNumber uint64) []*sequencertypes.Block
+	AddCommit(commit *sequencertypes.BlsSignature, pubKey string) error
+	IsFinalized(blockNumber uint64) bool
 }

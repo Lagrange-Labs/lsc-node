@@ -123,6 +123,6 @@ func TestBlockOperation(t *testing.T) {
 	require.True(t, res.Result)
 
 	// get block
-	_, err = service.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: 0})
+	_, err = service.GetBatch(context.Background(), &types.GetBatchRequest{BlockNumber: 0})
 	require.Error(t, err)
 }
