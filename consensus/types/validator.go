@@ -6,8 +6,9 @@ import (
 
 // Validator defines a validator state.
 type Validator struct {
-	PublicKey   string
-	VotingPower uint64
+	BlsPubKey    string
+	StakeAddress string
+	VotingPower  uint64
 }
 
 // ValidatorSet defines a set of validators.
@@ -27,10 +28,11 @@ func NewValidatorSet(nodes []networktypes.ClientNode, committeeVotingPower uint6
 
 	for i, node := range nodes {
 		validators[i] = &Validator{
-			PublicKey:   node.PublicKey,
-			VotingPower: node.VotingPower,
+			BlsPubKey:    node.PublicKey,
+			StakeAddress: node.StakeAddress,
+			VotingPower:  node.VotingPower,
 		}
-		votingPowerMap[node.PublicKey] = node.VotingPower
+		votingPowerMap[node.StakeAddress] = node.VotingPower
 		totalVotingPower += node.VotingPower
 	}
 
@@ -43,8 +45,8 @@ func NewValidatorSet(nodes []networktypes.ClientNode, committeeVotingPower uint6
 }
 
 // GetVotingPower returns the voting power of a validator.
-func (vs *ValidatorSet) GetVotingPower(pubKey string) uint64 {
-	return vs.votingPowerMap[pubKey]
+func (vs *ValidatorSet) GetVotingPower(stakeAddr string) uint64 {
+	return vs.votingPowerMap[stakeAddr]
 }
 
 // GetTotalVotingPower returns the total committee voting power.
