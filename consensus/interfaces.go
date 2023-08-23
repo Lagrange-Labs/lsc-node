@@ -19,6 +19,8 @@ type storageInterface interface {
 	UpdateBlock(ctx context.Context, block *sequencertypes.Block) error
 	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error)
 	AddEvidences(ctx context.Context, evidences []*types.Evidence) error
-	GetLastCommitteeRoot(ctx context.Context, chainID uint32) (*govtypes.CommitteeRoot, error)
+	GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFinalized bool) (*govtypes.CommitteeRoot, error)
+	GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error)
+	UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error
 	AddNode(ctx context.Context, node *networktypes.ClientNode) error
 }

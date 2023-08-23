@@ -5,6 +5,16 @@
                 "internalType": "contract ILagrangeService",
                 "name": "_service",
                 "type": "address"
+            },
+            {
+                "internalType": "contract IServiceManager",
+                "name": "_serviceManager",
+                "type": "address"
+            },
+            {
+                "internalType": "contract IStrategyManager",
+                "name": "_strategyManager",
+                "type": "address"
             }
         ],
         "stateMutability": "nonpayable",
@@ -65,6 +75,44 @@
             }
         ],
         "name": "OwnershipTransferred",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "quorumNumber",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "contract IStrategy",
+                "name": "strategy",
+                "type": "address"
+            }
+        ],
+        "name": "StrategyAddedToQuorum",
+        "type": "event"
+    },
+    {
+        "anonymous": false,
+        "inputs": [
+            {
+                "indexed": true,
+                "internalType": "uint256",
+                "name": "quorumNumber",
+                "type": "uint256"
+            },
+            {
+                "indexed": false,
+                "internalType": "contract IStrategy",
+                "name": "strategy",
+                "type": "address"
+            }
+        ],
+        "name": "StrategyRemovedFromQuorum",
         "type": "event"
     },
     {
@@ -139,170 +187,6 @@
         "type": "function"
     },
     {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "CommitteeLeaves",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "CommitteeMap",
-        "outputs": [
-            {
-                "internalType": "address",
-                "name": "addr",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "stake",
-                "type": "uint256"
-            },
-            {
-                "internalType": "bytes",
-                "name": "blsPubKey",
-                "type": "bytes"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "CommitteeMapKeys",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "CommitteeMapLength",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "CommitteeParams",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "startBlock",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "duration",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "freezeDuration",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "Committees",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "root",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "height",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "totalVotingPower",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
         "inputs": [],
         "name": "DOMAIN_SEPARATOR",
         "outputs": [
@@ -356,6 +240,58 @@
     },
     {
         "inputs": [],
+        "name": "NUMBER_OF_QUORUMS",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "UPDATE_TYPE_AMOUNT_CHANGE",
+        "outputs": [
+            {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "UPDATE_TYPE_REGISTER",
+        "outputs": [
+            {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "UPDATE_TYPE_UNREGISTER",
+        "outputs": [
+            {
+                "internalType": "uint8",
+                "name": "",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
         "name": "VERSION_HASH",
         "outputs": [
             {
@@ -375,19 +311,14 @@
                 "type": "address"
             },
             {
-                "internalType": "uint256",
-                "name": "chainID",
-                "type": "uint256"
-            },
-            {
                 "internalType": "bytes",
                 "name": "blsPubKey",
                 "type": "bytes"
             },
             {
-                "internalType": "uint256",
-                "name": "stake",
-                "type": "uint256"
+                "internalType": "uint32",
+                "name": "chainID",
+                "type": "uint32"
             },
             {
                 "internalType": "uint32",
@@ -404,8 +335,38 @@
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "",
+                "name": "quorumNumber",
                 "type": "uint256"
+            },
+            {
+                "components": [
+                    {
+                        "internalType": "contract IStrategy",
+                        "name": "strategy",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint96",
+                        "name": "multiplier",
+                        "type": "uint96"
+                    }
+                ],
+                "internalType": "struct VoteWeigherBaseStorage.StrategyAndWeightingMultiplier[]",
+                "name": "_newStrategiesConsideredAndMultipliers",
+                "type": "tuple[]"
+            }
+        ],
+        "name": "addStrategiesConsideredAndMultipliers",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint32",
+                "name": "",
+                "type": "uint32"
             },
             {
                 "internalType": "uint256",
@@ -413,10 +374,134 @@
                 "type": "uint256"
             }
         ],
-        "name": "addedAddrs",
+        "name": "committeeAddrs",
         "outputs": [
             {
                 "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint32",
+                "name": "",
+                "type": "uint32"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "committeeLeaves",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint32",
+                "name": "",
+                "type": "uint32"
+            },
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "name": "committeeLeavesMap",
+        "outputs": [
+            {
+                "internalType": "uint32",
+                "name": "",
+                "type": "uint32"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint32",
+                "name": "",
+                "type": "uint32"
+            }
+        ],
+        "name": "committeeParams",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "startBlock",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "duration",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "freezeDuration",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint32",
+                "name": "",
+                "type": "uint32"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "committees",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "root",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "height",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "totalVotingPower",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "delegation",
+        "outputs": [
+            {
+                "internalType": "contract IDelegationManager",
                 "name": "",
                 "type": "address"
             }
@@ -440,9 +525,9 @@
     {
         "inputs": [
             {
-                "internalType": "uint256",
+                "internalType": "uint32",
                 "name": "chainID",
-                "type": "uint256"
+                "type": "uint32"
             },
             {
                 "internalType": "uint256",
@@ -486,9 +571,9 @@
     {
         "inputs": [
             {
-                "internalType": "uint256",
+                "internalType": "uint32",
                 "name": "chainID",
-                "type": "uint256"
+                "type": "uint32"
             },
             {
                 "internalType": "uint256",
@@ -510,26 +595,9 @@
     {
         "inputs": [
             {
-                "components": [
-                    {
-                        "internalType": "address",
-                        "name": "addr",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "stake",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "bytes",
-                        "name": "blsPubKey",
-                        "type": "bytes"
-                    }
-                ],
-                "internalType": "struct ILagrangeCommittee.CommitteeLeaf",
-                "name": "cleaf",
-                "type": "tuple"
+                "internalType": "address",
+                "name": "opAddr",
+                "type": "address"
             }
         ],
         "name": "getLeafHash",
@@ -546,45 +614,9 @@
     {
         "inputs": [
             {
-                "components": [
-                    {
-                        "internalType": "address",
-                        "name": "addr",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "uint256",
-                        "name": "stake",
-                        "type": "uint256"
-                    },
-                    {
-                        "internalType": "bytes",
-                        "name": "blsPubKey",
-                        "type": "bytes"
-                    }
-                ],
-                "internalType": "struct ILagrangeCommittee.CommitteeLeaf",
-                "name": "leaf",
-                "type": "tuple"
-            }
-        ],
-        "name": "getLeafSlices",
-        "outputs": [
-            {
-                "internalType": "uint96[11]",
-                "name": "slices",
-                "type": "uint96[11]"
-            }
-        ],
-        "stateMutability": "pure",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
+                "internalType": "uint32",
                 "name": "chainID",
-                "type": "uint256"
+                "type": "uint32"
             }
         ],
         "name": "getNext1CommitteeRoot",
@@ -682,13 +714,13 @@
     {
         "inputs": [
             {
-                "internalType": "uint256",
-                "name": "epochNumber",
-                "type": "uint256"
+                "internalType": "uint32",
+                "name": "chainID",
+                "type": "uint32"
             },
             {
                 "internalType": "uint256",
-                "name": "chainID",
+                "name": "epochNumber",
                 "type": "uint256"
             }
         ],
@@ -701,6 +733,29 @@
             }
         ],
         "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "quorumNumber",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256[]",
+                "name": "strategyIndices",
+                "type": "uint256[]"
+            },
+            {
+                "internalType": "uint96[]",
+                "name": "newMultipliers",
+                "type": "uint96[]"
+            }
+        ],
+        "name": "modifyStrategyWeights",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -729,6 +784,11 @@
                 "type": "uint32"
             },
             {
+                "internalType": "uint32",
+                "name": "chainID",
+                "type": "uint32"
+            },
+            {
                 "internalType": "bool",
                 "name": "slashed",
                 "type": "bool"
@@ -754,8 +814,27 @@
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "chainID",
+                "name": "",
                 "type": "uint256"
+            }
+        ],
+        "name": "quorumBips",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint32",
+                "name": "chainID",
+                "type": "uint32"
             },
             {
                 "internalType": "uint256",
@@ -777,24 +856,23 @@
         "inputs": [
             {
                 "internalType": "uint256",
-                "name": "",
+                "name": "quorumNumber",
                 "type": "uint256"
             },
             {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "removedAddrs",
-        "outputs": [
+                "internalType": "contract IStrategy[]",
+                "name": "_strategiesToRemove",
+                "type": "address[]"
+            },
             {
-                "internalType": "address",
-                "name": "",
-                "type": "address"
+                "internalType": "uint256[]",
+                "name": "indicesToRemove",
+                "type": "uint256[]"
             }
         ],
-        "stateMutability": "view",
+        "name": "removeStrategiesConsideredAndMultipliers",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -818,26 +896,103 @@
         "type": "function"
     },
     {
+        "inputs": [],
+        "name": "serviceManager",
+        "outputs": [
+            {
+                "internalType": "contract IServiceManager",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [
             {
                 "internalType": "address",
                 "name": "operator",
                 "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "chainID",
-                "type": "uint256"
-            },
-            {
-                "internalType": "bool",
-                "name": "slashed",
-                "type": "bool"
             }
         ],
         "name": "setSlashed",
         "outputs": [],
         "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "slasher",
+        "outputs": [
+            {
+                "internalType": "contract ISlasher",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "strategiesConsideredAndMultipliers",
+        "outputs": [
+            {
+                "internalType": "contract IStrategy",
+                "name": "strategy",
+                "type": "address"
+            },
+            {
+                "internalType": "uint96",
+                "name": "multiplier",
+                "type": "uint96"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint256",
+                "name": "quorumNumber",
+                "type": "uint256"
+            }
+        ],
+        "name": "strategiesConsideredAndMultipliersLength",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "strategyManager",
+        "outputs": [
+            {
+                "internalType": "contract IStrategyManager",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -856,9 +1011,9 @@
     {
         "inputs": [
             {
-                "internalType": "uint256",
+                "internalType": "uint32",
                 "name": "chainID",
-                "type": "uint256"
+                "type": "uint32"
             },
             {
                 "internalType": "uint256",
@@ -874,9 +1029,34 @@
     {
         "inputs": [
             {
-                "internalType": "uint256",
+                "components": [
+                    {
+                        "internalType": "address",
+                        "name": "operator",
+                        "type": "address"
+                    },
+                    {
+                        "internalType": "uint8",
+                        "name": "updateType",
+                        "type": "uint8"
+                    }
+                ],
+                "internalType": "struct OperatorUpdate",
+                "name": "opUpdate",
+                "type": "tuple"
+            }
+        ],
+        "name": "updateOperator",
+        "outputs": [],
+        "stateMutability": "nonpayable",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint32",
                 "name": "",
-                "type": "uint256"
+                "type": "uint32"
             }
         ],
         "name": "updatedEpoch",
@@ -888,6 +1068,59 @@
             }
         ],
         "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "uint32",
+                "name": "",
+                "type": "uint32"
+            },
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "name": "updatedOperators",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "operator",
+                "type": "address"
+            },
+            {
+                "internalType": "uint8",
+                "name": "updateType",
+                "type": "uint8"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [
+            {
+                "internalType": "address",
+                "name": "operator",
+                "type": "address"
+            },
+            {
+                "internalType": "uint256",
+                "name": "quorumNumber",
+                "type": "uint256"
+            }
+        ],
+        "name": "weightOfOperator",
+        "outputs": [
+            {
+                "internalType": "uint96",
+                "name": "",
+                "type": "uint96"
+            }
+        ],
+        "stateMutability": "nonpayable",
         "type": "function"
     }
 ]
