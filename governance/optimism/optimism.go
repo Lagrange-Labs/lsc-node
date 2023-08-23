@@ -156,7 +156,7 @@ func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
     var result map[string]interface{}
     err = json.Unmarshal([]byte(jsonStr), &result)
     if err != nil {
-        fmt.Errorf("%s",err)
+        return OutputRootProof{},err
     }
     
     if curlResult, ok := result["result"].(map[string]interface{}); ok {
