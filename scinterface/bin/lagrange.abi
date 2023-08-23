@@ -2,18 +2,13 @@
     {
         "inputs": [
             {
-                "internalType": "contract IServiceManager",
-                "name": "_serviceManager",
-                "type": "address"
-            },
-            {
                 "internalType": "contract ILagrangeCommittee",
                 "name": "_committee",
                 "type": "address"
             },
             {
-                "internalType": "contract IStrategyManager",
-                "name": "_strategyManager",
+                "internalType": "contract IServiceManager",
+                "name": "_serviceManager",
                 "type": "address"
             }
         ],
@@ -82,44 +77,6 @@
             }
         ],
         "name": "OwnershipTransferred",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "uint256",
-                "name": "quorumNumber",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "contract IStrategy",
-                "name": "strategy",
-                "type": "address"
-            }
-        ],
-        "name": "StrategyAddedToQuorum",
-        "type": "event"
-    },
-    {
-        "anonymous": false,
-        "inputs": [
-            {
-                "indexed": true,
-                "internalType": "uint256",
-                "name": "quorumNumber",
-                "type": "uint256"
-            },
-            {
-                "indexed": false,
-                "internalType": "contract IStrategy",
-                "name": "strategy",
-                "type": "address"
-            }
-        ],
-        "name": "StrategyRemovedFromQuorum",
         "type": "event"
     },
     {
@@ -250,7 +207,7 @@
     },
     {
         "inputs": [],
-        "name": "CHAIN_ID_OPTIMISM",
+        "name": "CHAIN_ID_OPTIMISM_BEDROCK",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -263,7 +220,33 @@
     },
     {
         "inputs": [],
-        "name": "NUMBER_OF_QUORUMS",
+        "name": "UPDATE_TYPE_AMOUNT_CHANGE",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "UPDATE_TYPE_REGISTER",
+        "outputs": [
+            {
+                "internalType": "uint256",
+                "name": "",
+                "type": "uint256"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
+        "inputs": [],
+        "name": "UPDATE_TYPE_UNREGISTER",
         "outputs": [
             {
                 "internalType": "uint256",
@@ -277,31 +260,25 @@
     {
         "inputs": [
             {
-                "internalType": "uint256",
-                "name": "quorumNumber",
-                "type": "uint256"
+                "internalType": "bytes32",
+                "name": "latestHash",
+                "type": "bytes32"
             },
             {
-                "components": [
-                    {
-                        "internalType": "contract IStrategy",
-                        "name": "strategy",
-                        "type": "address"
-                    },
-                    {
-                        "internalType": "uint96",
-                        "name": "multiplier",
-                        "type": "uint96"
-                    }
-                ],
-                "internalType": "struct VoteWeigherBaseStorage.StrategyAndWeightingMultiplier[]",
-                "name": "_newStrategiesConsideredAndMultipliers",
-                "type": "tuple[]"
+                "internalType": "bytes[]",
+                "name": "sequence",
+                "type": "bytes[]"
             }
         ],
-        "name": "addStrategiesConsideredAndMultipliers",
-        "outputs": [],
-        "stateMutability": "nonpayable",
+        "name": "_verifyRawHeaderSequence",
+        "outputs": [
+            {
+                "internalType": "bool",
+                "name": "",
+                "type": "bool"
+            }
+        ],
+        "stateMutability": "view",
         "type": "function"
     },
     {
@@ -460,10 +437,10 @@
     },
     {
         "inputs": [],
-        "name": "delegation",
+        "name": "getArbAddr",
         "outputs": [
             {
-                "internalType": "contract IDelegationManager",
+                "internalType": "address",
                 "name": "",
                 "type": "address"
             }
@@ -558,6 +535,19 @@
         "type": "function"
     },
     {
+        "inputs": [],
+        "name": "getOptAddr",
+        "outputs": [
+            {
+                "internalType": "address",
+                "name": "",
+                "type": "address"
+            }
+        ],
+        "stateMutability": "view",
+        "type": "function"
+    },
+    {
         "inputs": [
             {
                 "internalType": "address",
@@ -566,29 +556,6 @@
             }
         ],
         "name": "initialize",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "quorumNumber",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "strategyIndices",
-                "type": "uint256[]"
-            },
-            {
-                "internalType": "uint96[]",
-                "name": "newMultipliers",
-                "type": "uint96[]"
-            }
-        ],
-        "name": "modifyStrategyWeights",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -609,28 +576,9 @@
     {
         "inputs": [
             {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "quorumBips",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
+                "internalType": "uint32",
                 "name": "chainID",
-                "type": "uint256"
+                "type": "uint32"
             },
             {
                 "internalType": "bytes",
@@ -644,29 +592,6 @@
             }
         ],
         "name": "register",
-        "outputs": [],
-        "stateMutability": "nonpayable",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "quorumNumber",
-                "type": "uint256"
-            },
-            {
-                "internalType": "contract IStrategy[]",
-                "name": "_strategiesToRemove",
-                "type": "address[]"
-            },
-            {
-                "internalType": "uint256[]",
-                "name": "indicesToRemove",
-                "type": "uint256[]"
-            }
-        ],
-        "name": "removeStrategiesConsideredAndMultipliers",
         "outputs": [],
         "stateMutability": "nonpayable",
         "type": "function"
@@ -692,77 +617,29 @@
         "type": "function"
     },
     {
-        "inputs": [],
-        "name": "slasher",
-        "outputs": [
+        "inputs": [
             {
-                "internalType": "contract ISlasher",
-                "name": "",
+                "internalType": "contract ArbitrumVerifier",
+                "name": "_arb",
                 "type": "address"
             }
         ],
-        "stateMutability": "view",
+        "name": "setArbAddr",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
         "inputs": [
             {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            },
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "name": "strategiesConsideredAndMultipliers",
-        "outputs": [
-            {
-                "internalType": "contract IStrategy",
-                "name": "strategy",
-                "type": "address"
-            },
-            {
-                "internalType": "uint96",
-                "name": "multiplier",
-                "type": "uint96"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "uint256",
-                "name": "quorumNumber",
-                "type": "uint256"
-            }
-        ],
-        "name": "strategiesConsideredAndMultipliersLength",
-        "outputs": [
-            {
-                "internalType": "uint256",
-                "name": "",
-                "type": "uint256"
-            }
-        ],
-        "stateMutability": "view",
-        "type": "function"
-    },
-    {
-        "inputs": [],
-        "name": "strategyManager",
-        "outputs": [
-            {
-                "internalType": "contract IStrategyManager",
-                "name": "",
+                "internalType": "contract OptimismVerifier",
+                "name": "_opt",
                 "type": "address"
             }
         ],
-        "stateMutability": "view",
+        "name": "setOptAddr",
+        "outputs": [],
+        "stateMutability": "nonpayable",
         "type": "function"
     },
     {
@@ -890,30 +767,6 @@
             }
         ],
         "stateMutability": "pure",
-        "type": "function"
-    },
-    {
-        "inputs": [
-            {
-                "internalType": "address",
-                "name": "operator",
-                "type": "address"
-            },
-            {
-                "internalType": "uint256",
-                "name": "quorumNumber",
-                "type": "uint256"
-            }
-        ],
-        "name": "weightOfOperator",
-        "outputs": [
-            {
-                "internalType": "uint96",
-                "name": "",
-                "type": "uint96"
-            }
-        ],
-        "stateMutability": "nonpayable",
         "type": "function"
     }
 ]

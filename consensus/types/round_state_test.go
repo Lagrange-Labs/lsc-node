@@ -40,8 +40,9 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey, *ValidatorSet) {
 		secKey, pubKey := utils.RandomBlsKey()
 		secKeys = append(secKeys, secKey)
 		node := networktypes.ClientNode{
-			PublicKey:   pubKey,
-			VotingPower: 1,
+			PublicKey:    pubKey,
+			StakeAddress: utils.RandomHex(20),
+			VotingPower:  1,
 		}
 		nodes = append(nodes, node)
 	}
@@ -59,11 +60,11 @@ func TestCheckVotingPower(t *testing.T) {
 
 	// Test 1: not enough case
 	for i := 0; i < 6; i++ {
-		rs.AddCommit(&sequencertypes.BlsSignature{}, vs.validators[i].PublicKey)
+		rs.AddCommit(&sequencertypes.BlsSignature{}, vs.validators[i].BlsPubKey, vs.validators[i].StakeAddress)
 	}
 	require.False(t, rs.CheckEnoughVotingPower(vs))
 	// Test 2: enough case
-	rs.AddCommit(&sequencertypes.BlsSignature{}, vs.validators[6].PublicKey)
+	rs.AddCommit(&sequencertypes.BlsSignature{}, vs.validators[6].BlsPubKey, vs.validators[6].StakeAddress)
 	require.True(t, rs.CheckEnoughVotingPower(vs))
 }
 
@@ -82,13 +83,13 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		blsSign.BlsSignature = common.Bytes2Hex(signatureMsg[:])
 
 		pubKey := new(bls.PublicKey)
-		require.NoError(t, pubKey.Deserialize(common.FromHex(vs.validators[i].PublicKey)))
+		require.NoError(t, pubKey.Deserialize(common.FromHex(vs.validators[i].BlsPubKey)))
 
 		verified, err := signature.VerifyByte(pubKey, sigHash)
 		require.NoError(t, err)
 		require.True(t, verified)
 
-		rs.AddCommit(blsSign, vs.validators[i].PublicKey)
+		rs.AddCommit(blsSign, vs.validators[i].BlsPubKey, vs.validators[i].StakeAddress)
 	}
 	err := rs.CheckAggregatedSignature()
 	require.NoError(t, err)
@@ -117,13 +118,13 @@ func TestCheckAggregatedSignature(t *testing.T) {
 			blsSign.BlsSignature = wrongSignature // wrong signature
 		}
 		pubKey := new(bls.PublicKey)
-		require.NoError(t, pubKey.Deserialize(common.FromHex(vs.validators[i].PublicKey)))
+		require.NoError(t, pubKey.Deserialize(common.FromHex(vs.validators[i].BlsPubKey)))
 
 		verified, err := signature.VerifyByte(pubKey, sigHash)
 		require.NoError(t, err)
 		require.True(t, verified)
 
-		rs.AddCommit(&blsSign, vs.validators[i].PublicKey)
+		rs.AddCommit(&blsSign, vs.validators[i].BlsPubKey, vs.validators[i].StakeAddress)
 	}
 	err = rs.CheckAggregatedSignature()
 	require.Error(t, err)

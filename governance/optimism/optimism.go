@@ -154,8 +154,8 @@ func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
     
     jsonStr := string(scres)
     var result map[string]interface{}
-    err = json.Unmarshal([]byte(jsonStr), &result)
-    if err != nil {
+    
+    if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
         return OutputRootProof{},err
     }
     
