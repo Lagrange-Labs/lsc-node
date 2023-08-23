@@ -14,4 +14,5 @@ type storageInterface interface {
 	GetEvidences(ctx context.Context) ([]*contypes.Evidence, error)
 	UpdateEvidence(ctx context.Context, evidence *contypes.Evidence) error
 	UpdateCommitteeRoot(ctx context.Context, committeeRoot *types.CommitteeRoot) error
+	GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error)
 }

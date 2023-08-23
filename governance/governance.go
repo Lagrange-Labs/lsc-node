@@ -26,7 +26,8 @@ type Governance struct {
 	lagrangeSC         *lagrange.Lagrange
 	committeeSC        *committee.Committee
 	chainID            uint32
-	updatedEpochNumber int64
+	updatedEpochNumber uint64
+	currentEpochNumber uint64
 
 	storage     storageInterface
 	etherClient *ethclient.Client
@@ -56,7 +57,12 @@ func NewGovernance(cfg *types.Config, chainID uint32, storage storageInterface) 
 		return nil, err
 	}
 
-	updatedEpochNumber, err := committeeSC.UpdatedEpoch(nil, big.NewInt(int64(chainID)))
+	updatedEpochNumber, err := committeeSC.UpdatedEpoch(nil, chainID)
+	if err != nil {
+		return nil, err
+	}
+
+	lastEpochNumber, err := storage.GetLastCommitteeEpochNumber(context.Background(), chainID)
 	if err != nil {
 		return nil, err
 	}
@@ -71,7 +77,8 @@ func NewGovernance(cfg *types.Config, chainID uint32, storage storageInterface) 
 		storage:            storage,
 		etherClient:        client,
 		auth:               auth,
-		updatedEpochNumber: updatedEpochNumber.Int64(),
+		updatedEpochNumber: updatedEpochNumber.Uint64(),
+		currentEpochNumber: lastEpochNumber,
 		ctx:                ctx,
 		cancel:             cancel,
 	}, nil
@@ -79,18 +86,27 @@ func NewGovernance(cfg *types.Config, chainID uint32, storage storageInterface) 
 
 // Start starts the governance process.
 func (g *Governance) Start() {
-	ticker := time.NewTicker(g.stakingInterval)
+	if err := g.updateCommittee(); err != nil {
+		logger.Fatalf("failed to update committee root: %w", err)
+	}
+
+	ticker := time.NewTicker(g.evidenceInterval)
+	defer ticker.Stop()
+
 	for {
 		select {
 		case <-g.ctx.Done():
 			return
-		case <-time.After(g.evidenceInterval):
+		case <-ticker.C:
 			go func() {
 				if err := g.uploadEvidences(); err != nil {
-					panic(fmt.Errorf("failed to upload evidences: %w", err))
+					logger.Errorf("failed to upload evidences: %w", err)
 				}
 			}()
-		case <-ticker.C:
+		case <-time.After(g.stakingInterval):
+			if err := g.updateCommittee(); err != nil {
+				logger.Errorf("failed to update committee root: %w", err)
+			}
 			if err := g.updateNodeStatuses(); err != nil {
 				logger.Errorf("failed to update node status: %w", err)
 			}
@@ -122,14 +138,15 @@ func (g *Governance) uploadEvidences() error {
 }
 
 func (g *Governance) updateNodeStatuses() error {
-	nodes, err := g.storage.GetNodesByStatuses(g.ctx, []networktypes.NodeStatus{networktypes.NodeJoined}, g.chainID)
+	nodeStatuses := []networktypes.NodeStatus{networktypes.NodeJoined}
+
+	nodes, err := g.storage.GetNodesByStatuses(g.ctx, nodeStatuses, g.chainID)
 	if err != nil {
 		return err
 	}
 	if len(nodes) > 0 {
 		logger.Infof("updating nodes %v", nodes)
 	}
-	// TODO - we need to update node status in case of new adding and removing in real time
 	for _, node := range nodes {
 		sNode, err := g.committeeSC.Operators(nil, common.HexToAddress(node.StakeAddress))
 		if err != nil {
@@ -139,24 +156,19 @@ func (g *Governance) updateNodeStatuses() error {
 		logger.Infof("node found %v", sNode)
 		node.VotingPower = uint64(sNode.Amount.Int64())
 		if node.VotingPower == 0 {
-			logger.Errorf("node %s has 0 voting power", node.StakeAddress)
-			continue
-		}
-
-		if sNode.Slashed {
+			logger.Infof("node %s has 0 voting power", node.StakeAddress)
+			node.Status = networktypes.NodeUnstaked
+		} else if sNode.Slashed {
 			node.Status = networktypes.NodeSlashed
-			if err := g.storage.UpdateNode(g.ctx, &node); err != nil {
-				return err
-			}
 		} else {
 			node.Status = networktypes.NodeRegistered
-			if err := g.storage.UpdateNode(g.ctx, &node); err != nil {
-				return err
-			}
+		}
+		if err := g.storage.UpdateNode(g.ctx, &node); err != nil {
+			return err
 		}
 	}
 
-	return g.updateCommittee()
+	return nil
 }
 
 func (g *Governance) updateCommittee() error {
@@ -165,23 +177,24 @@ func (g *Governance) updateCommittee() error {
 		return err
 	}
 
-	epochNumber, err := g.committeeSC.GetEpochNumber(nil, big.NewInt(int64(g.chainID)), big.NewInt(int64(blockNumber)))
+	epochNumber, err := g.committeeSC.GetEpochNumber(nil, g.chainID, big.NewInt(int64(blockNumber)))
 	if err != nil {
 		return err
 	}
-	if epochNumber.Int64() > g.updatedEpochNumber {
-		updatable, err := g.committeeSC.IsUpdatable(nil, epochNumber, big.NewInt(int64(g.chainID)))
+	if epochNumber.Uint64() > g.updatedEpochNumber {
+		updatable, err := g.committeeSC.IsUpdatable(nil, g.chainID, epochNumber)
 		if err != nil {
 			return err
 		}
-		if !updatable && epochNumber.Int64() > g.updatedEpochNumber+1 {
-			epochNumber = big.NewInt(epochNumber.Int64() - 1)
-			updatable = true
-		}
-		if updatable {
+		isSkipped := (epochNumber.Uint64() > g.updatedEpochNumber+1)
+		if updatable || isSkipped {
 			// rotate the committee tree
-			logger.Infof("updating committee tree for epoch %d", epochNumber.Int64())
-			tx, err := g.committeeSC.Update(g.auth, big.NewInt(int64(g.chainID)), epochNumber)
+			updateEpochNumber := big.NewInt(int64(epochNumber.Int64()))
+			if isSkipped {
+				updateEpochNumber = updateEpochNumber.Sub(epochNumber, big.NewInt(1))
+			}
+			logger.Infof("updating committee tree for epoch %d", updateEpochNumber.Int64())
+			tx, err := g.committeeSC.Update(g.auth, g.chainID, updateEpochNumber)
 			if err != nil {
 				return err
 			}
@@ -193,27 +206,52 @@ func (g *Governance) updateCommittee() error {
 			if receipt.Status != 1 {
 				return fmt.Errorf("transaction failed: %v", receipt)
 			}
-			g.updatedEpochNumber = epochNumber.Int64()
+			g.updatedEpochNumber = updateEpochNumber.Uint64()
 		}
 	}
 
-	committeeData, err := g.committeeSC.GetCommittee(nil, big.NewInt(int64(g.chainID)), big.NewInt(int64(blockNumber)))
-	if err != nil {
-		return err
+	if epochNumber.Uint64() > g.currentEpochNumber {
+		// fetch the committee root from the smart contract
+		committeeData, err := g.committeeSC.GetCommittee(nil, g.chainID, big.NewInt(int64(blockNumber)))
+
+		if err != nil {
+			return err
+		}
+
+		committeeRoot := &types.CommitteeRoot{
+			ChainID:              g.chainID,
+			CurrentCommitteeRoot: common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes()),
+			TotalVotingPower:     committeeData.CurrentCommittee.TotalVotingPower.Uint64(),
+			EpochBlockNumber:     blockNumber,
+			EpochNumber:          epochNumber.Uint64(),
+		}
+
+		if committeeRoot.TotalVotingPower == 0 {
+			logger.Errorf("total voting power is 0, committee root %v, epoch number %d", committeeRoot, epochNumber.Int64())
+			return fmt.Errorf("total voting power is 0")
+		}
+		operators := make([]networktypes.ClientNode, 0)
+		for i := int64(0); i < committeeData.CurrentCommittee.Height.Int64(); i++ {
+			addr, err := g.committeeSC.CommitteeAddrs(nil, g.chainID, big.NewInt(i))
+			if err != nil {
+				return err
+			}
+			operator, err := g.committeeSC.Operators(nil, addr)
+			if err != nil {
+				return err
+			}
+			operators = append(operators, networktypes.ClientNode{
+				StakeAddress: addr.String(),
+				VotingPower:  uint64(operator.Amount.Int64()),
+			})
+		}
+
+		committeeRoot.Operators = operators
+		if err := g.storage.UpdateCommitteeRoot(g.ctx, committeeRoot); err != nil {
+			return err
+		}
+		g.currentEpochNumber = epochNumber.Uint64()
 	}
 
-	committeeRoot := &types.CommitteeRoot{
-		ChainID:              g.chainID,
-		CurrentCommitteeRoot: common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes()),
-		NextCommitteeRoot:    common.Bytes2Hex(committeeData.NextRoot.Bytes()),
-		TotalVotingPower:     committeeData.CurrentCommittee.TotalVotingPower.Uint64(),
-		EpochBlockNumber:     blockNumber,
-	}
-
-	if committeeRoot.TotalVotingPower == 0 {
-		logger.Errorf("total voting power is 0, committee root %v, epoch number %d", committeeRoot, epochNumber.Int64())
-		return fmt.Errorf("total voting power is 0")
-	}
-
-	return g.storage.UpdateCommitteeRoot(g.ctx, committeeRoot)
+	return nil
 }
