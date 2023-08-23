@@ -4,7 +4,6 @@ import (
 	"encoding/binary"
 	"math/big"
 
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	evm "github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/lagrange"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
@@ -90,12 +89,12 @@ func GetEvidence(sig *sequencertypes.BlsSignature, correctBlockHash, correctCurr
 	}
 	addr := crypto.PubkeyToAddress(*pubKey).Hex()
 
-	rawHeader,err := evm.GetRawAttestBlockHeader(int(req.EpochBlockNumber))
+	rawHeader,err := evm.GetRawAttestBlockHeader(int(sig.BlockNumber()))
 	if err != nil {
 	    return nil,err
 	}
 
-	hex, l2hash, err := evm.GetExtraDataByNetwork(int(req.EpochBlockNumber))
+	hex, l2hash, err := evm.GetExtraDataByNetwork(int(sig.BlockNumber()))
 	if err != nil {
 	    return nil,err
 	}

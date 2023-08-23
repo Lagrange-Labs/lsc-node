@@ -30,7 +30,7 @@ import (
 // Client is a gRPC client to join the network
 type Client struct {
 	types.NetworkServiceClient
-	rpcClient   rpcclient.RpcClient
+	etherClient *ethclient.Client
 	rpcClient   rpcclient.RpcClient
 	committeeSC *committee.Committee
 
