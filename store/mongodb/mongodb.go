@@ -140,7 +140,7 @@ func (db *MongoDB) GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*
 // GetLastBlockNumber returns the last block number that was stored.
 func (db *MongoDB) GetLastBlockNumber(ctx context.Context, chainID uint32) (uint64, error) {
 	collection := db.client.Database("state").Collection("blocks")
-	sortOptions := options.FindOne().SetSort(bson.D{{"chain_header.block_number", -1}}) //nolint:govet
+	sortOptions := options.FindOne().SetSort(bson.D{{"chain_header.block_number", -1}}).SetProjection(bson.D{{"chain_header.block_number", -1}}) //nolint:govet
 	block := bson.M{}
 	err := collection.FindOne(ctx, bson.M{"chain_header.chain_id": chainID}, sortOptions).Decode(&block)
 	if err == mongo.ErrNoDocuments {
@@ -157,11 +157,11 @@ func (db *MongoDB) GetLastBlockNumber(ctx context.Context, chainID uint32) (uint
 func (db *MongoDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, bool, error) {
 	isFinalized := true
 	collection := db.client.Database("state").Collection("blocks")
-	sortOptions := options.FindOne().SetSort(bson.D{{"chain_header.block_number", -1}}) //nolint:govet
+	sortOptions := options.FindOne().SetSort(bson.D{{"chain_header.block_number", -1}}).SetProjection(bson.D{{"chain_header.block_number", 1}}) //nolint:govet
 	block := bson.M{}
 	err := collection.FindOne(ctx, bson.M{"pub_keys": bson.M{"$ne": nil}, "chain_header.chain_id": chainID}, sortOptions).Decode(&block)
 	if err == mongo.ErrNoDocuments {
-		sortOptions = options.FindOne().SetSort(bson.D{{"chain_header.block_number", 1}}) //nolint:govet
+		sortOptions = options.FindOne().SetSort(bson.D{{"chain_header.block_number", 1}}).SetProjection(bson.D{{"chain_header.block_number", 1}}) //nolint:govet
 		err = collection.FindOne(ctx, bson.M{"chain_header.chain_id": chainID}, sortOptions).Decode(&block)
 		if err == mongo.ErrNoDocuments {
 			return 0, false, nil
@@ -262,20 +262,33 @@ func (db *MongoDB) GetEvidences(ctx context.Context) ([]*contypes.Evidence, erro
 func (db *MongoDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error {
 	collection := db.client.Database("state").Collection("committee_roots")
 	filter := bson.M{"chain_id": committeeRoot.ChainID, "epoch_block_number": committeeRoot.EpochBlockNumber}
-	update := bson.M{"$set": bson.M{"current_committee_root": committeeRoot.CurrentCommitteeRoot, "next_committee_root": committeeRoot.NextCommitteeRoot, "total_voting_power": committeeRoot.TotalVotingPower}}
+	update := bson.M{"$set": bson.M{"current_committee_root": committeeRoot.CurrentCommitteeRoot, "total_voting_power": committeeRoot.TotalVotingPower, "epoch_number": committeeRoot.EpochNumber, "operators": committeeRoot.Operators, "is_finalized": committeeRoot.IsFinalized}}
 	_, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	return err
 }
 
 // GetLastCommitteeRoot returns the last committee root for the given chainID.
-func (db *MongoDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32) (*govtypes.CommitteeRoot, error) {
+func (db *MongoDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFinalized bool) (*govtypes.CommitteeRoot, error) {
 	collection := db.client.Database("state").Collection("committee_roots")
 	sortOptions := options.FindOne().SetSort(bson.D{{"epoch_block_number", -1}}) //nolint:govet
-	filter := bson.M{"chain_id": chainID}
+	filter := bson.M{"chain_id": chainID, "is_finalized": isFinalized}
 	committeeRoot := &govtypes.CommitteeRoot{}
 	err := collection.FindOne(ctx, filter, sortOptions).Decode(committeeRoot)
 	if err == mongo.ErrNoDocuments {
 		return nil, nil
 	}
 	return committeeRoot, err
+}
+
+// GetLastCommitteeEpochNumber returns the last committee epoch number for the given chainID.
+func (db *MongoDB) GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error) {
+	collection := db.client.Database("state").Collection("committee_roots")
+	sortOptions := options.FindOne().SetSort(bson.D{{"epoch_number", -1}}).SetProjection(bson.D{{"epoch_number", 1}}) //nolint:govet
+	filter := bson.M{"chain_id": chainID}
+	committeeRoot := &govtypes.CommitteeRoot{}
+	err := collection.FindOne(ctx, filter, sortOptions).Decode(committeeRoot)
+	if err == mongo.ErrNoDocuments {
+		return 0, nil
+	}
+	return committeeRoot.EpochNumber, err
 }

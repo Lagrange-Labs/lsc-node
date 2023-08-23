@@ -34,13 +34,14 @@ type Client struct {
 	rpcClient   rpcclient.RpcClient
 	committeeSC *committee.Committee
 
-	chainID         uint32
-	blsPrivateKey   *bls.SecretKey
-	blsPublicKey    string
-	ecdsaPrivateKey *ecdsa.PrivateKey
-	stakeAddress    string
-	lastBlockNumber uint64
-	pullInterval    time.Duration
+	chainID           uint32
+	blsPrivateKey     *bls.SecretKey
+	blsPublicKey      string
+	ecdsaPrivateKey   *ecdsa.PrivateKey
+	stakeAddress      string
+	lastBlockNumber   uint64
+	pullInterval      time.Duration
+	nextCommitteeRoot string
 
 	ctx        context.Context
 	cancelFunc context.CancelFunc
@@ -124,6 +125,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 		committeeSC:          committeeSC,
 		chainID:              chainID,
 		lastBlockNumber:      1,
+		nextCommitteeRoot:    "",
 
 		ctx:        ctx,
 		cancelFunc: cancel,
@@ -206,6 +208,27 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 	wg.Add(len(res.Batch))
 	chError := make(chan error, len(res.Batch))
 
+	// verify the committee root
+	if len(c.nextCommitteeRoot) > 0 && res.Batch[0].CurrentCommittee() != c.nextCommitteeRoot {
+		return nil, fmt.Errorf("the block committee root %s is not equal to the previous batch's next committee root %s", res.Batch[0].CurrentCommittee(), c.nextCommitteeRoot)
+	}
+	committeeData, err := c.committeeSC.GetCommittee(nil, c.chainID, big.NewInt(int64(res.Batch[0].EpochBlockNumber())))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the committee data: %v", err)
+	}
+	for i := range res.Batch {
+		if res.Batch[i].EpochBlockNumber() != res.Batch[0].EpochBlockNumber() {
+			return nil, fmt.Errorf("the epoch block number is not equal: %d, %d", res.Batch[i].EpochBlockNumber(), res.Batch[0].EpochBlockNumber())
+		}
+		if res.Batch[i].CurrentCommittee() != common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes()) {
+			return nil, fmt.Errorf("the block committee root %s is not equal to the current root %v", res.Batch[i].CurrentCommittee(), committeeData)
+		}
+		if i > 0 && res.Batch[i].NextCommittee() != res.Batch[i-1].CurrentCommittee() {
+			return nil, fmt.Errorf("the block next committee root %s is not equal to the next block's committee root %s", res.Batch[i].NextCommittee(), res.Batch[i-1].CurrentCommittee())
+		}
+	}
+	c.nextCommitteeRoot = res.Batch[len(res.Batch)-1].NextCommittee()
+
 	for _, block := range res.Batch {
 		go func(block *sequencertypes.Block) {
 			defer wg.Done()
@@ -230,20 +253,6 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 			}
 			if blockHash != rBlockHash {
 				chError <- fmt.Errorf("the block hash %s is not equal to the rpc block hash %s", blockHash, rBlockHash)
-				return
-			}
-			// verify the committee root
-			committeeData, err := c.committeeSC.GetCommittee(nil, big.NewInt(int64(c.chainID)), big.NewInt(int64(block.EpochBlockNumber())))
-			if err != nil {
-				chError <- fmt.Errorf("failed to get the committee root: %v", err)
-				return
-			}
-			if block.CurrentCommittee() != common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes()) {
-				chError <- fmt.Errorf("the block committee root %s is not equal to the current root %v", block.CurrentCommittee(), committeeData)
-				return
-			}
-			if block.NextCommittee() != common.Bytes2Hex(committeeData.NextRoot.Bytes()) {
-				chError <- fmt.Errorf("the block committee root %s is not equal to the next root %v", block.NextCommittee(), committeeData)
 				return
 			}
 		}(block)

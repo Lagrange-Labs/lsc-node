@@ -138,6 +138,24 @@ services:
       - "/bin/sh"
       - "-c"
       - "/app/lagrange-node run-client"
+  simnode6:
+    container_name: node6
+    image: lagrange-node
+    environment:
+      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
+      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=1.8s
+      - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x06038d3c5eb590de0c96fbba710522755bc9fc5157d24e004fcd7d2bf7852028
+      - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0x311fb4aa77facbc0debb6d9d88d3b4047115d905a4ff7b4399fc164494a75e3c
+      - LAGRANGE_NODE_CLIENT_RPCENDPOINT=http://192.168.20.100:8545
+      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
+      - LAGRANGE_NODE_STORE_DBPATH=mongodb://192.168.20.101:27017
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.10
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-client"
   prover:
     container_name: prover
     image: lagrange-prover
