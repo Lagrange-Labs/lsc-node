@@ -60,7 +60,7 @@ func (suite *ClientTestSuite) Test_Client_Start() {
 		require.Equal(t, networktypes.NodeJoined, node.Status)
 
 		suite.manager.RunSequencer()
-		time.Sleep(3 * time.Second)
+		time.Sleep(10 * time.Second)
 
 		node, err = suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress)
 		require.NoError(t, err)

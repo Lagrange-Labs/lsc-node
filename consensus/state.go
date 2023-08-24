@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
@@ -32,6 +33,7 @@ type State struct {
 	roundInterval time.Duration
 	batchSize     uint32
 	chainID       uint32
+	lastCommittee *govtypes.CommitteeRoot
 
 	chStop chan struct{}
 }
@@ -53,6 +55,11 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		logger.Fatalf("failed to add the proposer node: %v", err)
 	}
 
+	lastCommittee, err := storage.GetLastCommitteeRoot(context.Background(), chainID, true)
+	if err != nil {
+		logger.Fatalf("failed to get the last committee root: %v", err)
+	}
+
 	chStop := make(chan struct{})
 
 	return &State{
@@ -61,6 +68,7 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		roundLimit:    time.Duration(cfg.RoundLimit),
 		roundInterval: time.Duration(cfg.RoundInterval),
 		chainID:       chainID,
+		lastCommittee: lastCommittee,
 		batchSize:     cfg.BatchSize,
 		chStop:        chStop,
 		rwMutex:       &sync.RWMutex{},
@@ -162,12 +170,14 @@ func (s *State) OnStart() {
 			// TODO: handle the case when the batch is not finalized, now it will be run forever
 			logger.Error("the infinite loop is started!")
 			_ = s.processRound(context.Background())
-			for _, round := range s.rounds {
+			for blockNumber, round := range s.rounds {
 				if err := s.storage.UpdateBlock(context.Background(), round.GetCurrentBlock()); err != nil {
 					logger.Errorf("failed to update the block %d: %v", round.GetCurrentBlockNumber(), err)
 					continue
 				}
-
+				if lastBlockNumber < blockNumber {
+					lastBlockNumber = blockNumber
+				}
 				logger.Infof("the block %d is finalized", round.GetCurrentBlockNumber())
 			}
 		}
@@ -186,15 +196,19 @@ func (s *State) OnStop() {
 }
 
 // AddCommit adds the commit to the round.
-func (s *State) AddCommit(commit *sequencertypes.BlsSignature, pubKey string) error {
+func (s *State) AddCommit(commit *sequencertypes.BlsSignature, pubKey, stakeAddr string) error {
 	s.rwMutex.Lock()
 	defer s.rwMutex.Unlock()
+
+	if s.validators.GetVotingPower(stakeAddr) == 0 {
+		return fmt.Errorf("the stake address %s is not registered", stakeAddr)
+	}
 
 	round, ok := s.rounds[commit.BlockNumber()]
 	if !ok {
 		return fmt.Errorf("the round for the block %d is not found", commit.BlockNumber())
 	}
-	round.AddCommit(commit, pubKey)
+	round.AddCommit(commit, pubKey, stakeAddr)
 	return nil
 }
 
@@ -242,25 +256,40 @@ func (s *State) startRound(blockNumber uint64) error {
 		return fmt.Errorf("getting the next block batch from %d is failed: %v", blockNumber, err)
 	}
 
-	committee, err := s.storage.GetLastCommitteeRoot(context.Background(), s.chainID)
+	epochNumber, err := s.storage.GetLastCommitteeEpochNumber(context.Background(), s.chainID)
 	if err != nil {
-		return fmt.Errorf("failed to get the last committee root: %v", err)
+		return fmt.Errorf("failed to get the last committee epoch number: %v", err)
 	}
-	if committee == nil {
-		return fmt.Errorf("the last committee root is nil")
-	}
-	if committee.TotalVotingPower == 0 {
-		return fmt.Errorf("the total voting power of the last committee is 0")
+	if epochNumber == 0 {
+		return fmt.Errorf("the last committee epoch number is 0")
 	}
 
-	nodes, err := s.storage.GetNodesByStatuses(context.Background(), []networktypes.NodeStatus{networktypes.NodeRegistered}, s.chainID)
-	if err != nil {
-		return err
+	committee := s.lastCommittee
+	if committee == nil || epochNumber > committee.EpochNumber {
+		// update the last committee
+		lastCommittee, err := s.storage.GetLastCommitteeRoot(context.Background(), s.chainID, false)
+		if err != nil {
+			return fmt.Errorf("failed to get the last committee root: %v", err)
+		}
+		if lastCommittee == nil {
+			return fmt.Errorf("the last committee root is nil")
+		}
+		if lastCommittee.TotalVotingPower == 0 {
+			return fmt.Errorf("the last committee root has 0 voting power")
+		}
+		s.lastCommittee = lastCommittee
+		if committee == nil {
+			lastCommittee.IsFinalized = true
+			committee = lastCommittee
+			if err := s.storage.UpdateCommitteeRoot(context.Background(), lastCommittee); err != nil {
+				return fmt.Errorf("failed to update the last committee root: %v", err)
+			}
+		}
 	}
 
-	logger.Infof("the registered nodes are loaded: %v", nodes)
+	logger.Infof("the registered nodes are loaded: %v", committee.Operators)
 
-	s.validators = types.NewValidatorSet(nodes, committee.TotalVotingPower)
+	s.validators = types.NewValidatorSet(committee.Operators, committee.TotalVotingPower)
 	if s.validators.GetTotalVotingPower()*3 < committee.TotalVotingPower*2 {
 		return fmt.Errorf("the voting power of the registered nodes voting power %d is less than 2/3 of the total voting power %d", s.validators.GetTotalVotingPower(), committee.TotalVotingPower)
 	}
@@ -272,7 +301,7 @@ func (s *State) startRound(blockNumber uint64) error {
 	for _, block := range blocks {
 		block.BlockHeader = &sequencertypes.BlockHeader{}
 		block.BlockHeader.CurrentCommittee = committee.CurrentCommitteeRoot
-		block.BlockHeader.NextCommittee = committee.NextCommitteeRoot
+		block.BlockHeader.NextCommittee = committee.CurrentCommitteeRoot
 		block.BlockHeader.EpochBlockNumber = committee.EpochBlockNumber
 		block.BlockHeader.TotalVotingPower = committee.TotalVotingPower
 
@@ -291,6 +320,14 @@ func (s *State) startRound(blockNumber uint64) error {
 		blockNumbers = append(blockNumbers, block.BlockNumber())
 	}
 
+	if committee.EpochNumber < s.lastCommittee.EpochNumber {
+		// update the next committee of the last block
+		blocks[len(blocks)-1].BlockHeader.NextCommittee = s.lastCommittee.CurrentCommitteeRoot
+		s.lastCommittee.IsFinalized = true
+		if err := s.storage.UpdateCommitteeRoot(context.Background(), s.lastCommittee); err != nil {
+			return fmt.Errorf("failed to update the last committee root: %v", err)
+		}
+	}
 	logger.Infof("the next block batch is loaded: %v", blockNumbers)
 
 	return nil
