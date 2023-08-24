@@ -47,6 +47,7 @@ func getL2OutputAfter(rpc *rpc.Client, addr common.Address, blockNum *big.Int) (
     abiJSON, err := ioutil.ReadFile(abiPath)
     if err != nil { return OutputProposal{},err }
     l2ooAbi, err := abi.JSON(strings.NewReader(string(abiJSON)))
+    if err != nil { return OutputProposal{},err }
 
     // Make RPC Request for L2 Output Proposal
     f := "getL2OutputAfter"
@@ -93,6 +94,7 @@ func (orp *OutputRootProof) Hex() (string,error) {
 	    orp.MessagePasserStorageRoot,
 	    orp.LatestBlockhash,
 	)
+        if err != nil { return "",err }
         encodedCleaned := encoded[4:] // strip signature prefix
 	return hexutil.Encode(encodedCleaned),nil
 }
