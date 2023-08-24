@@ -22,6 +22,9 @@ func TestL2Output(t *testing.T) {
 
     output,err := getL2OutputAfter(ethClient, common.HexToAddress(addr), big.NewInt(11991348))
     _ = output
+    if err != nil {
+        log.Fatalf("%v",err)
+    }
     require.NoError(t, err)
  }
 
@@ -32,5 +35,8 @@ func TestL2OutputProof(t *testing.T) {
         L2OutputOracleAddr: "0xe6dfba0953616bacab0c9a8ecb3a9bba77fc15c0" }
     proof,err := GetProof(cfg, 11991348)
     _ = proof
+    if err != nil {
+        log.Fatalf("%v",err)
+    }
     require.NoError(t, err)
 }

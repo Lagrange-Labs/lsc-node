@@ -8,7 +8,6 @@ import (
     "encoding/json"
     "strings"
     "io/ioutil"
-    "errors"
 
     "github.com/ethereum/go-ethereum/common"
     "github.com/ethereum/go-ethereum/ethclient"
@@ -177,7 +176,7 @@ func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
         reProof := crypto.Keccak256(encodedCleaned)
         
         if hexutil.Encode(reProof) != outputRootStr {
-            return OutputRootProof{},errors.New("Output roots do not match")
+            return OutputRootProof{},fmt.Errorf("Output roots do not match: %v %v", hexutil.Encode(reProof), outputRootStr)
         }
         //fmt.Println("Reconstructed Output Root:", hexutil.Encode(reProof))
         
