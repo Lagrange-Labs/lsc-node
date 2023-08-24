@@ -10,11 +10,17 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 )
 
-var eth = os.Getenv("EthereumURL")
-var opt = os.Getenv("RPCEndpoint")
+var ethSecret = os.Getenv("ETH_RPC")
+var optSecret = os.Getenv("OPT_RPC")
+
 var addr = "0xe6dfba0953616bacab0c9a8ecb3a9bba77fc15c0"
 
 func TestL2Output(t *testing.T) {
+    os.Setenv("EthereumURL",ethSecret)
+    os.Setenv("RPCEndpoint",optSecret)
+
+    eth := os.Getenv("EthereumURL")
+
     ethClient, err := rpc.Dial(eth)
     if err != nil {
         log.Fatalf("Failed to connect to the Ethereum client: %v", err)
@@ -29,6 +35,12 @@ func TestL2Output(t *testing.T) {
  }
 
 func TestL2OutputProof(t *testing.T) {
+    os.Setenv("EthereumURL",ethSecret)
+    os.Setenv("RPCEndpoint",optSecret)
+
+    eth := os.Getenv("EthereumURL")
+    opt := os.Getenv("RPCEndpoint")
+    
     cfg := ProofConfig{
         EthEndpoint: eth,
         OptEndpoint: opt,
