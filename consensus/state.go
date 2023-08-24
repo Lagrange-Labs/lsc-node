@@ -170,12 +170,14 @@ func (s *State) OnStart() {
 			// TODO: handle the case when the batch is not finalized, now it will be run forever
 			logger.Error("the infinite loop is started!")
 			_ = s.processRound(context.Background())
-			for _, round := range s.rounds {
+			for blockNumber, round := range s.rounds {
 				if err := s.storage.UpdateBlock(context.Background(), round.GetCurrentBlock()); err != nil {
 					logger.Errorf("failed to update the block %d: %v", round.GetCurrentBlockNumber(), err)
 					continue
 				}
-
+				if lastBlockNumber < blockNumber {
+					lastBlockNumber = blockNumber
+				}
 				logger.Infof("the block %d is finalized", round.GetCurrentBlockNumber())
 			}
 		}
