@@ -6,7 +6,13 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
+var ethSecret = os.Getenv("ETH_RPC")
+var optSecret = os.Getenv("OPT_RPC")
+
 func TestL2Hash(t *testing.T) {
+    os.Setenv("EthereumURL",ethSecret)
+    os.Setenv("RPCEndpoint",optSecret)
+    
     cfg := ProofConfig{
         EthEndpoint: os.Getenv("EthereumURL"),
         ArbEndpoint: os.Getenv("RPCEndpoint"),
