@@ -214,7 +214,7 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 	}
 	committeeData, err := c.committeeSC.GetCommittee(nil, c.chainID, big.NewInt(int64(res.Batch[0].EpochBlockNumber())))
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the committee data: %v", err)
+		return nil, fmt.Errorf("failed to get the committee data: %v chainID: %d Batch: %v", err, c.chainID, res.Batch)
 	}
 	for i := range res.Batch {
 		if res.Batch[i].EpochBlockNumber() != res.Batch[0].EpochBlockNumber() {

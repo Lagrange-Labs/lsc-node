@@ -8,7 +8,6 @@ import (
     "encoding/json"
     "strings"
     "io/ioutil"
-    "errors"
 
     "github.com/ethereum/go-ethereum/common"
     "github.com/ethereum/go-ethereum/ethclient"
@@ -48,6 +47,7 @@ func getL2OutputAfter(rpc *rpc.Client, addr common.Address, blockNum *big.Int) (
     abiJSON, err := ioutil.ReadFile(abiPath)
     if err != nil { return OutputProposal{},err }
     l2ooAbi, err := abi.JSON(strings.NewReader(string(abiJSON)))
+    if err != nil { return OutputProposal{},err }
 
     // Make RPC Request for L2 Output Proposal
     f := "getL2OutputAfter"
@@ -94,6 +94,7 @@ func (orp *OutputRootProof) Hex() (string,error) {
 	    orp.MessagePasserStorageRoot,
 	    orp.LatestBlockhash,
 	)
+        if err != nil { return "",err }
         encodedCleaned := encoded[4:] // strip signature prefix
 	return hexutil.Encode(encodedCleaned),nil
 }
@@ -154,8 +155,8 @@ func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
     
     jsonStr := string(scres)
     var result map[string]interface{}
-    err = json.Unmarshal([]byte(jsonStr), &result)
-    if err != nil {
+    
+    if err := json.Unmarshal([]byte(jsonStr), &result); err != nil {
         return OutputRootProof{},err
     }
     
@@ -177,7 +178,7 @@ func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
         reProof := crypto.Keccak256(encodedCleaned)
         
         if hexutil.Encode(reProof) != outputRootStr {
-            return OutputRootProof{},errors.New("Output roots do not match")
+            return OutputRootProof{},fmt.Errorf("Output roots do not match: %v %v", hexutil.Encode(reProof), outputRootStr)
         }
         //fmt.Println("Reconstructed Output Root:", hexutil.Encode(reProof))
         
