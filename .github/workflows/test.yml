@@ -32,3 +32,7 @@ jobs:
       - name: test & coverage report creation
         run: |
           make test
+	env:
+	  ETH_RPC: ${{ secrets.ETH_RPC }}
+	  OPT_RPC: ${{ secrets.OPT_RPC }}
+	  ARB_RPC: ${{ secrets.ARB_RPC }}
