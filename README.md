@@ -95,6 +95,16 @@ make proto-gen
 make docker-build
 ```
 
+```bash
+# Install linter
+make install-linter
+```
+
+```bash
+# Lint the codebase
+make lint
+```
+
 ## License
 
 This project is licensed under the [XXXX](./LICENSE).
