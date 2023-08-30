@@ -125,9 +125,6 @@ func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
     l2BlockNumber := output.L2BlockNumber;
     outputRootStr := hexutil.Encode(outputRoot[:])
     
-    //fmt.Println("Checkpoint Block Number:", l2BlockNumber)
-    //fmt.Println("Output Root:", hexutil.Encode(outputRoot[:]));
-
     // Retrieve L2 block, continue accumulating output proof components
     block, err := optClient.HeaderByNumber(context.Background(), l2BlockNumber)
     if err != nil {
@@ -162,11 +159,6 @@ func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
     
     if curlResult, ok := result["result"].(map[string]interface{}); ok {
         storageRoot := curlResult["storageHash"]
-
-        //fmt.Println("version:",version)
-        //fmt.Println("stateRoot:",stateRoot)
-        //fmt.Println("storageRoot",storageRoot)
-        //fmt.Println("hash:",hash)
 
 	// Reconstruct output proof, compute hash, verify against proposal, return
 
