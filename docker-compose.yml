@@ -23,6 +23,7 @@ services:
         ipv4_address: 192.168.20.3
     ports:
       - 9090:9090
+      - 6061:6060
     command:
       - "/bin/sh"
       - "-c"
@@ -44,6 +45,8 @@ services:
     networks:
       localnet:
         ipv4_address: 192.168.20.4
+    ports:
+      - 6060:6060
     command:
       - "/bin/sh"
       - "-c"
