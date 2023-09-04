@@ -89,7 +89,7 @@ func (c *EvmClient) GetChainID() (uint32, error) {
 }
 
 // GetRawAttestBlockHeader returns the raw block header hex string associated with blockNum w/o implicit client
-func GetRawAttestBlockHeader(blockNum int) (string, error) {
+func getRawAttestBlockHeader(blockNum int) (string, error) {
 	optClient,err := NewEvmClient(os.Getenv("RPCEndpoint"))
 	if err != nil { return "0x00",nil }
 	hex,err := optClient.GetRawBlockHeader(blockNum)
