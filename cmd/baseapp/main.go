@@ -2,6 +2,9 @@ package main
 
 import (
 	"fmt"
+	"log"
+	"net/http"
+	_ "net/http/pprof"
 	"os"
 	"os/signal"
 	"runtime"
@@ -27,7 +30,17 @@ var (
 	}
 )
 
+// TODO: use an environment variable to enable/disable debug mode
+const DEBUG_MODE = false
+
 func main() {
+	// Start an HTTP server for pprof profiling data.
+	if DEBUG_MODE {
+		go func() {
+			log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
+		}()
+	}
+
 	app := cli.NewApp()
 	app.Name = "Lagrange Node"
 
