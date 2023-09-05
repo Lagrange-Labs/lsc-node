@@ -315,7 +315,11 @@ func (c *Client) TryCommitBlocks(blocks []*sequencertypes.Block) error {
 		BlsSignatures: blsSignatures,
 		StakeAddress:  c.stakeAddress,
 	}
-	stream, err := c.CommitBatch(c.ctx, req)
+
+	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	defer cancel()
+
+	stream, err := c.CommitBatch(ctx, req)
 	if err != nil {
 		return fmt.Errorf("failed to upload signature: %v", err)
 	}
