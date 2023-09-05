@@ -69,16 +69,6 @@ func (c *EvmClient) GetExtraDataByNumber(blockNumber uint64) (string, error) {
 	return hexutil.Encode(extraData), err
 }
 
-// GetBlockNumberByHash returns the block number by the given block hash.
-func (c *EvmClient) GetBlockNumberByHash(blockHash string) (int, error) {
-	header, err := c.ethClient.HeaderByHash(context.Background(), common.HexToHash(blockHash))
-	if err == ethereum.NotFound {
-		return 0, ErrBlockNotFound
-	}
-
-	return int(header.Number.Int64()), err
-}
-
 // GetChainID returns the chain ID.
 func (c *EvmClient) GetChainID() (uint32, error) {
 	chainID, err := c.ethClient.ChainID(context.Background())
@@ -88,16 +78,16 @@ func (c *EvmClient) GetChainID() (uint32, error) {
 	return uint32(chainID.Int64()), err
 }
 
-// GetRawAttestBlockHeader returns the raw block header hex string associated with blockNum w/o implicit client
-func getRawAttestBlockHeader(blockNum int) (string, error) {
+// GetRawAttestBlockHeader returns the raw block header hex string associated with blockNum w/o explicit client
+func GetRawAttestBlockHeader(blockNum int) (string, error) {
 	optClient,err := NewEvmClient(os.Getenv("RPCEndpoint"))
 	if err != nil { return "0x00",nil }
-	hex,err := optClient.GetRawBlockHeader(blockNum)
+	hex,err := optClient.getRawBlockHeader(blockNum)
 	return hex,err
 }
 
-// GetRawBlockHeader returns the raw block header hex string associated with blockNum
-func (c *EvmClient) GetRawBlockHeader(blockNum int) (string, error) {
+// getRawBlockHeader returns the raw block header hex string associated with blockNum
+func (c *EvmClient) getRawBlockHeader(blockNum int) (string, error) {
         header, err := c.ethClient.HeaderByNumber(context.Background(), big.NewInt(int64(blockNum)))
 	if err != nil { return "",err }
 	rlpBytes, err := rlp.EncodeToBytes(header)
@@ -111,7 +101,7 @@ func (c *EvmClient) GetRawBlockHeaders(startblock *big.Int, endblock *big.Int) (
     headers := make(map[*big.Int]string)
     // Iterate block numbers
     for i := (*startblock).Int64(); i <= (*endblock).Int64(); i++ {
-        hex,err := c.GetRawBlockHeader(int(i))
+        hex,err := c.getRawBlockHeader(int(i))
         if err != nil {
 	    return headers,err
 	}

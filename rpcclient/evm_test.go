@@ -42,7 +42,7 @@ func GetClient() *ethclient.Client {
 func TestRawBlockHeaders(t *testing.T) {
 	c, err := NewEvmClient(os.Getenv("EthereumURL"))
 	if err != nil { panic(err) }
-	block,err := c.GetRawBlockHeader(1)
+	block,err := c.getRawBlockHeader(1)
 	if err != nil { panic(err) }
 	blockBytes,err := hexutil.Decode(block)
 	if err != nil { panic(err) }
