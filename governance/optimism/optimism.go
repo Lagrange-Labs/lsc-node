@@ -172,7 +172,6 @@ func GetProof(cfg ProofConfig, blockNumber int) (OutputRootProof, error) {
         if hexutil.Encode(reProof) != outputRootStr {
             return OutputRootProof{},fmt.Errorf("Output roots do not match: %v %v", hexutil.Encode(reProof), outputRootStr)
         }
-        //fmt.Println("Reconstructed Output Root:", hexutil.Encode(reProof))
         
         proof := OutputRootProof{
             big.NewInt(int64(version)),
