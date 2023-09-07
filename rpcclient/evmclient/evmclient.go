@@ -4,6 +4,7 @@ import (
 	"context"
 	"encoding/json"
 	"io"
+	"math"
 	"math/big"
 	"net/http"
 	"strings"
@@ -93,7 +94,9 @@ func (c *Client) GetL2FinalizedBlockNumber() (uint64, error) {
 		return 0, err
 	}
 	if result.Error.Code != 0 {
-		return 0, types.ErrBlockNotFound
+		// TODO: handle error
+		// API does not support the finalized block number
+		return math.MaxUint64, nil
 	}
 
 	return result.Result.Number, nil

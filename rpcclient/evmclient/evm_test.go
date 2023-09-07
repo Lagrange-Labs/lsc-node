@@ -1,6 +1,7 @@
 package evmclient
 
 import (
+	"math"
 	"os"
 	"testing"
 
@@ -19,8 +20,9 @@ func TestEndpoints(t *testing.T) {
 	require.Equal(t, len(hash), 66)
 
 	// pre-merge chain does not support this
-	_, err = c.GetL2FinalizedBlockNumber()
-	require.Error(t, err)
+	num, err := c.GetL2FinalizedBlockNumber()
+	require.Equal(t, num, uint64(math.MaxUint64))
+	require.NoError(t, err)
 }
 
 func TestFinalizedL2BlockNumber(t *testing.T) {
