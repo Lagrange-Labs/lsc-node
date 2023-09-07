@@ -38,7 +38,7 @@ func TestFinalizedL2BlockNumber(t *testing.T) {
 
 	num, err := c.GetL2FinalizedBlockNumber()
 	require.NoError(t, err)
-	require.True(t, num > cNum)
+	require.True(t, num < cNum)
 
 	arbURL := os.Getenv("ARB_RPC")
 	if arbURL == "" {
@@ -52,5 +52,5 @@ func TestFinalizedL2BlockNumber(t *testing.T) {
 
 	num, err = c.GetL2FinalizedBlockNumber()
 	require.NoError(t, err)
-	require.True(t, num > cNum)
+	require.True(t, num < cNum)
 }

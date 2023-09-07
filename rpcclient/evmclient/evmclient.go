@@ -7,8 +7,10 @@ import (
 	"math"
 	"math/big"
 	"net/http"
+	"strconv"
 	"strings"
 
+	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -83,7 +85,7 @@ func (c *Client) GetL2FinalizedBlockNumber() (uint64, error) {
 
 	var result = struct {
 		Result struct {
-			Number uint64 `json:"number"`
+			Number string `json:"number"`
 		} `json:"result"`
 		Error struct {
 			Code    int    `json:"code"`
@@ -91,6 +93,7 @@ func (c *Client) GetL2FinalizedBlockNumber() (uint64, error) {
 		} `json:"error"`
 	}{}
 	if err := json.Unmarshal(body, &result); err != nil {
+		logger.Errorf("failed to unmarshal json: %v", string(body))
 		return 0, err
 	}
 	if result.Error.Code != 0 {
@@ -98,6 +101,9 @@ func (c *Client) GetL2FinalizedBlockNumber() (uint64, error) {
 		// API does not support the finalized block number
 		return math.MaxUint64, nil
 	}
-
-	return result.Result.Number, nil
+	blockNumber, err := strconv.ParseUint(result.Result.Number, 0, 64)
+	if err != nil {
+		return 0, err
+	}
+	return blockNumber, nil
 }
