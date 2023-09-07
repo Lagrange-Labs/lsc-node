@@ -6,19 +6,20 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
+	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 )
 
 const (
 	// SyncInterval is the interval between two block syncs after fully synced.
-	SyncInterval = 500 * time.Millisecond
+	SyncInterval = 1 * time.Second
 )
 
 // Sequencer is the main component of the lagrange node.
 // - It is responsible for fetching block headers from the blockchain.
 type Sequencer struct {
 	storage         storageInterface
-	rpcClient       rpcclient.RpcClient
+	rpcClient       rpctypes.RpcClient
 	chainID         uint32
 	lastBlockNumber uint64
 
@@ -28,7 +29,7 @@ type Sequencer struct {
 
 // NewSequencer creates a new sequencer instance.
 func NewSequencer(cfg *Config, storage storageInterface) (*Sequencer, error) {
-	rpcClient, err := rpcclient.CreateRPCClient(cfg.Chain, cfg.RPCURL)
+	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCURL)
 	if err != nil {
 		return nil, err
 	}
@@ -65,16 +66,30 @@ func (s *Sequencer) GetChainID() uint32 {
 
 // Start starts the sequencer.
 func (s *Sequencer) Start() error {
-	logger.Info("sequencer started")
+	finalizedBlockNumber, err := s.rpcClient.GetL2FinalizedBlockNumber()
+	if err != nil {
+		return err
+	}
+
+	logger.Infof("sequencer started from %d", finalizedBlockNumber)
+
 	for {
 		select {
 		case <-s.ctx.Done():
 			return nil
 		default:
 			lastBlockNumber := s.lastBlockNumber
+			if s.lastBlockNumber > finalizedBlockNumber {
+				time.Sleep(SyncInterval)
+				finalizedBlockNumber, err = s.rpcClient.GetL2FinalizedBlockNumber()
+				if err != nil {
+					return err
+				}
+				continue
+			}
 			blockHash, err := s.rpcClient.GetBlockHashByNumber(lastBlockNumber)
 			if err != nil {
-				if err == rpcclient.ErrBlockNotFound {
+				if err == rpctypes.ErrBlockNotFound {
 					time.Sleep(SyncInterval)
 					continue
 				}
@@ -91,7 +106,7 @@ func (s *Sequencer) Start() error {
 			}
 
 			s.lastBlockNumber = lastBlockNumber + 1
-			time.Sleep(100 * time.Millisecond)
+			time.Sleep(1 * time.Millisecond)
 		}
 	}
 }

@@ -1,4 +1,4 @@
-package rpcclient
+package types
 
 import "fmt"
 
@@ -8,6 +8,8 @@ var (
 )
 
 type RpcClient interface {
+	GetCurrentBlockNumber() (uint64, error)
 	GetBlockHashByNumber(blockNumber uint64) (string, error)
+	GetL2FinalizedBlockNumber() (uint64, error)
 	GetChainID() (uint32, error)
 }
