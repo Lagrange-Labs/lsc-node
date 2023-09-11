@@ -22,6 +22,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
+	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
@@ -30,7 +31,7 @@ import (
 // Client is a gRPC client to join the network
 type Client struct {
 	types.NetworkServiceClient
-	rpcClient   rpcclient.RpcClient
+	rpcClient   rpctypes.RpcClient
 	committeeSC *committee.Committee
 
 	chainID           uint32
@@ -94,7 +95,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	}
 	stakeAddress := crypto.PubkeyToAddress(ecdsaPriv.PublicKey).Hex()
 
-	rpcClient, err := rpcclient.CreateRPCClient(cfg.Chain, cfg.RPCEndpoint)
+	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCEndpoint)
 	if err != nil {
 		panic(err)
 	}
