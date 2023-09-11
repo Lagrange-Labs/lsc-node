@@ -98,7 +98,7 @@ func runServer(ctx *cli.Context) error {
 	}
 
 	// Get the chain ID.
-	rpcClient, err := rpcclient.CreateRPCClient(cfg.Sequencer.Chain, cfg.Sequencer.RPCURL)
+	rpcClient, err := rpcclient.NewClient(cfg.Sequencer.Chain, cfg.Sequencer.RPCURL)
 	if err != nil {
 		return err
 	}
