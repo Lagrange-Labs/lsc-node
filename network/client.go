@@ -95,7 +95,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	}
 	stakeAddress := crypto.PubkeyToAddress(ecdsaPriv.PublicKey).Hex()
 
-	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCEndpoint)
+	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCEndpoint, cfg.EthereumURL, "")
 	if err != nil {
 		panic(err)
 	}

@@ -29,7 +29,7 @@ type Sequencer struct {
 
 // NewSequencer creates a new sequencer instance.
 func NewSequencer(cfg *Config, storage storageInterface) (*Sequencer, error) {
-	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCURL)
+	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCURL, cfg.EthURL, cfg.BatchStorage)
 	if err != nil {
 		return nil, err
 	}
