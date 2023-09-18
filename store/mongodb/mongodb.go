@@ -53,7 +53,7 @@ func (db *MongoDB) AddNode(ctx context.Context, node *networktypes.ClientNode) e
 	} else {
 		node.Status = networktypes.NodeJoined
 	}
-	_, err = collection.UpdateOne(ctx, bson.M{"stake_address": node.StakeAddress}, bson.M{"$set": node}, options.Update().SetUpsert(true))
+	_, err = collection.UpdateOne(ctx, bson.M{"stake_address": node.StakeAddress, "chain_id": node.ChainID}, bson.M{"$set": node}, options.Update().SetUpsert(true))
 	return err
 }
 
