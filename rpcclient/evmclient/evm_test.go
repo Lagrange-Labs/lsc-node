@@ -59,7 +59,7 @@ func TestFinalizedL2BlockNumber(t *testing.T) {
 }
 
 func TestBlockCollector(t *testing.T) {
-	c, err := NewClient(os.Getenv("EthereumURL"))
+	c, err := NewClient(os.Getenv("ETH_RPC"))
 	if err != nil { panic(err) }
 	blocks,err := c.GetRawBlockHeaders(big.NewInt(9500000),big.NewInt(9500010))
 	if err != nil { panic(err) }
@@ -67,7 +67,7 @@ func TestBlockCollector(t *testing.T) {
 }
 
 func TestRawBlockHeaders(t *testing.T) {
-	c, err := NewClient(os.Getenv("EthereumURL"))
+	c, err := NewClient(os.Getenv("ETH_RPC"))
 	if err != nil { panic(err) }
 	block,err := c.getRawBlockHeader(1)
 	if err != nil { panic(err) }
