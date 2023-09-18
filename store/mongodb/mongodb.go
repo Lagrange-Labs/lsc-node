@@ -39,7 +39,7 @@ func NewMongoDB(uri string) (*MongoDB, error) {
 func (db *MongoDB) AddNode(ctx context.Context, node *networktypes.ClientNode) error {
 	collection := db.client.Database("state").Collection("nodes")
 	tNode := networktypes.ClientNode{}
-	err := collection.FindOne(ctx, bson.M{"stake_address": node.StakeAddress}).Decode(&tNode)
+	err := collection.FindOne(ctx, bson.M{"stake_address": node.StakeAddress, "chain_id": node.ChainID}).Decode(&tNode)
 	if err == nil && tNode.Status == networktypes.NodeRegistered {
 		return nil
 	}
@@ -53,7 +53,7 @@ func (db *MongoDB) AddNode(ctx context.Context, node *networktypes.ClientNode) e
 	} else {
 		node.Status = networktypes.NodeJoined
 	}
-	_, err = collection.UpdateOne(ctx, bson.M{"stake_address": node.StakeAddress}, bson.M{"$set": node}, options.Update().SetUpsert(true))
+	_, err = collection.UpdateOne(ctx, bson.M{"stake_address": node.StakeAddress, "chain_id": node.ChainID}, bson.M{"$set": node}, options.Update().SetUpsert(true))
 	return err
 }
 
