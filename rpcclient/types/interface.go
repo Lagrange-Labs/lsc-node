@@ -5,6 +5,7 @@ import "fmt"
 var (
 	// ErrBlockNotFound is returned when the block is not found.
 	ErrBlockNotFound = fmt.Errorf("block not found")
+	ErrUnsupportedNetwork = fmt.Errorf("unsupported network")
 )
 
 type RpcClient interface {

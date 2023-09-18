@@ -4,7 +4,7 @@ import (
 	"encoding/binary"
 	"math/big"
 
-	evm "github.com/Lagrange-Labs/lagrange-node/rpcclient"
+	evm "github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/lagrange"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
