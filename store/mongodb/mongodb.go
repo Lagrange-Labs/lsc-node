@@ -176,10 +176,10 @@ func (db *MongoDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint
 }
 
 // GetNodeByStakeAddr returns the node for the given stake address.
-func (db *MongoDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string) (*networktypes.ClientNode, error) {
+func (db *MongoDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*networktypes.ClientNode, error) {
 	collection := db.client.Database("state").Collection("nodes")
 	node := networktypes.ClientNode{}
-	err := collection.FindOne(ctx, bson.M{"stake_address": stakeAddress}).Decode(&node)
+	err := collection.FindOne(ctx, bson.M{"stake_address": stakeAddress, "chain_id": chainID}).Decode(&node)
 	if err == mongo.ErrNoDocuments {
 		return nil, types.ErrNodeNotFound
 	}
