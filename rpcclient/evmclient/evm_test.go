@@ -78,6 +78,7 @@ func TestRawBlockHeaders(t *testing.T) {
 	require.Equal(t, "0x8f5bab218b6bb34476f51ca588e9f4553a3a7ce5e13a66c660a5283e97e9a85a", hash.Hex())
 }
 func TestRawAttestBlockHeaders(t *testing.T) {
+        os.Setenv("RPCEndpoint",os.Getenv("OPT_RPC"))
 	block,err := GetRawAttestBlockHeader(1)
 	if err != nil { panic(err) }
 	blockBytes,err := hexutil.Decode(block)
