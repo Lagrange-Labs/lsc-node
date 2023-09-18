@@ -2,9 +2,11 @@ package mantle
 
 import (
 	"context"
+	"math"
 	"math/big"
 	"strings"
 
+	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
@@ -74,6 +76,12 @@ func (c *Client) GetL2FinalizedBlockNumber() (uint64, error) {
 
 	result, err := c.ethClient.CallContract(context.Background(), msg, big.NewInt(int64(b-64)))
 	if err != nil {
+		if strings.Contains(err.Error(), "missing trie node") {
+			// TODO: This is a temporary workaround for the missing trie node error.
+			// It means the dedicated RPC node is not fully synced yet.
+			logger.Infof("Missing trie node error: %v", err)
+			return math.MaxUint64, nil
+		}
 		return 0, err
 	}
 

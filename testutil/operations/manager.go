@@ -45,7 +45,7 @@ func NewManager() (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	rpcClient, err := rpcclient.NewClient(cfg.Sequencer.Chain, cfg.Sequencer.RPCURL, "", "")
+	rpcClient, err := rpcclient.NewClient(cfg.Sequencer.Chain, cfg.Sequencer.RPCURL, cfg.Sequencer.EthURL, cfg.Sequencer.BatchStorageAddr)
 	if err != nil {
 		return nil, err
 	}

@@ -29,7 +29,7 @@ type Sequencer struct {
 
 // NewSequencer creates a new sequencer instance.
 func NewSequencer(cfg *Config, storage storageInterface) (*Sequencer, error) {
-	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCURL, cfg.EthURL, cfg.BatchStorage)
+	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCURL, cfg.EthURL, cfg.BatchStorageAddr)
 	if err != nil {
 		return nil, err
 	}
@@ -80,6 +80,7 @@ func (s *Sequencer) Start() error {
 		default:
 			lastBlockNumber := s.lastBlockNumber
 			if s.lastBlockNumber > finalizedBlockNumber {
+				logger.Infof("sequencer synced to %d", finalizedBlockNumber)
 				time.Sleep(SyncInterval)
 				finalizedBlockNumber, err = s.rpcClient.GetL2FinalizedBlockNumber()
 				if err != nil {
@@ -90,6 +91,7 @@ func (s *Sequencer) Start() error {
 			blockHash, err := s.rpcClient.GetBlockHashByNumber(lastBlockNumber)
 			if err != nil {
 				if err == rpctypes.ErrBlockNotFound {
+					logger.Infof("block %d not found", lastBlockNumber)
 					time.Sleep(SyncInterval)
 					continue
 				}
