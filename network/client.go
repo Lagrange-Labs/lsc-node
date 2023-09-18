@@ -136,6 +136,11 @@ func (c *Client) GetStakeAddress() string {
 	return c.stakeAddress
 }
 
+// GetChainID returns the chain ID.
+func (c *Client) GetChainID() uint32 {
+	return c.chainID
+}
+
 // Start starts the connection loop.
 func (c *Client) Start() {
 	err := c.TryJoinNetwork()
