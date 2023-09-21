@@ -23,7 +23,7 @@ build: ## Builds the binary locally into ./dist
 .PHONY: build
 
 docker-build: ## Builds a docker image with the node binary
-	docker build -t lagrange-node -f ./Dockerfile .
+	sudo docker build -t lagrange-node -f ./Dockerfile .
 .PHONY: docker-build
 
 

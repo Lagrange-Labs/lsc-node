@@ -55,14 +55,14 @@ func (suite *ClientTestSuite) Test_Client_Start() {
 		require.NoError(t, suite.client.TryJoinNetwork())
 
 		stakeAddress := suite.client.GetStakeAddress()
-		node, err := suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress)
+		node, err := suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress, suite.client.GetChainID())
 		require.NoError(t, err)
 		require.Equal(t, networktypes.NodeJoined, node.Status)
 
 		suite.manager.RunSequencer()
 		time.Sleep(10 * time.Second)
 
-		node, err = suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress)
+		node, err = suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress, suite.client.GetChainID())
 		require.NoError(t, err)
 		require.Equal(t, networktypes.NodeRegistered, node.Status)
 	})

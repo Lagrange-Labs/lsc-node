@@ -95,7 +95,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	}
 	stakeAddress := crypto.PubkeyToAddress(ecdsaPriv.PublicKey).Hex()
 
-	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCEndpoint)
+	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCEndpoint, cfg.EthereumURL, "")
 	if err != nil {
 		panic(err)
 	}
@@ -134,6 +134,11 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 // GetStakeAddress returns the stake address.
 func (c *Client) GetStakeAddress() string {
 	return c.stakeAddress
+}
+
+// GetChainID returns the chain ID.
+func (c *Client) GetChainID() uint32 {
+	return c.chainID
 }
 
 // Start starts the connection loop.

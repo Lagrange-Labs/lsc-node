@@ -7,10 +7,10 @@ GRPCPort = "9090"
 
 [Client]
 GrpcURL = "127.0.0.1:9090"
-Chain = "arbitrum"
+Chain = "mantle"
 RPCEndpoint = "http://127.0.0.1:8545"
 EthereumURL = "http://127.0.0.1:8545"
-CommitteeSCAddress = "0x923d8ADAAa6e52c485293cD48EE56F7BFAD85cd4"
+CommitteeSCAddress = "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f"
 BLSPrivateKey = "0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f654a"
 ECDSAPrivateKey = "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
 PullInterval = "100ms"
@@ -20,15 +20,17 @@ BackendType = "mongodb"
 DBPath = "mongodb://127.0.0.1:27017"
 
 [Sequencer]
-Chain = "arbitrum"
+Chain = "mantle"
 RPCURL = "http://127.0.0.1:8545"
+EthURL = "http://127.0.0.1:8545"
+BatchStorageAddr = "0x2f947E51B9A7cF1d6651D0a568261673233ba42b"
 FromBlockNumber = 5
 
 [Governance]
 EthereumURL = "http://127.0.0.1:8545"
 PrivateKey = "0x3e17bc938ec10c865fc4e2d049902716dc0712b5b0e688b7183c16807234a84c"
-StakingSCAddress = "0xF824C350EA9501234a731B01B8EC6E660e069c7F"
-CommitteeSCAddress = "0x923d8ADAAa6e52c485293cD48EE56F7BFAD85cd4"
+StakingSCAddress = "0xe509Dea686816C3c64ed4950dA54792a70A25239"
+CommitteeSCAddress = "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f"
 StakingCheckInterval = "2s"
 EvidenceUploadInterval = "3s"
 
