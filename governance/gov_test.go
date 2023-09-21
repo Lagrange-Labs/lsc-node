@@ -77,7 +77,7 @@ func TestUpdateNodeStatus(t *testing.T) {
 	time.Sleep(time.Second * 5)
 	require.NoError(t, gov.updateNodeStatuses())
 	// check the node status
-	node, err := storage.GetNodeByStakeAddr(context.Background(), clientNode.StakeAddress)
+	node, err := storage.GetNodeByStakeAddr(context.Background(), clientNode.StakeAddress, clientNode.ChainID)
 	require.NoError(t, err)
 	require.Equal(t, auth.From.Hex(), node.StakeAddress)
 	require.Equal(t, networktypes.NodeRegistered, node.Status)

@@ -88,7 +88,7 @@ func (s *sequencerService) GetBatch(ctx context.Context, req *types.GetBatchRequ
 	if err != nil {
 		return nil, err
 	}
-	node, err := s.storage.GetNodeByStakeAddr(ctx, req.StakeAddress)
+	node, err := s.storage.GetNodeByStakeAddr(ctx, req.StakeAddress, s.chainID)
 	if err != nil {
 		return nil, err
 	}
@@ -111,7 +111,7 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 	if err != nil {
 		return err
 	}
-	node, err := s.storage.GetNodeByStakeAddr(context.Background(), req.StakeAddress)
+	node, err := s.storage.GetNodeByStakeAddr(context.Background(), req.StakeAddress, s.chainID)
 	if err != nil {
 		return err
 	}
