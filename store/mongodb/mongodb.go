@@ -60,7 +60,7 @@ func (db *MongoDB) AddNode(ctx context.Context, node *networktypes.ClientNode) e
 // UpdateNode updates the node status in the database.
 func (db *MongoDB) UpdateNode(ctx context.Context, node *networktypes.ClientNode) error {
 	collection := db.client.Database("state").Collection("nodes")
-	_, err := collection.UpdateOne(ctx, bson.M{"stake_address": node.StakeAddress}, bson.M{"$set": node})
+	_, err := collection.UpdateOne(ctx, bson.M{"stake_address": node.StakeAddress, "chain_id": node.ChainID}, bson.M{"$set": node})
 	return err
 }
 
