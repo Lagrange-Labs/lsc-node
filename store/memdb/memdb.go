@@ -42,9 +42,9 @@ func (d *MemDB) AddNode(ctx context.Context, node *networktypes.ClientNode) erro
 }
 
 // GetNodeByStakeAddr returns the node with the given IP address.
-func (d *MemDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string) (*networktypes.ClientNode, error) {
+func (d *MemDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*networktypes.ClientNode, error) {
 	for _, node := range d.nodes {
-		if node.StakeAddress == stakeAddress {
+		if node.StakeAddress == stakeAddress && node.ChainID == chainID {
 			return &node, nil
 		}
 	}
