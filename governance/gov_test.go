@@ -24,7 +24,6 @@ const (
 )
 
 var (
-	stakeAddr     = "0x"
 	committeeAddr = "0x"
 )
 
@@ -33,7 +32,6 @@ func init() {
 	if err != nil {
 		panic(err)
 	}
-	stakeAddr = cfg.Governance.StakingSCAddress
 	committeeAddr = cfg.Governance.CommitteeSCAddress
 }
 
@@ -46,12 +44,10 @@ func createTestGovernance(t *testing.T) (storetypes.Storage, *Governance, *ethcl
 	require.NoError(t, err)
 
 	govCfg := types.Config{
-		EthereumURL:            "http://127.0.0.1:8545",
-		PrivateKey:             "0x3e17bc938ec10c865fc4e2d049902716dc0712b5b0e688b7183c16807234a84c",
-		StakingSCAddress:       stakeAddr,
-		CommitteeSCAddress:     committeeAddr,
-		StakingCheckInterval:   utils.TimeDuration(time.Second * 1),
-		EvidenceUploadInterval: utils.TimeDuration(time.Second * 1),
+		EthereumURL:          "http://127.0.0.1:8545",
+		PrivateKey:           "0x3e17bc938ec10c865fc4e2d049902716dc0712b5b0e688b7183c16807234a84c",
+		CommitteeSCAddress:   committeeAddr,
+		StakingCheckInterval: utils.TimeDuration(time.Second * 1),
 	}
 	client, err := ethclient.Dial(govCfg.EthereumURL)
 	require.NoError(t, err)
@@ -93,18 +89,15 @@ func TestUploadEvidence(t *testing.T) {
 	blockHash := common.HexToHash(utils.RandomHex(32))
 	committeeRoot := common.HexToHash(utils.RandomHex(32))
 	evidence := &contypes.Evidence{
-		Operator:                    auth.From.Hex(),
-		BlockHash:                   blockHash,
-		CorrectBlockHash:            blockHash,
-		CurrentCommitteeRoot:        committeeRoot,
-		CorrectCurrentCommitteeRoot: committeeRoot,
-		NextCommitteeRoot:           committeeRoot,
-		CorrectNextCommitteeRoot:    committeeRoot,
-		BlockNumber:                 1,
-		EpochBlockNumber:            1,
-		BlockSignature:              common.FromHex(utils.RandomHex(32)),
-		CommitSignature:             common.FromHex(utils.RandomHex(32)),
-		ChainID:                     1,
+		Operator:             auth.From.Hex(),
+		BlockHash:            blockHash,
+		CurrentCommitteeRoot: committeeRoot,
+		NextCommitteeRoot:    committeeRoot,
+		BlockNumber:          1,
+		EpochBlockNumber:     1,
+		BlockSignature:       common.FromHex(utils.RandomHex(32)),
+		CommitSignature:      common.FromHex(utils.RandomHex(32)),
+		ChainID:              1,
 	}
 	require.NoError(t, storage.AddEvidences(context.Background(), []*contypes.Evidence{evidence}))
 	// check the evidence status
