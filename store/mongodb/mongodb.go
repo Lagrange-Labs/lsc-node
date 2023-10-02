@@ -236,11 +236,12 @@ func (db *MongoDB) UpdateEvidence(ctx context.Context, evidence *contypes.Eviden
 	return err
 }
 
-// GetEvidences returns the pending evidences.
-func (db *MongoDB) GetEvidences(ctx context.Context) ([]*contypes.Evidence, error) {
+// GetEvidences returns the evidences for the given block range.
+func (db *MongoDB) GetEvidences(ctx context.Context, fromBlockNumber, toBlockNumber uint64) ([]*contypes.Evidence, error) {
 	collection := db.client.Database("state").Collection("evidences")
-	filter := bson.M{"status": false}
-	cursor, err := collection.Find(ctx, filter)
+	filter := bson.M{"block_number": bson.M{"$gte": fromBlockNumber, "$lte": toBlockNumber}}
+	sortOptions := options.Find().SetSort(bson.D{{"block_number", 1}}) //nolint:govet
+	cursor, err := collection.Find(ctx, filter, sortOptions)
 	if err != nil {
 		return nil, err
 	}

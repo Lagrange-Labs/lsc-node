@@ -34,8 +34,8 @@ type Storage interface {
 	UpdateBlock(ctx context.Context, block *sequencertypes.Block) error
 	// AddEvidences adds new evidences to the database.
 	AddEvidences(ctx context.Context, evidences []*contypes.Evidence) error
-	// GetEvidences returns the pending evidences for the given block number.
-	GetEvidences(ctx context.Context) ([]*contypes.Evidence, error)
+	// GetEvidences returns the pending evidences for the given block number range.
+	GetEvidences(ctx context.Context, fromBlockNumber, toBlockNumber uint64) ([]*contypes.Evidence, error)
 	// UpdateEvidence updates the evidence in the database.
 	UpdateEvidence(ctx context.Context, evidence *contypes.Evidence) error
 	// UpdateCommitteeRoot updates the committee root in the database.
