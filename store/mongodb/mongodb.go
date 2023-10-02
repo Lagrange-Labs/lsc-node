@@ -175,6 +175,21 @@ func (db *MongoDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint
 	return uint64(chainHeader["block_number"].(int64)), isFinalized, nil
 }
 
+// GetLastEvidenceBlockNumber returns the last block number of the submitted evidence.
+func (db *MongoDB) GetLastEvidenceBlockNumber(ctx context.Context, chainID uint32) (uint64, error) {
+	collection := db.client.Database("state").Collection("evidences")
+	sortOptions := options.FindOne().SetSort(bson.D{{"block_number", -1}}) //nolint:govet
+	evidence := bson.M{}
+	err := collection.FindOne(ctx, bson.M{"chain_id": chainID, "status": true}, sortOptions).Decode(&evidence)
+	if err == mongo.ErrNoDocuments {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return uint64(evidence["block_number"].(int64)), nil
+}
+
 // GetNodeByStakeAddr returns the node for the given stake address.
 func (db *MongoDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*networktypes.ClientNode, error) {
 	collection := db.client.Database("state").Collection("nodes")

@@ -213,3 +213,13 @@ func (d *MemDB) GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32)
 	}
 	return 0, nil
 }
+
+// GetLastEvidenceBlockNumber returns the last submitted evidence block number for the given chainID.
+func (d *MemDB) GetLastEvidenceBlockNumber(ctx context.Context, chainID uint32) (uint64, error) {
+	for i := len(d.evidences) - 1; i >= 0; i-- {
+		if d.evidences[i].ChainID == chainID && d.evidences[i].Status {
+			return d.evidences[i].BlockNumber, nil
+		}
+	}
+	return 0, nil
+}

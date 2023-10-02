@@ -44,4 +44,6 @@ type Storage interface {
 	GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFinalized bool) (*govtypes.CommitteeRoot, error)
 	// GetLastCommitteeEpochNumber returns the last committee epoch number for the given chainID.
 	GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error)
+	// GetLastEvidenceBlockNumber returns the last submitted evidence block number for the given chainID.
+	GetLastEvidenceBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
 }
