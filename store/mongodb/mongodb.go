@@ -296,6 +296,18 @@ func (db *MongoDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32, isF
 	return committeeRoot, err
 }
 
+// GetCommitteeRoot returns the committee root for the given epoch number.
+func (db *MongoDB) GetCommitteeRoot(ctx context.Context, chainID uint32, epochNumber uint64) (*govtypes.CommitteeRoot, error) {
+	collection := db.client.Database("state").Collection("committee_roots")
+	filter := bson.M{"chain_id": chainID, "epoch_number": epochNumber}
+	committeeRoot := &govtypes.CommitteeRoot{}
+	err := collection.FindOne(ctx, filter).Decode(committeeRoot)
+	if err == mongo.ErrNoDocuments {
+		return nil, nil
+	}
+	return committeeRoot, err
+}
+
 // GetLastCommitteeEpochNumber returns the last committee epoch number for the given chainID.
 func (db *MongoDB) GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error) {
 	collection := db.client.Database("state").Collection("committee_roots")

@@ -204,6 +204,16 @@ func (d *MemDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFina
 	return nil, nil
 }
 
+// GetCommitteeRoot returns the committee root for the given epoch number.
+func (d *MemDB) GetCommitteeRoot(ctx context.Context, chainID uint32, epochNumber uint64) (*govtypes.CommitteeRoot, error) {
+	for i := len(d.committeeRoots) - 1; i >= 0; i-- {
+		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].EpochNumber == epochNumber {
+			return d.committeeRoots[i], nil
+		}
+	}
+	return nil, nil
+}
+
 // GetLastCommitteeEpochNumber returns the last committee epoch number for the given chainID.
 func (d *MemDB) GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error) {
 	for i := len(d.committeeRoots) - 1; i >= 0; i-- {
