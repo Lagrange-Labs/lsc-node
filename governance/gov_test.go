@@ -101,7 +101,7 @@ func TestUploadEvidence(t *testing.T) {
 	}
 	require.NoError(t, storage.AddEvidences(context.Background(), []*contypes.Evidence{evidence}))
 	// check the evidence status
-	evidences, err := storage.GetEvidences(context.Background(), 1, 1)
+	evidences, err := storage.GetEvidences(context.Background(), 1, 1, 1)
 	require.NoError(t, err)
 	require.Equal(t, 1, len(evidences))
 }

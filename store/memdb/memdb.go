@@ -178,10 +178,10 @@ func (d *MemDB) UpdateEvidence(ctx context.Context, evidence *contypes.Evidence)
 }
 
 // GetEvidences returns the evidences for the given block range.
-func (d *MemDB) GetEvidences(ctx context.Context, fromBlockNumber, toBlockNumber uint64) ([]*contypes.Evidence, error) {
+func (d *MemDB) GetEvidences(ctx context.Context, chainID uint32, fromBlockNumber, toBlockNumber uint64) ([]*contypes.Evidence, error) {
 	evidences := make([]*contypes.Evidence, 0)
 	for _, evidence := range d.evidences {
-		if evidence.BlockNumber >= fromBlockNumber && evidence.BlockNumber <= toBlockNumber {
+		if evidence.ChainID == chainID && evidence.BlockNumber >= fromBlockNumber && evidence.BlockNumber <= toBlockNumber {
 			evidences = append(evidences, evidence)
 		}
 	}
