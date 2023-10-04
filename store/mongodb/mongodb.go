@@ -296,10 +296,10 @@ func (db *MongoDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32, isF
 	return committeeRoot, err
 }
 
-// GetCommitteeRoot returns the committee root for the given epoch number.
-func (db *MongoDB) GetCommitteeRoot(ctx context.Context, chainID uint32, epochNumber uint64) (*govtypes.CommitteeRoot, error) {
+// GetCommitteeRoot returns the committee root for the given epoch block number.
+func (db *MongoDB) GetCommitteeRoot(ctx context.Context, chainID uint32, epochBlockNumber uint64) (*govtypes.CommitteeRoot, error) {
 	collection := db.client.Database("state").Collection("committee_roots")
-	filter := bson.M{"chain_id": chainID, "epoch_number": epochNumber}
+	filter := bson.M{"chain_id": chainID, "epoch_block_number": epochBlockNumber}
 	committeeRoot := &govtypes.CommitteeRoot{}
 	err := collection.FindOne(ctx, filter).Decode(committeeRoot)
 	if err == mongo.ErrNoDocuments {
