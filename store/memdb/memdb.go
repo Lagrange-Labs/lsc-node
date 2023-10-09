@@ -177,11 +177,11 @@ func (d *MemDB) UpdateEvidence(ctx context.Context, evidence *contypes.Evidence)
 	return nil
 }
 
-// GetEvidences returns the pending evidences.
-func (d *MemDB) GetEvidences(ctx context.Context) ([]*contypes.Evidence, error) {
+// GetEvidences returns the evidences for the given block range.
+func (d *MemDB) GetEvidences(ctx context.Context, chainID uint32, fromBlockNumber, toBlockNumber uint64) ([]*contypes.Evidence, error) {
 	evidences := make([]*contypes.Evidence, 0)
 	for _, evidence := range d.evidences {
-		if !evidence.Status {
+		if evidence.ChainID == chainID && evidence.BlockNumber >= fromBlockNumber && evidence.BlockNumber <= toBlockNumber {
 			evidences = append(evidences, evidence)
 		}
 	}
@@ -204,11 +204,31 @@ func (d *MemDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFina
 	return nil, nil
 }
 
+// GetCommitteeRoot returns the committee root for the given epoch block number.
+func (d *MemDB) GetCommitteeRoot(ctx context.Context, chainID uint32, epochBlockNumber uint64) (*govtypes.CommitteeRoot, error) {
+	for i := len(d.committeeRoots) - 1; i >= 0; i-- {
+		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].EpochBlockNumber == epochBlockNumber {
+			return d.committeeRoots[i], nil
+		}
+	}
+	return nil, nil
+}
+
 // GetLastCommitteeEpochNumber returns the last committee epoch number for the given chainID.
 func (d *MemDB) GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error) {
 	for i := len(d.committeeRoots) - 1; i >= 0; i-- {
 		if d.committeeRoots[i].ChainID == chainID {
 			return d.committeeRoots[i].EpochNumber, nil
+		}
+	}
+	return 0, nil
+}
+
+// GetLastEvidenceBlockNumber returns the last submitted evidence block number for the given chainID.
+func (d *MemDB) GetLastEvidenceBlockNumber(ctx context.Context, chainID uint32) (uint64, error) {
+	for i := len(d.evidences) - 1; i >= 0; i-- {
+		if d.evidences[i].ChainID == chainID && d.evidences[i].Status {
+			return d.evidences[i].BlockNumber, nil
 		}
 	}
 	return 0, nil
