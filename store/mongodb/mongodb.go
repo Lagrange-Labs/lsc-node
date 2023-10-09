@@ -175,6 +175,21 @@ func (db *MongoDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint
 	return uint64(chainHeader["block_number"].(int64)), isFinalized, nil
 }
 
+// GetLastEvidenceBlockNumber returns the last block number of the submitted evidence.
+func (db *MongoDB) GetLastEvidenceBlockNumber(ctx context.Context, chainID uint32) (uint64, error) {
+	collection := db.client.Database("state").Collection("evidences")
+	sortOptions := options.FindOne().SetSort(bson.D{{"block_number", -1}}) //nolint:govet
+	evidence := bson.M{}
+	err := collection.FindOne(ctx, bson.M{"chain_id": chainID, "status": true}, sortOptions).Decode(&evidence)
+	if err == mongo.ErrNoDocuments {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	return uint64(evidence["block_number"].(int64)), nil
+}
+
 // GetNodeByStakeAddr returns the node for the given stake address.
 func (db *MongoDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*networktypes.ClientNode, error) {
 	collection := db.client.Database("state").Collection("nodes")
@@ -236,11 +251,12 @@ func (db *MongoDB) UpdateEvidence(ctx context.Context, evidence *contypes.Eviden
 	return err
 }
 
-// GetEvidences returns the pending evidences.
-func (db *MongoDB) GetEvidences(ctx context.Context) ([]*contypes.Evidence, error) {
+// GetEvidences returns the evidences for the given block range.
+func (db *MongoDB) GetEvidences(ctx context.Context, chainID uint32, fromBlockNumber, toBlockNumber uint64) ([]*contypes.Evidence, error) {
 	collection := db.client.Database("state").Collection("evidences")
-	filter := bson.M{"status": false}
-	cursor, err := collection.Find(ctx, filter)
+	filter := bson.M{"chain_id": chainID, "block_number": bson.M{"$gte": fromBlockNumber, "$lte": toBlockNumber}}
+	sortOptions := options.Find().SetSort(bson.D{{"block_number", 1}}) //nolint:govet
+	cursor, err := collection.Find(ctx, filter, sortOptions)
 	if err != nil {
 		return nil, err
 	}
@@ -274,6 +290,18 @@ func (db *MongoDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32, isF
 	filter := bson.M{"chain_id": chainID, "is_finalized": isFinalized}
 	committeeRoot := &govtypes.CommitteeRoot{}
 	err := collection.FindOne(ctx, filter, sortOptions).Decode(committeeRoot)
+	if err == mongo.ErrNoDocuments {
+		return nil, nil
+	}
+	return committeeRoot, err
+}
+
+// GetCommitteeRoot returns the committee root for the given epoch block number.
+func (db *MongoDB) GetCommitteeRoot(ctx context.Context, chainID uint32, epochBlockNumber uint64) (*govtypes.CommitteeRoot, error) {
+	collection := db.client.Database("state").Collection("committee_roots")
+	filter := bson.M{"chain_id": chainID, "epoch_block_number": epochBlockNumber}
+	committeeRoot := &govtypes.CommitteeRoot{}
+	err := collection.FindOne(ctx, filter).Decode(committeeRoot)
 	if err == mongo.ErrNoDocuments {
 		return nil, nil
 	}
