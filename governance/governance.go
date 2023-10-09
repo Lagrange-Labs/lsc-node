@@ -6,12 +6,10 @@ import (
 	"math/big"
 	"time"
 
-	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	"github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
-	"github.com/Lagrange-Labs/lagrange-node/scinterface/lagrange"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -22,8 +20,6 @@ import (
 // Governance is the module which is responsible for the staking and slashing.
 type Governance struct {
 	stakingInterval    time.Duration
-	evidenceInterval   time.Duration
-	lagrangeSC         *lagrange.Lagrange
 	committeeSC        *committee.Committee
 	chainID            uint32
 	updatedEpochNumber uint64
@@ -43,10 +39,7 @@ func NewGovernance(cfg *types.Config, chainID uint32, storage storageInterface) 
 	if err != nil {
 		return nil, err
 	}
-	lagrangeSC, err := lagrange.NewLagrange(common.HexToAddress(cfg.StakingSCAddress), client)
-	if err != nil {
-		return nil, err
-	}
+
 	committeeSC, err := committee.NewCommittee(common.HexToAddress(cfg.CommitteeSCAddress), client)
 	if err != nil {
 		return nil, err
@@ -70,8 +63,6 @@ func NewGovernance(cfg *types.Config, chainID uint32, storage storageInterface) 
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Governance{
 		stakingInterval:    time.Duration(cfg.StakingCheckInterval),
-		evidenceInterval:   time.Duration(cfg.EvidenceUploadInterval),
-		lagrangeSC:         lagrangeSC,
 		committeeSC:        committeeSC,
 		chainID:            chainID,
 		storage:            storage,
@@ -90,7 +81,7 @@ func (g *Governance) Start() {
 		logger.Fatalf("failed to update committee root: %w", err)
 	}
 
-	ticker := time.NewTicker(g.evidenceInterval)
+	ticker := time.NewTicker(g.stakingInterval)
 	defer ticker.Stop()
 
 	for {
@@ -98,12 +89,6 @@ func (g *Governance) Start() {
 		case <-g.ctx.Done():
 			return
 		case <-ticker.C:
-			go func() {
-				if err := g.uploadEvidences(); err != nil {
-					logger.Errorf("failed to upload evidences: %w", err)
-				}
-			}()
-		case <-time.After(g.stakingInterval):
 			if err := g.updateCommittee(); err != nil {
 				logger.Errorf("failed to update committee root: %w", err)
 			}
@@ -117,24 +102,6 @@ func (g *Governance) Start() {
 // Stop stops the governance process.
 func (g *Governance) Stop() {
 	g.cancel()
-}
-
-func (g *Governance) uploadEvidences() error {
-	evidences, err := g.storage.GetEvidences(g.ctx)
-	if err != nil {
-		return err
-	}
-	for _, evidence := range evidences {
-		_, err := g.lagrangeSC.UploadEvidence(g.auth, contypes.GetLagrangeServiceEvidence(evidence))
-		if err != nil {
-			return err
-		}
-		evidence.Status = true
-		if err := g.storage.UpdateEvidence(g.ctx, evidence); err != nil {
-			return err
-		}
-	}
-	return nil
 }
 
 func (g *Governance) updateNodeStatuses() error {

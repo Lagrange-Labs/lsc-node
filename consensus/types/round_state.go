@@ -198,7 +198,7 @@ func (rs *RoundState) GetEvidences() ([]*Evidence, error) {
 	var evidences []*Evidence
 
 	for _, req := range rs.evidences {
-		evidence, err := GetEvidence(req, rs.proposalBlock.BlockHash(), rs.proposalBlock.CurrentCommittee(), rs.proposalBlock.NextCommittee())
+		evidence, err := GetEvidence(req)
 		if err != nil {
 			return nil, err
 		}
