@@ -1,9 +1,6 @@
 package operations
 
 import (
-	"context"
-	"fmt"
-
 	"github.com/Lagrange-Labs/lagrange-node/config"
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
 	"github.com/Lagrange-Labs/lagrange-node/governance"
@@ -12,24 +9,8 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
-	"github.com/Lagrange-Labs/lagrange-node/testutil"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/urfave/cli/v2"
 )
-
-var (
-	stakeAddr = "0x"
-)
-
-func init() {
-	cfg, err := config.Default()
-	if err != nil {
-		panic(err)
-	}
-	stakeAddr = cfg.Governance.StakingSCAddress
-}
 
 // Manager is a struct for test operations.
 type Manager struct {
@@ -70,22 +51,6 @@ func (m *Manager) RunServer() {
 			panic(err)
 		}
 	}()
-}
-
-// RegisterOperator registers a new operator.
-func (m *Manager) RegisterOperator(privateKey string) {
-	ethClient, err := ethclient.Dial(m.cfg.Client.RPCEndpoint)
-	if err != nil {
-		panic(fmt.Errorf("failed to connect to ethereum node: %w", err))
-	}
-	auth, err := utils.GetSigner(context.Background(), ethClient, privateKey)
-	if err != nil {
-		panic(fmt.Errorf("failed to get signer: %w", err))
-	}
-
-	if err := testutil.RegisterOperator(ethClient, auth, common.HexToAddress(stakeAddr), common.HexToAddress("0x")); err != nil {
-		panic(fmt.Errorf("failed to register operator: %w", err))
-	}
 }
 
 // RunClient runs a new client instance.
