@@ -15,7 +15,7 @@ LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.GitRev=$(GITREV)'
 LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.GitBranch=$(GITBRANCH)'
 LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.BuildDate=$(DATE)'
 
-STOP := docker-compose down --remove-orphans
+STOP := docker compose down --remove-orphans
 
 # Building the docker image and the binary
 build: ## Builds the binary locally into ./dist
@@ -46,19 +46,19 @@ lint:
 .PHONY:	lint install-linter
 
 test: stop
-	docker-compose -f docker-compose.yml up -d mongo
-	docker-compose -f docker-compose.yml up -d lagrangesc
+	docker compose -f docker-compose.yml up -d mongo
+	docker compose -f docker-compose.yml up -d lagrangesc
 	sleep 5
 	docker ps -a
 	trap '$(STOP)' EXIT; go test ./... --timeout=10m
 .PHONY: test
 
 run-db-mongo:
-	docker-compose -f docker-compose.yml up -d mongo
+	docker compose -f docker-compose.yml up -d mongo
 .PHONY: run-db-mongo
 
 run-lagrange-sc:
-	docker-compose -f docker-compose.yml up -d lagrangesc
+	docker compose -f docker-compose.yml up -d lagrangesc
 .PHONY: run-lagrange-sc
 
 benchmark: 
@@ -67,21 +67,19 @@ benchmark:
 
 # Local testnet
 localnet-start: stop 
-	docker-compose -f docker-compose.yml up -d mongo
-	docker-compose -f docker-compose.yml up -d lagrangesc
+	docker compose -f docker-compose.yml up -d mongo
+	docker compose -f docker-compose.yml up -d lagrangesc
 	sleep 3
-	docker-compose -f docker-compose.yml up -d simserver
-	docker-compose -f docker-compose.yml up -d simsequencer
+	docker compose -f docker-compose.yml up -d simserver
+	docker compose -f docker-compose.yml up -d simsequencer
 	sleep 3
-	docker-compose -f docker-compose.yml up -d simnode0
-	docker-compose -f docker-compose.yml up -d simnode1
-	docker-compose -f docker-compose.yml up -d simnode2
-	docker-compose -f docker-compose.yml up -d simnode3
-	docker-compose -f docker-compose.yml up -d simnode4
-	docker-compose -f docker-compose.yml up -d simnode5
-	docker-compose -f docker-compose.yml up -d simnode6
-	sleep 3
-	docker-compose -f docker-compose.yml up -d prover
+	docker compose -f docker-compose.yml up -d simnode0
+	docker compose -f docker-compose.yml up -d simnode1
+	docker compose -f docker-compose.yml up -d simnode2
+	docker compose -f docker-compose.yml up -d simnode3
+	docker compose -f docker-compose.yml up -d simnode4
+	docker compose -f docker-compose.yml up -d simnode5
+	docker compose -f docker-compose.yml up -d simnode6
 
 stop:
 	$(STOP)
