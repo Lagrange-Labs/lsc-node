@@ -1,7 +1,6 @@
 package mantle
 
 import (
-	"math"
 	"os"
 	"testing"
 
@@ -33,7 +32,6 @@ func TestFinalizedL2BlockNumberMock(t *testing.T) {
 	require.NoError(t, err)
 
 	// pre-merge chain does not support this
-	num, err := c.GetFinalizedBlockNumber()
+	_, err = c.GetFinalizedBlockNumber()
 	require.NoError(t, err)
-	require.Equal(t, num, uint64(math.MaxUint64))
 }

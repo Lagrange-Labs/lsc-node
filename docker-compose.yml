@@ -162,7 +162,7 @@ services:
       - "/app/lagrange-node run-client"
   lagrangesc:
     container_name: lagrange-smart-contract
-    image: lagrangelabs/lagrange-contracts:mantle
+    image: lagrangelabs/lagrange-contracts:0.1.1
     # image: lagrange/contracts:latest
     networks:
       localnet:
