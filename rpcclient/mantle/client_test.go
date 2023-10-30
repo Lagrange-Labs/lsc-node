@@ -23,7 +23,7 @@ func TestEndpoints(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, len(hash), 66)
 
-	num, err := c.GetL2FinalizedBlockNumber()
+	num, err := c.GetFinalizedBlockNumber()
 	require.NoError(t, err)
 	require.Greater(t, num, uint64(0))
 }
@@ -33,7 +33,7 @@ func TestFinalizedL2BlockNumberMock(t *testing.T) {
 	require.NoError(t, err)
 
 	// pre-merge chain does not support this
-	num, err := c.GetL2FinalizedBlockNumber()
+	num, err := c.GetFinalizedBlockNumber()
 	require.NoError(t, err)
 	require.Equal(t, num, uint64(math.MaxUint64))
 }

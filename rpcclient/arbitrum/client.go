@@ -1,15 +1,10 @@
-package mantle
+package arbitrum
 
 import (
-	"context"
-	"math"
-	"math/big"
 	"strings"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -17,7 +12,7 @@ import (
 
 var _ types.RpcClient = (*Client)(nil)
 
-// Client is a Mantle client.
+// Client is a Arbitrum client.
 type Client struct {
 	evmclient.Client
 
@@ -61,41 +56,7 @@ func NewClient(rpcURL, l1RpcURL string, batchStorageAddr string) (*Client, error
 	}, nil
 }
 
-// GetFinalizedBlockNumber returns the L2 finalized block number.
-func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
-	b, err := c.ethClient.BlockNumber(context.Background())
-	if err != nil {
-		return 0, err
-	}
-
-	if b <= 64 {
-		return 0, nil
-	}
-
-	// Get the L2 block number from the L1BatchStorage contract
-	msg := ethereum.CallMsg{
-		To:   &c.batchStorage,
-		Data: abiInput,
-	}
-
-	result, err := c.ethClient.CallContract(context.Background(), msg, big.NewInt(int64(b-64)))
-	if err != nil {
-		if strings.Contains(err.Error(), "missing trie node") {
-			// TODO: This is a temporary workaround for the missing trie node error.
-			// It means the dedicated RPC node is not fully synced yet.
-			logger.Infof("Missing trie node error: %v", err)
-			return math.MaxUint64, nil
-		}
-		return 0, err
-	}
-
-	var blockNumber *big.Int
-	err = getL2BlockNumberABI.UnpackIntoInterface(&blockNumber, "getL2StoredBlockNumber", result)
-
-	return blockNumber.Uint64(), err
-}
-
-// GetL1BlockNumber returns the L1 block number for the given L2 block number.
+// GetL1BlockNumber returns the current L1 block number for the given L2 block number.
 func (c *Client) GetL1BlockNumber(l2BlockNumber uint64) (uint64, error) {
 	return 0, nil
 }

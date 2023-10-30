@@ -66,7 +66,7 @@ func (s *Sequencer) GetChainID() uint32 {
 
 // Start starts the sequencer.
 func (s *Sequencer) Start() error {
-	finalizedBlockNumber, err := s.rpcClient.GetL2FinalizedBlockNumber()
+	finalizedBlockNumber, err := s.rpcClient.GetFinalizedBlockNumber()
 	if err != nil {
 		return err
 	}
@@ -82,7 +82,7 @@ func (s *Sequencer) Start() error {
 			if s.lastBlockNumber > finalizedBlockNumber {
 				logger.Infof("sequencer synced to %d", finalizedBlockNumber)
 				time.Sleep(SyncInterval)
-				finalizedBlockNumber, err = s.rpcClient.GetL2FinalizedBlockNumber()
+				finalizedBlockNumber, err = s.rpcClient.GetFinalizedBlockNumber()
 				if err != nil {
 					return err
 				}
