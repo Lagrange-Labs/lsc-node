@@ -97,11 +97,17 @@ func (s *Sequencer) Start() error {
 				}
 				return err
 			}
+			l1BlockNumber, err := s.rpcClient.GetL1BlockNumber(lastBlockNumber)
+			if err != nil {
+				return err
+			}
+
 			if err := s.storage.AddBlock(s.ctx, &types.Block{
 				ChainHeader: &types.ChainHeader{
-					BlockNumber: lastBlockNumber,
-					BlockHash:   blockHash,
-					ChainId:     s.chainID,
+					BlockNumber:   lastBlockNumber,
+					BlockHash:     blockHash,
+					ChainId:       s.chainID,
+					L1BlockNumber: l1BlockNumber,
 				},
 			}); err != nil {
 				return err

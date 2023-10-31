@@ -97,5 +97,6 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 
 // GetL1BlockNumber returns the L1 block number for the given L2 block number.
 func (c *Client) GetL1BlockNumber(l2BlockNumber uint64) (uint64, error) {
-	return 0, nil
+	// TODO: This is a temporary workaround for testing.
+	return l2BlockNumber, nil
 }

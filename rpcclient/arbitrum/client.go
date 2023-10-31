@@ -1,11 +1,8 @@
 package arbitrum
 
 import (
-	"strings"
-
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
@@ -18,23 +15,6 @@ type Client struct {
 
 	ethClient    *ethclient.Client
 	batchStorage common.Address // Address of the L1BatchStorage contract
-}
-
-var (
-	getL2BlockNumberABI abi.ABI
-	abiInput            []byte
-)
-
-func init() {
-	var err error
-	getL2BlockNumberABI, err = abi.JSON(strings.NewReader(`[{"inputs":[],"name":"getL2StoredBlockNumber","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]`))
-	if err != nil {
-		panic(err)
-	}
-	abiInput, err = getL2BlockNumberABI.Pack("getL2StoredBlockNumber")
-	if err != nil {
-		panic(err)
-	}
 }
 
 // NewClient creates a new Client instance.
@@ -58,5 +38,6 @@ func NewClient(rpcURL, l1RpcURL string, batchStorageAddr string) (*Client, error
 
 // GetL1BlockNumber returns the current L1 block number for the given L2 block number.
 func (c *Client) GetL1BlockNumber(l2BlockNumber uint64) (uint64, error) {
-	return 0, nil
+	// TODO: This is a temporary workaround for testing.
+	return l2BlockNumber, nil
 }

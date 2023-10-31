@@ -55,11 +55,6 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		logger.Fatalf("failed to add the proposer node: %v", err)
 	}
 
-	lastCommittee, err := storage.GetLastCommitteeRoot(context.Background(), chainID, true)
-	if err != nil {
-		logger.Fatalf("failed to get the last committee root: %v", err)
-	}
-
 	chStop := make(chan struct{})
 
 	return &State{
@@ -68,7 +63,6 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		roundLimit:    time.Duration(cfg.RoundLimit),
 		roundInterval: time.Duration(cfg.RoundInterval),
 		chainID:       chainID,
-		lastCommittee: lastCommittee,
 		batchSize:     cfg.BatchSize,
 		chStop:        chStop,
 		rwMutex:       &sync.RWMutex{},
@@ -77,7 +71,6 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 
 // OnStart loads the first unverified block and starts the round.
 func (s *State) OnStart() {
-	var err error
 	logger.Info("Consensus process is started with the batch size: ", s.batchSize)
 
 	for {
@@ -88,16 +81,16 @@ func (s *State) OnStart() {
 		default:
 		}
 
-		isFinalized := false
-		s.lastBlockNumber, isFinalized, err = s.storage.GetLastFinalizedBlockNumber(context.Background(), s.chainID)
+		lastBlock, err := s.storage.GetLastFinalizedBlock(context.Background(), s.chainID)
 		if err != nil {
-			logger.Errorf("failed to get the last finalized block number: %v", err)
+			logger.Errorf("failed to get the last finalized block: %v", err)
 			return
 		}
-		if s.lastBlockNumber > 0 {
-			if isFinalized {
-				// the last block is not finalized yet
-				s.lastBlockNumber = s.lastBlockNumber + 1
+		if lastBlock != nil {
+			s.lastBlockNumber = lastBlock.BlockNumber()
+			if len(lastBlock.AggSignature) > 0 {
+				// the last block is finalized
+				s.lastBlockNumber += 1
 			}
 			break
 		}
@@ -153,6 +146,7 @@ func (s *State) OnStart() {
 			}
 			if err := s.storage.UpdateBlock(context.Background(), round.GetCurrentBlock()); err != nil {
 				logger.Errorf("failed to update the block %d: %v", round.GetCurrentBlockNumber(), err)
+				failedRounds[blockNumber] = round
 				continue
 			}
 			if lastBlockNumber < blockNumber {
@@ -299,6 +293,7 @@ func (s *State) startRound(blockNumber uint64) error {
 
 	blockNumbers := make([]uint64, 0)
 	for _, block := range blocks {
+		// epochNumber, err := s.
 		block.BlockHeader = &sequencertypes.BlockHeader{}
 		block.BlockHeader.CurrentCommittee = committee.CurrentCommitteeRoot
 		block.BlockHeader.NextCommittee = committee.CurrentCommitteeRoot
@@ -340,8 +335,8 @@ func (s *State) getNextBlocks(ctx context.Context, blockNumber uint64) ([]*seque
 	if err != nil && err != storetypes.ErrBlockNotFound {
 		return nil, err
 	}
-	if len(blocks) > 1 {
-		return blocks, err
+	if len(blocks) > 0 {
+		return blocks, nil
 	}
 	// in case the number of blocks is less than 2, wait for it to be added from the sequencer
 	ticker := time.NewTicker(CheckInterval)

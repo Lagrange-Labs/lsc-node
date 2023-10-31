@@ -105,19 +105,6 @@ func (d *MemDB) UpdateBlock(ctx context.Context, block *sequencertypes.Block) er
 	return nil
 }
 
-// GetLastFinalizedBlockNumber returns the last finalized block number.
-func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, bool, error) {
-	for i := len(d.blocks) - 1; i >= 0; i-- {
-		if len(d.blocks[i].AggSignature) != 0 {
-			return d.blocks[i].BlockNumber(), true, nil
-		}
-	}
-	if len(d.blocks) > 0 {
-		return d.blocks[0].BlockNumber(), false, nil
-	}
-	return 0, false, nil
-}
-
 // UpdateNode updates the node status in the database.
 func (d *MemDB) UpdateNode(ctx context.Context, node *networktypes.ClientNode) error {
 	d.nodes[node.PublicKey] = *node

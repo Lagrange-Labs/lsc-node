@@ -17,17 +17,30 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+// CommitteeParams is the committee parameters.
+type CommitteeParams struct {
+	StartBlock     uint64
+	Duration       uint64
+	FreezeDuration uint64
+}
+
 // Governance is the module which is responsible for the staking and slashing.
 type Governance struct {
-	stakingInterval    time.Duration
-	committeeSC        *committee.Committee
+	stakingInterval time.Duration
+
 	chainID            uint32
 	updatedEpochNumber uint64
 	currentEpochNumber uint64
+	committeeParams    *CommitteeParams
 
+	committeeSC *committee.Committee
 	storage     storageInterface
 	etherClient *ethclient.Client
 	auth        *bind.TransactOpts
+
+	// Operators sync is a heavy operation, so we do it only once
+	isOpertorsSynced bool
+	operators        []networktypes.ClientNode
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -60,6 +73,11 @@ func NewGovernance(cfg *types.Config, chainID uint32, storage storageInterface) 
 		return nil, err
 	}
 
+	committeeParams, err := committeeSC.CommitteeParams(nil, chainID)
+	if err != nil {
+		return nil, err
+	}
+
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Governance{
 		stakingInterval:    time.Duration(cfg.StakingCheckInterval),
@@ -70,8 +88,13 @@ func NewGovernance(cfg *types.Config, chainID uint32, storage storageInterface) 
 		auth:               auth,
 		updatedEpochNumber: updatedEpochNumber.Uint64(),
 		currentEpochNumber: lastEpochNumber,
-		ctx:                ctx,
-		cancel:             cancel,
+		committeeParams: &CommitteeParams{
+			StartBlock:     committeeParams.StartBlock.Uint64(),
+			Duration:       committeeParams.Duration.Uint64(),
+			FreezeDuration: committeeParams.FreezeDuration.Uint64(),
+		},
+		ctx:    ctx,
+		cancel: cancel,
 	}, nil
 }
 
@@ -139,29 +162,42 @@ func (g *Governance) updateNodeStatuses() error {
 }
 
 func (g *Governance) updateCommittee() error {
+	g.isOpertorsSynced = false
+	// check if there are any missing committee roots
+	for epochNumber := g.currentEpochNumber + 1; epochNumber <= g.updatedEpochNumber; epochNumber++ {
+		epochEndBlockNumber := epochNumber*g.committeeParams.Duration + g.committeeParams.StartBlock - 1
+
+		committeeRoot, err := g.fetchCommitteeRoot(epochEndBlockNumber, epochNumber)
+		if err != nil {
+			return err
+		}
+
+		if err := g.storage.UpdateCommitteeRoot(g.ctx, committeeRoot); err != nil {
+			return err
+		}
+	}
+	g.currentEpochNumber = g.updatedEpochNumber
+
+	// check if the committee tree needs to be updated
 	blockNumber, err := g.etherClient.BlockNumber(g.ctx)
 	if err != nil {
 		return err
 	}
 
-	epochNumber, err := g.committeeSC.GetEpochNumber(nil, g.chainID, big.NewInt(int64(blockNumber)))
+	currentEpochNumber, err := g.committeeSC.GetEpochNumber(nil, g.chainID, big.NewInt(int64(blockNumber)))
 	if err != nil {
 		return err
 	}
-	if epochNumber.Uint64() > g.updatedEpochNumber {
-		updatable, err := g.committeeSC.IsUpdatable(nil, g.chainID, epochNumber)
+
+	for epochNumber := g.updatedEpochNumber + 1; epochNumber <= currentEpochNumber.Uint64(); epochNumber++ {
+		updatable, err := g.committeeSC.IsUpdatable(nil, g.chainID, big.NewInt(int64(epochNumber)))
 		if err != nil {
 			return err
 		}
-		isSkipped := (epochNumber.Uint64() > g.updatedEpochNumber+1)
-		if updatable || isSkipped {
-			// rotate the committee tree
-			updateEpochNumber := big.NewInt(int64(epochNumber.Int64()))
-			if isSkipped {
-				updateEpochNumber = updateEpochNumber.Sub(epochNumber, big.NewInt(1))
-			}
-			logger.Infof("updating committee tree for epoch %d", updateEpochNumber.Int64())
-			tx, err := g.committeeSC.Update(g.auth, g.chainID, updateEpochNumber)
+
+		if updatable {
+			logger.Infof("updating committee tree for epoch %d", epochNumber)
+			tx, err := g.committeeSC.Update(g.auth, g.chainID, big.NewInt(int64(epochNumber)))
 			if err != nil {
 				return err
 			}
@@ -173,39 +209,61 @@ func (g *Governance) updateCommittee() error {
 			if receipt.Status != 1 {
 				return fmt.Errorf("transaction failed: %v", receipt)
 			}
-			g.updatedEpochNumber = updateEpochNumber.Uint64()
+
+			epochEndBlockNumber := epochNumber*g.committeeParams.Duration + g.committeeParams.StartBlock - 1
+
+			committeeRoot, err := g.fetchCommitteeRoot(epochEndBlockNumber, epochNumber)
+			if err != nil {
+				return err
+			}
+
+			if err := g.storage.UpdateCommitteeRoot(g.ctx, committeeRoot); err != nil {
+				return err
+			}
+
+			g.updatedEpochNumber = epochNumber
+			g.currentEpochNumber = epochNumber
 		}
 	}
 
-	if epochNumber.Uint64() > g.currentEpochNumber {
-		// fetch the committee root from the smart contract
-		committeeData, err := g.committeeSC.GetCommittee(nil, g.chainID, big.NewInt(int64(blockNumber)))
+	if currentEpochNumber.Uint64() > g.currentEpochNumber {
+		return fmt.Errorf("missing committee roots")
+	}
 
-		if err != nil {
-			return err
-		}
+	return nil
+}
 
-		committeeRoot := &types.CommitteeRoot{
-			ChainID:              g.chainID,
-			CurrentCommitteeRoot: common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes()),
-			TotalVotingPower:     committeeData.CurrentCommittee.TotalVotingPower.Uint64(),
-			EpochBlockNumber:     blockNumber,
-			EpochNumber:          epochNumber.Uint64(),
-		}
+// fetch the committee root from the smart contract
+func (g *Governance) fetchCommitteeRoot(blockNumber, epochNumber uint64) (*types.CommitteeRoot, error) {
+	committeeData, err := g.committeeSC.GetCommittee(nil, g.chainID, big.NewInt(int64(blockNumber)))
 
-		if committeeRoot.TotalVotingPower == 0 {
-			logger.Errorf("total voting power is 0, committee root %v, epoch number %d", committeeRoot, epochNumber.Int64())
-			return fmt.Errorf("total voting power is 0")
-		}
+	if err != nil {
+		return nil, err
+	}
+
+	committeeRoot := &types.CommitteeRoot{
+		ChainID:              g.chainID,
+		CurrentCommitteeRoot: common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes()),
+		TotalVotingPower:     committeeData.CurrentCommittee.TotalVotingPower.Uint64(),
+		EpochBlockNumber:     blockNumber,
+		EpochNumber:          epochNumber,
+	}
+
+	if committeeRoot.TotalVotingPower == 0 {
+		logger.Errorf("total voting power is 0, committee root %v, epoch number %d", committeeRoot, epochNumber)
+		return nil, fmt.Errorf("total voting power is 0")
+	}
+
+	if !g.isOpertorsSynced {
 		operators := make([]networktypes.ClientNode, 0)
 		for i := int64(0); i < committeeData.CurrentCommittee.Height.Int64(); i++ {
 			addr, err := g.committeeSC.CommitteeAddrs(nil, g.chainID, big.NewInt(i))
 			if err != nil {
-				return err
+				return nil, err
 			}
 			operator, err := g.committeeSC.Operators(nil, addr)
 			if err != nil {
-				return err
+				return nil, err
 			}
 			operators = append(operators, networktypes.ClientNode{
 				StakeAddress: addr.String(),
@@ -214,12 +272,11 @@ func (g *Governance) updateCommittee() error {
 			})
 		}
 
-		committeeRoot.Operators = operators
-		if err := g.storage.UpdateCommitteeRoot(g.ctx, committeeRoot); err != nil {
-			return err
-		}
-		g.currentEpochNumber = epochNumber.Uint64()
+		g.operators = operators
+		g.isOpertorsSynced = true
 	}
 
-	return nil
+	committeeRoot.Operators = g.operators
+
+	return committeeRoot, nil
 }

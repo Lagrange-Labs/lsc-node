@@ -26,8 +26,6 @@ type Storage interface {
 	UpdateNode(ctx context.Context, node *networktypes.ClientNode) error
 	// GetLastBlockNumber returns the last block number that was submitted to the network.
 	GetLastBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
-	// GetLastFinalizedBlockNumber returns the last block number that was finalized.
-	GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, bool, error)
 	// GetNodesByStatuses returns the nodes with the given statuses.
 	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error)
 	// UpdateBlock updates the block in the database.

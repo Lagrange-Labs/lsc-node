@@ -132,7 +132,11 @@ func (db *MongoDB) GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*
 	block := bson.M{}
 	err := collection.FindOne(ctx, bson.M{"agg_signature": bson.M{"$ne": nil}, "chain_header.chain_id": chainID}, sortOptions).Decode(&block)
 	if err == mongo.ErrNoDocuments {
-		return nil, types.ErrBlockNotFound
+		sortOptions = options.FindOne().SetSort(bson.D{{"chain_header.block_number", 1}}).SetProjection(bson.D{{"chain_header.block_number", 1}}) //nolint:govet
+		err = collection.FindOne(ctx, bson.M{"chain_header.chain_id": chainID}, sortOptions).Decode(&block)
+		if err == mongo.ErrNoDocuments {
+			return nil, types.ErrBlockNotFound
+		}
 	}
 	return ConvertMongoToBlock(block), err
 }
@@ -151,28 +155,6 @@ func (db *MongoDB) GetLastBlockNumber(ctx context.Context, chainID uint32) (uint
 	}
 	chainHeader := block["chain_header"].(bson.M)
 	return uint64(chainHeader["block_number"].(int64)), nil
-}
-
-// GetLastFinalizedBlockNumber returns the last block number that was finalized.
-func (db *MongoDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, bool, error) {
-	isFinalized := true
-	collection := db.client.Database("state").Collection("blocks")
-	sortOptions := options.FindOne().SetSort(bson.D{{"chain_header.block_number", -1}}).SetProjection(bson.D{{"chain_header.block_number", 1}}) //nolint:govet
-	block := bson.M{}
-	err := collection.FindOne(ctx, bson.M{"pub_keys": bson.M{"$ne": nil}, "chain_header.chain_id": chainID}, sortOptions).Decode(&block)
-	if err == mongo.ErrNoDocuments {
-		sortOptions = options.FindOne().SetSort(bson.D{{"chain_header.block_number", 1}}).SetProjection(bson.D{{"chain_header.block_number", 1}}) //nolint:govet
-		err = collection.FindOne(ctx, bson.M{"chain_header.chain_id": chainID}, sortOptions).Decode(&block)
-		if err == mongo.ErrNoDocuments {
-			return 0, false, nil
-		}
-		isFinalized = false
-	}
-	if err != nil {
-		return 0, false, err
-	}
-	chainHeader := block["chain_header"].(bson.M)
-	return uint64(chainHeader["block_number"].(int64)), isFinalized, nil
 }
 
 // GetLastEvidenceBlockNumber returns the last block number of the submitted evidence.
