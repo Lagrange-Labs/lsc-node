@@ -260,30 +260,18 @@ func (db *MongoDB) GetEvidences(ctx context.Context, chainID uint32, fromBlockNu
 func (db *MongoDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error {
 	collection := db.client.Database("state").Collection("committee_roots")
 	filter := bson.M{"chain_id": committeeRoot.ChainID, "epoch_block_number": committeeRoot.EpochBlockNumber}
-	update := bson.M{"$set": bson.M{"current_committee_root": committeeRoot.CurrentCommitteeRoot, "total_voting_power": committeeRoot.TotalVotingPower, "epoch_number": committeeRoot.EpochNumber, "operators": committeeRoot.Operators, "is_finalized": committeeRoot.IsFinalized}}
+	update := bson.M{"$set": bson.M{"current_committee_root": committeeRoot.CurrentCommitteeRoot, "total_voting_power": committeeRoot.TotalVotingPower, "epoch_number": committeeRoot.EpochNumber, "operators": committeeRoot.Operators}}
 	_, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	return err
-}
-
-// GetLastCommitteeRoot returns the last committee root for the given chainID.
-func (db *MongoDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFinalized bool) (*govtypes.CommitteeRoot, error) {
-	collection := db.client.Database("state").Collection("committee_roots")
-	sortOptions := options.FindOne().SetSort(bson.D{{"epoch_block_number", -1}}) //nolint:govet
-	filter := bson.M{"chain_id": chainID, "is_finalized": isFinalized}
-	committeeRoot := &govtypes.CommitteeRoot{}
-	err := collection.FindOne(ctx, filter, sortOptions).Decode(committeeRoot)
-	if err == mongo.ErrNoDocuments {
-		return nil, nil
-	}
-	return committeeRoot, err
 }
 
 // GetCommitteeRoot returns the committee root for the given epoch block number.
 func (db *MongoDB) GetCommitteeRoot(ctx context.Context, chainID uint32, epochBlockNumber uint64) (*govtypes.CommitteeRoot, error) {
 	collection := db.client.Database("state").Collection("committee_roots")
-	filter := bson.M{"chain_id": chainID, "epoch_block_number": epochBlockNumber}
+	filter := bson.M{"chain_id": chainID, "epoch_block_number": bson.M{"$gte": epochBlockNumber}}
+	sortOptions := options.FindOne().SetSort(bson.D{{"epoch_block_number", 1}}) //nolint:govet
 	committeeRoot := &govtypes.CommitteeRoot{}
-	err := collection.FindOne(ctx, filter).Decode(committeeRoot)
+	err := collection.FindOne(ctx, filter, sortOptions).Decode(committeeRoot)
 	if err == mongo.ErrNoDocuments {
 		return nil, nil
 	}

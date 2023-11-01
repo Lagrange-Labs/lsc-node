@@ -38,8 +38,6 @@ type Storage interface {
 	UpdateEvidence(ctx context.Context, evidence *contypes.Evidence) error
 	// UpdateCommitteeRoot updates the committee root in the database.
 	UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error
-	// GetLastCommitteeRoot returns the last committee root for the given chainID.
-	GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFinalized bool) (*govtypes.CommitteeRoot, error)
 	// GetCommitteeRoot returns the committee root for the given epoch block number.
 	GetCommitteeRoot(ctx context.Context, chainID uint32, epochBlockNumber uint64) (*govtypes.CommitteeRoot, error)
 	// GetLastCommitteeEpochNumber returns the last committee epoch number for the given chainID.
