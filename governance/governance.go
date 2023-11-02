@@ -100,6 +100,20 @@ func NewGovernance(cfg *types.Config, chainID uint32, storage storageInterface) 
 
 // Start starts the governance process.
 func (g *Governance) Start() {
+	go func() {
+		for {
+			select {
+			case <-g.ctx.Done():
+				return
+			default:
+			}
+			if err := g.updateNodeStatuses(); err != nil {
+				logger.Errorf("failed to update node status: %w", err)
+			}
+			time.Sleep(time.Second * 1)
+		}
+	}()
+
 	if err := g.updateCommittee(); err != nil {
 		logger.Fatalf("failed to update committee root: %w", err)
 	}
@@ -114,9 +128,6 @@ func (g *Governance) Start() {
 		case <-ticker.C:
 			if err := g.updateCommittee(); err != nil {
 				logger.Errorf("failed to update committee root: %w", err)
-			}
-			if err := g.updateNodeStatuses(); err != nil {
-				logger.Errorf("failed to update node status: %w", err)
 			}
 		}
 	}

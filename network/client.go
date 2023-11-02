@@ -208,7 +208,7 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 		return nil, ErrBlockNotReady
 	}
 
-	logger.Info("got the batch: ", res.Batch)
+	logger.Infof("got the batch the block number from %d to %d\n", res.Batch[0].BlockNumber(), res.Batch[len(res.Batch)-1].BlockNumber())
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(res.Batch))
