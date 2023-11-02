@@ -162,9 +162,10 @@ func (g *Governance) updateNodeStatuses() error {
 }
 
 func (g *Governance) updateCommittee() error {
+	logger.Infof("update committee is started, current epoch number %d, updated epoch number %d", g.currentEpochNumber, g.updatedEpochNumber)
 	g.isOpertorsSynced = false
 	// check if there are any missing committee roots
-	for epochNumber := g.currentEpochNumber + 1; epochNumber <= g.updatedEpochNumber; epochNumber++ {
+	for epochNumber := g.currentEpochNumber + 1; epochNumber <= g.updatedEpochNumber+1; epochNumber++ {
 		epochEndBlockNumber := epochNumber*g.committeeParams.Duration + g.committeeParams.StartBlock - 1
 
 		committeeRoot, err := g.fetchCommitteeRoot(epochEndBlockNumber, epochNumber)
@@ -175,8 +176,8 @@ func (g *Governance) updateCommittee() error {
 		if err := g.storage.UpdateCommitteeRoot(g.ctx, committeeRoot); err != nil {
 			return err
 		}
+		g.currentEpochNumber = epochNumber
 	}
-	g.currentEpochNumber = g.updatedEpochNumber
 
 	// check if the committee tree needs to be updated
 	blockNumber, err := g.etherClient.BlockNumber(g.ctx)
@@ -190,11 +191,26 @@ func (g *Governance) updateCommittee() error {
 	}
 
 	for epochNumber := g.updatedEpochNumber + 1; epochNumber <= currentEpochNumber.Uint64(); epochNumber++ {
+		if epochNumber > g.currentEpochNumber {
+			epochEndBlockNumber := epochNumber*g.committeeParams.Duration + g.committeeParams.StartBlock - 1
+
+			committeeRoot, err := g.fetchCommitteeRoot(epochEndBlockNumber, epochNumber)
+			if err != nil {
+				return err
+			}
+
+			if err := g.storage.UpdateCommitteeRoot(g.ctx, committeeRoot); err != nil {
+				return err
+			}
+
+			g.currentEpochNumber = epochNumber
+		}
+
+		// check if the committee tree needs to be updated
 		updatable, err := g.committeeSC.IsUpdatable(nil, g.chainID, big.NewInt(int64(epochNumber)))
 		if err != nil {
 			return err
 		}
-
 		if updatable {
 			logger.Infof("updating committee tree for epoch %d", epochNumber)
 			tx, err := g.committeeSC.Update(g.auth, g.chainID, big.NewInt(int64(epochNumber)))
@@ -210,19 +226,7 @@ func (g *Governance) updateCommittee() error {
 				return fmt.Errorf("transaction failed: %v", receipt)
 			}
 
-			epochEndBlockNumber := epochNumber*g.committeeParams.Duration + g.committeeParams.StartBlock - 1
-
-			committeeRoot, err := g.fetchCommitteeRoot(epochEndBlockNumber, epochNumber)
-			if err != nil {
-				return err
-			}
-
-			if err := g.storage.UpdateCommitteeRoot(g.ctx, committeeRoot); err != nil {
-				return err
-			}
-
 			g.updatedEpochNumber = epochNumber
-			g.currentEpochNumber = epochNumber
 		}
 	}
 

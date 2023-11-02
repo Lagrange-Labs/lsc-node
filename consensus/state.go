@@ -82,7 +82,7 @@ func (s *State) OnStart() {
 		}
 
 		lastBlock, err := s.storage.GetLastFinalizedBlock(context.Background(), s.chainID)
-		if err != nil {
+		if err != nil && err != storetypes.ErrBlockNotFound {
 			logger.Errorf("failed to get the last finalized block: %v", err)
 			return
 		}
@@ -250,13 +250,18 @@ func (s *State) startRound(blockNumber uint64) error {
 		return fmt.Errorf("getting the next block batch from %d is failed: %v", blockNumber, err)
 	}
 
+	logger.Infof("the blocks are loaded from %d to %d", blocks[0].BlockNumber(), blocks[len(blocks)-1].BlockNumber())
+
 	// load the committee root
 	if s.lastCommittee == nil {
-		s.lastCommittee, err = s.storage.GetCommitteeRoot(context.Background(), s.chainID, blocks[0].L1BlockNumber())
+		committee, err := s.storage.GetCommitteeRoot(context.Background(), s.chainID, blocks[0].L1BlockNumber())
 		if err != nil {
 			return fmt.Errorf("failed to get the last committee root: %v", err)
 		}
+		s.lastCommittee = committee
 	}
+
+	logger.Infof("the last committee root is loaded: %d, %d", s.lastCommittee.EpochBlockNumber, s.lastCommittee.EpochNumber)
 
 	var lastCommittee *govtypes.CommitteeRoot
 	index := -1
