@@ -1,13 +1,23 @@
 package arbitrum
 
 import (
+	"encoding/json"
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 var _ types.RpcClient = (*Client)(nil)
+
+// L2Header is the L2 block header.
+type L2Header struct {
+	L1BlockNumber *hexutil.Big `json:"l1BlockNumber"`
+}
 
 // Client is a Arbitrum client.
 type Client struct {
@@ -38,6 +48,15 @@ func NewClient(rpcURL, l1RpcURL string, batchStorageAddr string) (*Client, error
 
 // GetL1BlockNumber returns the current L1 block number for the given L2 block number.
 func (c *Client) GetL1BlockNumber(l2BlockNumber uint64) (uint64, error) {
-	// TODO: This is a temporary workaround for testing.
-	return l2BlockNumber, nil
+	rawHeader, err := c.GetRawHeaderByNumber(l2BlockNumber)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get L2 block header: %w", err)
+	}
+
+	var header L2Header
+	if err := json.Unmarshal(rawHeader, &header); err != nil {
+		return 0, fmt.Errorf("failed to unmarshal L2 block header: %w rawHeader: %s", err, rawHeader)
+	}
+
+	return header.L1BlockNumber.ToInt().Uint64(), nil
 }
