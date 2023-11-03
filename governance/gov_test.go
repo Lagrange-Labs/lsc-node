@@ -44,7 +44,7 @@ func createTestGovernance(t *testing.T) (storetypes.Storage, *Governance, *ethcl
 	require.NoError(t, err)
 
 	govCfg := types.Config{
-		EthereumURL:          "http://127.0.0.1:8545",
+		EthereumURL:          "http://localhost:8545",
 		PrivateKey:           "0x3e17bc938ec10c865fc4e2d049902716dc0712b5b0e688b7183c16807234a84c",
 		CommitteeSCAddress:   committeeAddr,
 		StakingCheckInterval: utils.TimeDuration(time.Second * 1),

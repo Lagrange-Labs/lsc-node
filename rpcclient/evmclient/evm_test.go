@@ -20,7 +20,7 @@ func TestEndpoints(t *testing.T) {
 	require.Equal(t, len(hash), 66)
 
 	// pre-merge chain does not support this
-	num, err := c.GetL2FinalizedBlockNumber()
+	num, err := c.GetFinalizedBlockNumber()
 	require.Equal(t, num, uint64(math.MaxUint64))
 	require.NoError(t, err)
 }
@@ -36,7 +36,7 @@ func TestFinalizedL2BlockNumber(t *testing.T) {
 	cNum, err := c.GetCurrentBlockNumber()
 	require.NoError(t, err)
 
-	num, err := c.GetL2FinalizedBlockNumber()
+	num, err := c.GetFinalizedBlockNumber()
 	require.NoError(t, err)
 	require.True(t, num < cNum)
 
@@ -50,7 +50,7 @@ func TestFinalizedL2BlockNumber(t *testing.T) {
 	cNum, err = c.GetCurrentBlockNumber()
 	require.NoError(t, err)
 
-	num, err = c.GetL2FinalizedBlockNumber()
+	num, err = c.GetFinalizedBlockNumber()
 	require.NoError(t, err)
 	require.True(t, num < cNum)
 }

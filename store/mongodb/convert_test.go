@@ -53,9 +53,10 @@ func TestConvertMongoToBlock(t *testing.T) {
 			"proposer_signature": utils.RandomHex(32),
 		},
 		"chain_header": bson.M{
-			"chain_id":     int64(1),
-			"block_hash":   utils.RandomHex(32),
-			"block_number": int64(1),
+			"chain_id":        int64(1),
+			"block_hash":      utils.RandomHex(32),
+			"block_number":    int64(1),
+			"l1_block_number": int64(1),
 		},
 		"pub_keys": bson.A{
 			utils.RandomHex(32),
@@ -69,6 +70,7 @@ func TestConvertMongoToBlock(t *testing.T) {
 	require.Equal(t, m["block_header"].(bson.M)["proposer_pub_key"], block.BlockHeader.ProposerPubKey)
 	require.Equal(t, m["chain_header"].(bson.M)["block_hash"], block.ChainHeader.BlockHash)
 	require.Equal(t, m["chain_header"].(bson.M)["block_number"], int64(block.BlockNumber()))
+	require.Equal(t, m["chain_header"].(bson.M)["l1_block_number"], int64(block.L1BlockNumber()))
 	require.Equal(t, len(m["pub_keys"].(bson.A)), len(block.PubKeys))
 	require.Equal(t, m["pub_keys"].(bson.A)[0], block.PubKeys[0])
 	require.Equal(t, m["pub_keys"].(bson.A)[1], block.PubKeys[1])

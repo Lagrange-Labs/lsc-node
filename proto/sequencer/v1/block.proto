@@ -9,6 +9,7 @@ message ChainHeader {
     uint64 block_number = 1;
     string block_hash = 2;
     uint32 chain_id = 3;
+    uint64 l1_block_number = 4;
 }
 
 // BlockHeader is the block header structure
