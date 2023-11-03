@@ -16,12 +16,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+// Client is an EVM client.
 type Client struct {
 	ethClient *ethclient.Client
 	rpcURL    string
 }
-
-var _ types.RpcClient = (*Client)(nil)
 
 // NewClient creates a new EvmClient instance.
 func NewClient(rpcURL string) (*Client, error) {
@@ -64,8 +63,8 @@ func (c *Client) GetChainID() (uint32, error) {
 	return uint32(chainID.Int64()), err
 }
 
-// GetL2FinalizedBlockNumber returns the L2 finalized block number.
-func (c *Client) GetL2FinalizedBlockNumber() (uint64, error) {
+// GetFinalizedBlockNumber returns the L2 finalized block number.
+func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 	payload := strings.NewReader("{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getBlockByNumber\",\"params\":[\"finalized\",false]}")
 
 	req, _ := http.NewRequest("POST", c.rpcURL, payload)

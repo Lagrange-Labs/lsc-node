@@ -130,9 +130,13 @@ func (db *MongoDB) GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*
 	collection := db.client.Database("state").Collection("blocks")
 	sortOptions := options.FindOne().SetSort(bson.D{{"chain_header.block_number", -1}}) //nolint:govet
 	block := bson.M{}
-	err := collection.FindOne(ctx, bson.M{"agg_signature": bson.M{"$ne": nil}, "chain_header.chain_id": chainID}, sortOptions).Decode(&block)
+	err := collection.FindOne(ctx, bson.M{"pub_keys": bson.M{"$ne": nil}, "chain_header.chain_id": chainID}, sortOptions).Decode(&block)
 	if err == mongo.ErrNoDocuments {
-		return nil, types.ErrBlockNotFound
+		sortOptions = options.FindOne().SetSort(bson.D{{"chain_header.block_number", 1}}) //nolint:govet
+		err = collection.FindOne(ctx, bson.M{"chain_header.chain_id": chainID}, sortOptions).Decode(&block)
+		if err == mongo.ErrNoDocuments {
+			return nil, types.ErrBlockNotFound
+		}
 	}
 	return ConvertMongoToBlock(block), err
 }
@@ -151,28 +155,6 @@ func (db *MongoDB) GetLastBlockNumber(ctx context.Context, chainID uint32) (uint
 	}
 	chainHeader := block["chain_header"].(bson.M)
 	return uint64(chainHeader["block_number"].(int64)), nil
-}
-
-// GetLastFinalizedBlockNumber returns the last block number that was finalized.
-func (db *MongoDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, bool, error) {
-	isFinalized := true
-	collection := db.client.Database("state").Collection("blocks")
-	sortOptions := options.FindOne().SetSort(bson.D{{"chain_header.block_number", -1}}).SetProjection(bson.D{{"chain_header.block_number", 1}}) //nolint:govet
-	block := bson.M{}
-	err := collection.FindOne(ctx, bson.M{"pub_keys": bson.M{"$ne": nil}, "chain_header.chain_id": chainID}, sortOptions).Decode(&block)
-	if err == mongo.ErrNoDocuments {
-		sortOptions = options.FindOne().SetSort(bson.D{{"chain_header.block_number", 1}}).SetProjection(bson.D{{"chain_header.block_number", 1}}) //nolint:govet
-		err = collection.FindOne(ctx, bson.M{"chain_header.chain_id": chainID}, sortOptions).Decode(&block)
-		if err == mongo.ErrNoDocuments {
-			return 0, false, nil
-		}
-		isFinalized = false
-	}
-	if err != nil {
-		return 0, false, err
-	}
-	chainHeader := block["chain_header"].(bson.M)
-	return uint64(chainHeader["block_number"].(int64)), isFinalized, nil
 }
 
 // GetLastEvidenceBlockNumber returns the last block number of the submitted evidence.
@@ -264,12 +246,12 @@ func (db *MongoDB) GetEvidences(ctx context.Context, chainID uint32, fromBlockNu
 
 	evidences := []*contypes.Evidence{}
 	for cursor.Next(ctx) {
-		evidence := &contypes.Evidence{}
-		err := cursor.Decode(evidence)
+		evidence := contypes.Evidence{}
+		err := cursor.Decode(&evidence)
 		if err != nil {
 			return nil, err
 		}
-		evidences = append(evidences, evidence)
+		evidences = append(evidences, &evidence)
 	}
 	return evidences, nil
 }
@@ -278,34 +260,19 @@ func (db *MongoDB) GetEvidences(ctx context.Context, chainID uint32, fromBlockNu
 func (db *MongoDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error {
 	collection := db.client.Database("state").Collection("committee_roots")
 	filter := bson.M{"chain_id": committeeRoot.ChainID, "epoch_block_number": committeeRoot.EpochBlockNumber}
-	update := bson.M{"$set": bson.M{"current_committee_root": committeeRoot.CurrentCommitteeRoot, "total_voting_power": committeeRoot.TotalVotingPower, "epoch_number": committeeRoot.EpochNumber, "operators": committeeRoot.Operators, "is_finalized": committeeRoot.IsFinalized}}
+	update := bson.M{"$set": bson.M{"current_committee_root": committeeRoot.CurrentCommitteeRoot, "total_voting_power": committeeRoot.TotalVotingPower, "epoch_number": committeeRoot.EpochNumber, "operators": committeeRoot.Operators}}
 	_, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	return err
-}
-
-// GetLastCommitteeRoot returns the last committee root for the given chainID.
-func (db *MongoDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFinalized bool) (*govtypes.CommitteeRoot, error) {
-	collection := db.client.Database("state").Collection("committee_roots")
-	sortOptions := options.FindOne().SetSort(bson.D{{"epoch_block_number", -1}}) //nolint:govet
-	filter := bson.M{"chain_id": chainID, "is_finalized": isFinalized}
-	committeeRoot := &govtypes.CommitteeRoot{}
-	err := collection.FindOne(ctx, filter, sortOptions).Decode(committeeRoot)
-	if err == mongo.ErrNoDocuments {
-		return nil, nil
-	}
-	return committeeRoot, err
 }
 
 // GetCommitteeRoot returns the committee root for the given epoch block number.
 func (db *MongoDB) GetCommitteeRoot(ctx context.Context, chainID uint32, epochBlockNumber uint64) (*govtypes.CommitteeRoot, error) {
 	collection := db.client.Database("state").Collection("committee_roots")
-	filter := bson.M{"chain_id": chainID, "epoch_block_number": epochBlockNumber}
-	committeeRoot := &govtypes.CommitteeRoot{}
-	err := collection.FindOne(ctx, filter).Decode(committeeRoot)
-	if err == mongo.ErrNoDocuments {
-		return nil, nil
-	}
-	return committeeRoot, err
+	filter := bson.M{"chain_id": chainID, "epoch_block_number": bson.M{"$gte": epochBlockNumber}}
+	sortOptions := options.FindOne().SetSort(bson.D{{"epoch_block_number", 1}}) //nolint:govet
+	committeeRoot := govtypes.CommitteeRoot{}
+	err := collection.FindOne(ctx, filter, sortOptions).Decode(&committeeRoot)
+	return &committeeRoot, err
 }
 
 // GetLastCommitteeEpochNumber returns the last committee epoch number for the given chainID.
@@ -313,8 +280,8 @@ func (db *MongoDB) GetLastCommitteeEpochNumber(ctx context.Context, chainID uint
 	collection := db.client.Database("state").Collection("committee_roots")
 	sortOptions := options.FindOne().SetSort(bson.D{{"epoch_number", -1}}).SetProjection(bson.D{{"epoch_number", 1}}) //nolint:govet
 	filter := bson.M{"chain_id": chainID}
-	committeeRoot := &govtypes.CommitteeRoot{}
-	err := collection.FindOne(ctx, filter, sortOptions).Decode(committeeRoot)
+	committeeRoot := govtypes.CommitteeRoot{}
+	err := collection.FindOne(ctx, filter, sortOptions).Decode(&committeeRoot)
 	if err == mongo.ErrNoDocuments {
 		return 0, nil
 	}

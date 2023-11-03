@@ -105,19 +105,6 @@ func (d *MemDB) UpdateBlock(ctx context.Context, block *sequencertypes.Block) er
 	return nil
 }
 
-// GetLastFinalizedBlockNumber returns the last finalized block number.
-func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, bool, error) {
-	for i := len(d.blocks) - 1; i >= 0; i-- {
-		if len(d.blocks[i].AggSignature) != 0 {
-			return d.blocks[i].BlockNumber(), true, nil
-		}
-	}
-	if len(d.blocks) > 0 {
-		return d.blocks[0].BlockNumber(), false, nil
-	}
-	return 0, false, nil
-}
-
 // UpdateNode updates the node status in the database.
 func (d *MemDB) UpdateNode(ctx context.Context, node *networktypes.ClientNode) error {
 	d.nodes[node.PublicKey] = *node
@@ -194,20 +181,10 @@ func (d *MemDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes
 	return nil
 }
 
-// GetLastCommitteeRoot returns the last committee root for the given chainID.
-func (d *MemDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFinalized bool) (*govtypes.CommitteeRoot, error) {
-	for i := len(d.committeeRoots) - 1; i >= 0; i-- {
-		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].IsFinalized == isFinalized {
-			return d.committeeRoots[i], nil
-		}
-	}
-	return nil, nil
-}
-
 // GetCommitteeRoot returns the committee root for the given epoch block number.
 func (d *MemDB) GetCommitteeRoot(ctx context.Context, chainID uint32, epochBlockNumber uint64) (*govtypes.CommitteeRoot, error) {
-	for i := len(d.committeeRoots) - 1; i >= 0; i-- {
-		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].EpochBlockNumber == epochBlockNumber {
+	for i := 0; i < len(d.committeeRoots); i++ {
+		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].EpochBlockNumber >= epochBlockNumber {
 			return d.committeeRoots[i], nil
 		}
 	}
