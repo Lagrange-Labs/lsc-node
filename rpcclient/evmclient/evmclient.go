@@ -3,35 +3,39 @@ package evmclient
 import (
 	"context"
 	"encoding/json"
-	"io"
-	"math"
+	"fmt"
 	"math/big"
-	"net/http"
-	"strconv"
-	"strings"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	"github.com/ethereum/go-ethereum/common/lru"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
+
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 )
 
 // Client is an EVM client.
 type Client struct {
+	rpcClient *rpc.Client
 	ethClient *ethclient.Client
 	rpcURL    string
+
+	cache *lru.Cache[uint64, json.RawMessage] // block number -> raw header
 }
 
 // NewClient creates a new EvmClient instance.
 func NewClient(rpcURL string) (*Client, error) {
-	client, err := ethclient.Dial(rpcURL)
+	client, err := rpc.DialContext(context.Background(), rpcURL)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Client{
-		ethClient: client,
+		rpcClient: client,
+		ethClient: ethclient.NewClient(client),
 		rpcURL:    rpcURL,
+		cache:     lru.NewCache[uint64, json.RawMessage](128),
 	}, nil
 }
 
@@ -46,9 +50,17 @@ func (c *Client) GetCurrentBlockNumber() (uint64, error) {
 
 // GetBlockHashByNumber returns the block hash by the given block number.
 func (c *Client) GetBlockHashByNumber(blockNumber uint64) (string, error) {
-	header, err := c.ethClient.HeaderByNumber(context.Background(), big.NewInt(int64(blockNumber)))
-	if err == ethereum.NotFound {
+	rawHeader, err := c.GetRawHeaderByNumber(blockNumber)
+	if err == rpc.ErrNoResult {
 		return "", types.ErrBlockNotFound
+	}
+	if err != nil {
+		return "", fmt.Errorf("failed to get the raw header error: %w", err)
+	}
+
+	var header ethtypes.Header
+	if err := json.Unmarshal(rawHeader, &header); err != nil {
+		return "", fmt.Errorf("failed to unmarshal block header error: %w rawHeader: %s", err, rawHeader)
 	}
 
 	return header.Hash().Hex(), err
@@ -65,44 +77,34 @@ func (c *Client) GetChainID() (uint32, error) {
 
 // GetFinalizedBlockNumber returns the L2 finalized block number.
 func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
-	payload := strings.NewReader("{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getBlockByNumber\",\"params\":[\"finalized\",false]}")
-
-	req, _ := http.NewRequest("POST", c.rpcURL, payload)
-
-	req.Header.Add("accept", "application/json")
-	req.Header.Add("content-type", "application/json")
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
+	var header *ethtypes.Header
+	if err := c.rpcClient.CallContext(context.Background(), &header, "eth_getBlockByNumber", "finalized", false); err != nil {
 		return 0, err
 	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return 0, err
+	return header.Number.Uint64(), nil
+}
+
+// GetRawHeaderByNumber returns the raw message of block header by the given block number.
+func (c *Client) GetRawHeaderByNumber(blockNumber uint64) (json.RawMessage, error) {
+	if raw, ok := c.cache.Get(blockNumber); ok {
+		return raw, nil
 	}
 
-	var result = struct {
-		Result struct {
-			Number string `json:"number"`
-		} `json:"result"`
-		Error struct {
-			Code    int    `json:"code"`
-			Message string `json:"message"`
-		} `json:"error"`
-	}{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		logger.Errorf("failed to unmarshal json: %v", string(body))
-		return 0, err
+	var rawHeader json.RawMessage
+	if err := c.rpcClient.CallContext(context.Background(), &rawHeader, "eth_getBlockByNumber",
+		hexutil.EncodeBig(big.NewInt(int64(blockNumber))), false); err != nil {
+		return nil, err
 	}
-	if result.Error.Code != 0 {
-		// TODO: handle error
-		// API does not support the finalized block number
-		return math.MaxUint64, nil
+
+	var header *ethtypes.Header
+	if err := json.Unmarshal(rawHeader, &header); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal block header error: %w rawHeader: %s", err, rawHeader)
 	}
-	blockNumber, err := strconv.ParseUint(result.Result.Number, 0, 64)
-	if err != nil {
-		return 0, err
+	if header == nil {
+		return nil, rpc.ErrNoResult
 	}
-	return blockNumber, nil
+
+	c.cache.Add(blockNumber, rawHeader)
+
+	return rawHeader, nil
 }

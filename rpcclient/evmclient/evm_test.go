@@ -1,7 +1,6 @@
 package evmclient
 
 import (
-	"math"
 	"os"
 	"testing"
 
@@ -21,8 +20,12 @@ func TestEndpoints(t *testing.T) {
 
 	// pre-merge chain does not support this
 	num, err := c.GetFinalizedBlockNumber()
-	require.Equal(t, num, uint64(math.MaxUint64))
+	require.Equal(t, num, uint64(0))
+	require.Error(t, err)
+
+	header, err := c.GetRawHeaderByNumber(1)
 	require.NoError(t, err)
+	require.NotNil(t, header)
 }
 
 func TestFinalizedL2BlockNumber(t *testing.T) {
@@ -38,6 +41,7 @@ func TestFinalizedL2BlockNumber(t *testing.T) {
 
 	num, err := c.GetFinalizedBlockNumber()
 	require.NoError(t, err)
+	require.Greater(t, num, uint64(0))
 	require.True(t, num < cNum)
 
 	arbURL := os.Getenv("ARB_RPC")
@@ -52,5 +56,6 @@ func TestFinalizedL2BlockNumber(t *testing.T) {
 
 	num, err = c.GetFinalizedBlockNumber()
 	require.NoError(t, err)
+	require.Greater(t, num, uint64(0))
 	require.True(t, num < cNum)
 }
