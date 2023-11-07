@@ -12,7 +12,7 @@ const LOCAL_BATCHSTORSGE_ADDR = "0x2f947E51B9A7cF1d6651D0a568261673233ba42b"
 
 func TestEndpoints(t *testing.T) {
 	ethURL := os.Getenv("ETH_RPC")
-	c, err := NewClient("http://127.0.0.1:8545", ethURL, GOERLI_BATCHSTORSGE_ADDR)
+	c, err := NewClient("http://localhost:8545", ethURL, GOERLI_BATCHSTORSGE_ADDR)
 	require.NoError(t, err)
 	id, err := c.GetChainID()
 	require.NoError(t, err)
@@ -28,7 +28,7 @@ func TestEndpoints(t *testing.T) {
 }
 
 func TestFinalizedL2BlockNumberMock(t *testing.T) {
-	c, err := NewClient("http://127.0.0.1:8545", "http://127.0.0.1:8545", LOCAL_BATCHSTORSGE_ADDR)
+	c, err := NewClient("http://localhost:8545", "http://localhost:8545", LOCAL_BATCHSTORSGE_ADDR)
 	require.NoError(t, err)
 
 	// pre-merge chain does not support this

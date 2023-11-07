@@ -24,7 +24,7 @@ type SequencerTestSuite struct {
 func (suite *SequencerTestSuite) SetupTest() {
 	suite.cfg = sequencer.Config{
 		Chain:           "arbitrum",
-		RPCURL:          "http://127.0.0.1:8545",
+		RPCURL:          "http://localhost:8545",
 		FromBlockNumber: 1,
 	}
 

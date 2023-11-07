@@ -26,8 +26,8 @@ func (suite *ClientTestSuite) SetupTest() {
 	suite.cfg = network.ClientConfig{
 		GrpcURL:         "127.0.0.1:9090",
 		Chain:           "arbitrum",
-		RPCEndpoint:     "http://127.0.0.1:8545",
-		EthereumURL:     "http://127.0.0.1:8545",
+		RPCEndpoint:     "http://localhost:8545",
+		EthereumURL:     "http://localhost:8545",
 		BLSPrivateKey:   "0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f654a",
 		ECDSAPrivateKey: "0xb126ae5e3d88007081b76024477b854ca4f808d48be1e22fe763822bc0c17cb3",
 		PullInterval:    utils.TimeDuration(2 * time.Second),
