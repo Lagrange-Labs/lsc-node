@@ -1,8 +1,8 @@
-name: Push Docker Image
+name: Push Docker Release Image
 on:
   push:
-    branches:
-      - develop
+    tags:
+      - "v[0-9]+.[0-9]+.[0-9]+*" # Push events to matching tags v1.0.0, v1.0.1, v1.1.0, v2.0.0, etc.
 
 jobs:
   build:
@@ -24,4 +24,4 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            lagrangelabs/lagrange-node:develop
+            lagrangelabs/lagrange-node:${{ github.ref_name }}
