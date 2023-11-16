@@ -36,3 +36,5 @@ jobs:
           ETH_RPC: ${{ secrets.ETH_RPC }}
           OPT_RPC: ${{ secrets.OPT_RPC }}
           ARB_RPC: ${{ secrets.ARB_RPC }}
+          CGO_CFLAGS: "-O -D__BLST_PORTABLE__"
+          CGO_CFLAGS_ALLOW: "-O -D__BLST_PORTABLE__"

@@ -5,7 +5,8 @@ DATE := $(shell LANG=US date +"%a, %d %b %Y %X %z")
 
 GOBASE := $(shell pwd)
 GOBIN := $(GOBASE)/dist
-GOENVVARS := GOBIN=$(GOBIN) CGO_ENABLED=0 GOOS=linux GOARCH=$(ARCH)
+GOARCH := $(arch)
+GOENVVARS := GOBIN=$(GOBIN) CGO_ENABLED=1 GOOS=linux GOARCH=$(GOARCH)
 GOBINARY := lagrange-node
 GOCMD := $(GOBASE)/cmd/baseapp/
 SCRIPTS_FOLDER=$(GOBASE)/scripts
