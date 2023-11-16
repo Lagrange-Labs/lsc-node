@@ -23,5 +23,5 @@ func TestCommitHash(t *testing.T) {
 	}
 
 	reqHash := GetCommitRequestHash(signature)
-	require.Equal(t, common.Bytes2Hex(reqHash), "b63341673d94ef9a7e86926be02601f40b1dc500be8a2b96bcc5b36d6c92690d")
+	require.Equal(t, common.Bytes2Hex(reqHash), "07382728002efb6f7d24a601b6213f10a74220abf51ed390fd13b536397dfd09")
 }
