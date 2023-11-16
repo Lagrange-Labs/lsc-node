@@ -14,8 +14,10 @@ type Storage interface {
 	AddNode(ctx context.Context, node *networktypes.ClientNode) error
 	// GetNodeByStakeAddr returns the node for the given stake address.
 	GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*networktypes.ClientNode, error)
-	// GetLastBlock returns the last block that was submitted to the network.
+	// GetLastFinalizedBlock returns the last finalized block for the given chainID.
 	GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*sequencertypes.Block, error)
+	// GetLastFinalizedBlockNumber returns the last finalized block number for the given chainID.
+	GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
 	// GetBlock returns the block for the given block number.
 	GetBlock(ctx context.Context, chainID uint32, blockNumber uint64) (*sequencertypes.Block, error)
 	// GetBlocks returns the `count` blocks starting from `fromBlockNumber`.

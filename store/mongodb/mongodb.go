@@ -125,7 +125,7 @@ func (db *MongoDB) GetBlocks(ctx context.Context, chainID uint32, fromBlockNumbe
 	return blocks, nil
 }
 
-// GetLastBlock returns the last block that was submitted to the network.
+// GetLastFinalizedBlock returns the last finalized block for the given chainID.
 func (db *MongoDB) GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*sequencertypes.Block, error) {
 	collection := db.client.Database("state").Collection("blocks")
 	sortOptions := options.FindOne().SetSort(bson.D{{"chain_header.block_number", -1}}) //nolint:govet
@@ -139,6 +139,22 @@ func (db *MongoDB) GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*
 		}
 	}
 	return ConvertMongoToBlock(block), err
+}
+
+// GetLastFinalizedBlockNumber returns the last block number that was stored.
+func (db *MongoDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, error) {
+	collection := db.client.Database("state").Collection("blocks")
+	sortOptions := options.FindOne().SetSort(bson.D{{"chain_header.block_number", -1}}).SetProjection(bson.D{{"chain_header.block_number", -1}}) //nolint:govet
+	block := bson.M{}
+	err := collection.FindOne(ctx, bson.M{"pub_keys": bson.M{"$ne": nil}, "chain_header.chain_id": chainID}, sortOptions).Decode(&block)
+	if err == mongo.ErrNoDocuments {
+		return 0, nil
+	}
+	if err != nil {
+		return 0, err
+	}
+	chainHeader := block["chain_header"].(bson.M)
+	return uint64(chainHeader["block_number"].(int64)), nil
 }
 
 // GetLastBlockNumber returns the last block number that was stored.
