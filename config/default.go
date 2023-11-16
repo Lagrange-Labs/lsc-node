@@ -24,7 +24,7 @@ Chain = "mantle"
 RPCURL = "http://localhost:8545"
 EthURL = "http://localhost:8545"
 BatchStorageAddr = "0x2f947E51B9A7cF1d6651D0a568261673233ba42b"
-FromBlockNumber = 5
+FromBlockNumber = 150
 
 [Governance]
 EthereumURL = "http://localhost:8545"

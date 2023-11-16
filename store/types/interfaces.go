@@ -14,8 +14,10 @@ type Storage interface {
 	AddNode(ctx context.Context, node *networktypes.ClientNode) error
 	// GetNodeByStakeAddr returns the node for the given stake address.
 	GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*networktypes.ClientNode, error)
-	// GetLastBlock returns the last block that was submitted to the network.
+	// GetLastFinalizedBlock returns the last finalized block for the given chainID.
 	GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*sequencertypes.Block, error)
+	// GetLastFinalizedBlockNumber returns the last finalized block number for the given chainID.
+	GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
 	// GetBlock returns the block for the given block number.
 	GetBlock(ctx context.Context, chainID uint32, blockNumber uint64) (*sequencertypes.Block, error)
 	// GetBlocks returns the `count` blocks starting from `fromBlockNumber`.
@@ -26,8 +28,6 @@ type Storage interface {
 	UpdateNode(ctx context.Context, node *networktypes.ClientNode) error
 	// GetLastBlockNumber returns the last block number that was submitted to the network.
 	GetLastBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
-	// GetLastFinalizedBlockNumber returns the last block number that was finalized.
-	GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, bool, error)
 	// GetNodesByStatuses returns the nodes with the given statuses.
 	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error)
 	// UpdateBlock updates the block in the database.
@@ -40,8 +40,6 @@ type Storage interface {
 	UpdateEvidence(ctx context.Context, evidence *contypes.Evidence) error
 	// UpdateCommitteeRoot updates the committee root in the database.
 	UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error
-	// GetLastCommitteeRoot returns the last committee root for the given chainID.
-	GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFinalized bool) (*govtypes.CommitteeRoot, error)
 	// GetCommitteeRoot returns the committee root for the given epoch block number.
 	GetCommitteeRoot(ctx context.Context, chainID uint32, epochBlockNumber uint64) (*govtypes.CommitteeRoot, error)
 	// GetLastCommitteeEpochNumber returns the last committee epoch number for the given chainID.

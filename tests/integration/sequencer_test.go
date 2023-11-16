@@ -25,6 +25,7 @@ func (suite *SequencerTestSuite) SetupTest() {
 	suite.cfg = sequencer.Config{
 		Chain:           "arbitrum",
 		RPCURL:          "http://localhost:8545",
+		EthURL:          "http://localhost:8545",
 		FromBlockNumber: 1,
 	}
 
@@ -48,11 +49,10 @@ func (suite *SequencerTestSuite) Test_Sequencer_Block_Generation() {
 	go suite.sequencer.Start() // nolint:errcheck
 	time.Sleep(5 * time.Second)
 
-	block, err := suite.manager.Storage.GetBlock(context.Background(), suite.sequencer.GetChainID(), 5)
+	block, err := suite.manager.Storage.GetBlock(context.Background(), suite.sequencer.GetChainID(), 150)
 	require.NoError(suite.T(), err)
 	require.NotNil(suite.T(), block)
 	require.NotNil(suite.T(), block.AggSignature)
-	// require.Greater(suite.T(), len(block.PubKeys), 1)
 
 	suite.sequencer.Stop()
 }

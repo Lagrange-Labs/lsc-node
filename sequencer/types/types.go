@@ -13,9 +13,14 @@ func (b *Block) BlockHash() string {
 	return b.ChainHeader.BlockHash
 }
 
-// BlockNumber returns the block number of the chain header.
+// BlockNumber returns the L2 block number of the chain header.
 func (b *Block) BlockNumber() uint64 {
 	return b.ChainHeader.BlockNumber
+}
+
+// L1BlockNumber returns the L1 block number of the chain header.
+func (b *Block) L1BlockNumber() uint64 {
+	return b.ChainHeader.L1BlockNumber
 }
 
 // TotalVotingPower returns the total voting power of the block.
