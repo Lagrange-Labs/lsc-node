@@ -51,9 +51,26 @@ func (d *MemDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string, cha
 	return nil, nil
 }
 
-// GetLastBlock returns the last block that was submitted to the network.
+// GetLastFinalizedBlock returns the last finalized block for the given chainID.
 func (d *MemDB) GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*sequencertypes.Block, error) {
-	return d.blocks[len(d.blocks)-1], nil
+	for i := len(d.blocks) - 1; i >= 0; i-- {
+		if d.blocks[i].ChainHeader.GetChainId() == chainID && len(d.blocks[i].PubKeys) > 0 {
+			return d.blocks[i], nil
+		}
+	}
+
+	return nil, nil
+}
+
+// GetLastFinalizedBlockNumber returns the last finalized block number for the given chainID.
+func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, error) {
+	for i := len(d.blocks) - 1; i >= 0; i-- {
+		if d.blocks[i].ChainHeader.GetChainId() == chainID && len(d.blocks[i].PubKeys) > 0 {
+			return d.blocks[i].BlockNumber(), nil
+		}
+	}
+
+	return 0, nil
 }
 
 // GetBlock returns the block for the given block number.
