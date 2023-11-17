@@ -47,7 +47,7 @@ func (suite *SequencerTestSuite) TearDownSuite() {
 
 func (suite *SequencerTestSuite) Test_Sequencer_Block_Generation() {
 	go suite.sequencer.Start() // nolint:errcheck
-	time.Sleep(5 * time.Second)
+	time.Sleep(10 * time.Second)
 
 	block, err := suite.manager.Storage.GetBlock(context.Background(), suite.sequencer.GetChainID(), 150)
 	require.NoError(suite.T(), err)

@@ -2,6 +2,7 @@ package utils
 
 import (
 	"testing"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
@@ -83,4 +84,11 @@ func BenchmarkAggregatedSignature(b *testing.B) {
 		})
 	}
 
+}
+
+func TestSignatureSplit(t *testing.T) {
+	now := time.Now()
+	res := GetSignatureAffine("9399a04fd3d10ca1354bf7de5d26161e4e8a44ecdfc0ba3791f3639e9e145cbffc35e824eff1799be7fb6fc90fecb54b03fca2a026b0ee2b4f35401972efe41942ff839924ae4c99f263c3afb1ffc919666a7b1ea78efecb6aa353ea3ce8abdb")
+	t.Logf("GetSignatureAffine took %s", time.Since(now))
+	require.Equal(t, common.Bytes2Hex(res), "03fca2a026b0ee2b4f35401972efe41942ff839924ae4c99f263c3afb1ffc919666a7b1ea78efecb6aa353ea3ce8abdb1399a04fd3d10ca1354bf7de5d26161e4e8a44ecdfc0ba3791f3639e9e145cbffc35e824eff1799be7fb6fc90fecb54b110859cf03915b530d8c93fbe9650daa613fed0e320fba9493d41acaaab87658e8f6742c3b5e090262166ce19da4b81d04ead4b67a375cf848d5c2dacfe5e002ac5cd78077ca370494e2a0c3435531b27e3a30350d3eb0dad59c716f3f86a587")
 }

@@ -3,16 +3,21 @@ package utils
 import (
 	"context"
 	"fmt"
+	"reflect"
 	"strings"
+	"unsafe"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/iden3/go-iden3-crypto/poseidon"
+	blst "github.com/supranational/blst/bindings/go"
 	"github.com/umbracle/go-eth-consensus/bls"
 	"golang.org/x/crypto/sha3"
 )
+
+type blstSignature = blst.P2Affine
 
 // Hash calculates  the keccak hash of elements.
 func Hash(data ...[]byte) []byte {
@@ -118,4 +123,35 @@ func GetSigner(ctx context.Context, c *ethclient.Client, accHexPrivateKey string
 		return nil, err
 	}
 	return bind.NewKeyedTransactorWithChainID(privateKey, chainID)
+}
+
+// GetSignatureAffine returns the affine coordinates of the signature.
+func GetSignatureAffine(sig string) []byte {
+	bytesData := common.FromHex(sig)
+
+	sigK := new(blstSignature).Uncompress(bytesData)
+	x := (*blst.Fp2)(unsafe.Pointer(getPrivateField(sigK, "x")))
+	y := (*blst.Fp2)(unsafe.Pointer(getPrivateField(sigK, "y")))
+
+	xfps := (*[2]blst.Fp)(unsafe.Pointer(getPrivateField(x, "fp")))
+	yfps := (*[2]blst.Fp)(unsafe.Pointer(getPrivateField(y, "fp")))
+
+	result := []byte{}
+	result = append(result, xfps[0].ToBEndian()...)
+	result = append(result, xfps[1].ToBEndian()...)
+	result = append(result, yfps[0].ToBEndian()...)
+	result = append(result, yfps[1].ToBEndian()...)
+
+	return result
+}
+
+func getPrivateField(instance interface{}, fieldName string) uintptr {
+	// Get the reflect.Value of the struct instance
+	value := reflect.ValueOf(instance)
+
+	// Get the reflect.Value of the private field by name
+	privateFieldValue := value.Elem().FieldByName(fieldName)
+
+	// Return the interface{} value of the private field
+	return privateFieldValue.UnsafeAddr()
 }
