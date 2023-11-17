@@ -1,5 +1,7 @@
 # CONTAINER FOR BUILDING BINARY
-FROM golang:1.18 AS build
+FROM golang:1.18-alpine AS build
+
+RUN apk add --no-cache --update gcc g++ make
 
 # INSTALL DEPENDENCIES
 COPY go.mod go.sum /src/
