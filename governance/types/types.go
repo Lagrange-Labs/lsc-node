@@ -12,5 +12,4 @@ type CommitteeRoot struct {
 	EpochBlockNumber     uint64                    `json:"epoch_block_number" bson:"epoch_block_number"`
 	TotalVotingPower     uint64                    `json:"total_voting_power" bson:"total_voting_power"`
 	Operators            []networktypes.ClientNode `json:"operators" bson:"operators"`
-	IsFinalized          bool                      `json:"is_finalized" bson:"is_finalized"`
 }

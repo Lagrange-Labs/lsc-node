@@ -8,12 +8,16 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
+var _ types.RpcClient = (*Client)(nil)
+
+// Client is a Mantle client.
 type Client struct {
 	evmclient.Client
 
@@ -57,8 +61,8 @@ func NewClient(rpcURL, l1RpcURL string, batchStorageAddr string) (*Client, error
 	}, nil
 }
 
-// GetL2FinalizedBlockNumber returns the L2 finalized block number.
-func (c *Client) GetL2FinalizedBlockNumber() (uint64, error) {
+// GetFinalizedBlockNumber returns the L2 finalized block number.
+func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 	b, err := c.ethClient.BlockNumber(context.Background())
 	if err != nil {
 		return 0, err
@@ -89,4 +93,10 @@ func (c *Client) GetL2FinalizedBlockNumber() (uint64, error) {
 	err = getL2BlockNumberABI.UnpackIntoInterface(&blockNumber, "getL2StoredBlockNumber", result)
 
 	return blockNumber.Uint64(), err
+}
+
+// GetL1BlockNumber returns the L1 block number for the given L2 block number.
+func (c *Client) GetL1BlockNumber(l2BlockNumber uint64) (uint64, error) {
+	// TODO: This is a temporary workaround for testing.
+	return l2BlockNumber, nil
 }
