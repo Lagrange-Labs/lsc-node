@@ -13,14 +13,13 @@ import (
 var _ storageInterface = (storetypes.Storage)(nil)
 
 type storageInterface interface {
-	GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, bool, error)
+	GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*sequencertypes.Block, error)
 	GetBlock(ctx context.Context, chainID uint32, blockNumber uint64) (*sequencertypes.Block, error)
 	GetBlocks(ctx context.Context, chainID uint32, fromBlockNumber uint64, count uint32) ([]*sequencertypes.Block, error)
 	UpdateBlock(ctx context.Context, block *sequencertypes.Block) error
 	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error)
 	AddEvidences(ctx context.Context, evidences []*types.Evidence) error
-	GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFinalized bool) (*govtypes.CommitteeRoot, error)
+	GetCommitteeRoot(ctx context.Context, chainID uint32, epochBlockNumber uint64) (*govtypes.CommitteeRoot, error)
 	GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error)
-	UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error
 	AddNode(ctx context.Context, node *networktypes.ClientNode) error
 }

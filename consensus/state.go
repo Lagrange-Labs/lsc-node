@@ -55,11 +55,6 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		logger.Fatalf("failed to add the proposer node: %v", err)
 	}
 
-	lastCommittee, err := storage.GetLastCommitteeRoot(context.Background(), chainID, true)
-	if err != nil {
-		logger.Fatalf("failed to get the last committee root: %v", err)
-	}
-
 	chStop := make(chan struct{})
 
 	return &State{
@@ -68,7 +63,6 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		roundLimit:    time.Duration(cfg.RoundLimit),
 		roundInterval: time.Duration(cfg.RoundInterval),
 		chainID:       chainID,
-		lastCommittee: lastCommittee,
 		batchSize:     cfg.BatchSize,
 		chStop:        chStop,
 		rwMutex:       &sync.RWMutex{},
@@ -77,7 +71,6 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 
 // OnStart loads the first unverified block and starts the round.
 func (s *State) OnStart() {
-	var err error
 	logger.Info("Consensus process is started with the batch size: ", s.batchSize)
 
 	for {
@@ -88,16 +81,16 @@ func (s *State) OnStart() {
 		default:
 		}
 
-		isFinalized := false
-		s.lastBlockNumber, isFinalized, err = s.storage.GetLastFinalizedBlockNumber(context.Background(), s.chainID)
-		if err != nil {
-			logger.Errorf("failed to get the last finalized block number: %v", err)
+		lastBlock, err := s.storage.GetLastFinalizedBlock(context.Background(), s.chainID)
+		if err != nil && err != storetypes.ErrBlockNotFound {
+			logger.Errorf("failed to get the last finalized block: %v", err)
 			return
 		}
-		if s.lastBlockNumber > 0 {
-			if isFinalized {
-				// the last block is not finalized yet
-				s.lastBlockNumber = s.lastBlockNumber + 1
+		if lastBlock != nil {
+			s.lastBlockNumber = lastBlock.BlockNumber()
+			if len(lastBlock.AggSignature) > 0 {
+				// the last block is finalized
+				s.lastBlockNumber += 1
 			}
 			break
 		}
@@ -153,6 +146,7 @@ func (s *State) OnStart() {
 			}
 			if err := s.storage.UpdateBlock(context.Background(), round.GetCurrentBlock()); err != nil {
 				logger.Errorf("failed to update the block %d: %v", round.GetCurrentBlockNumber(), err)
+				failedRounds[blockNumber] = round
 				continue
 			}
 			if lastBlockNumber < blockNumber {
@@ -256,54 +250,54 @@ func (s *State) startRound(blockNumber uint64) error {
 		return fmt.Errorf("getting the next block batch from %d is failed: %v", blockNumber, err)
 	}
 
-	epochNumber, err := s.storage.GetLastCommitteeEpochNumber(context.Background(), s.chainID)
-	if err != nil {
-		return fmt.Errorf("failed to get the last committee epoch number: %v", err)
-	}
-	if epochNumber == 0 {
-		return fmt.Errorf("the last committee epoch number is 0")
-	}
+	logger.Infof("the blocks are loaded from %d to %d", blocks[0].BlockNumber(), blocks[len(blocks)-1].BlockNumber())
 
-	committee := s.lastCommittee
-	if committee == nil || epochNumber > committee.EpochNumber {
-		// update the last committee
-		lastCommittee, err := s.storage.GetLastCommitteeRoot(context.Background(), s.chainID, false)
+	// load the committee root
+	if s.lastCommittee == nil {
+		committee, err := s.storage.GetCommitteeRoot(context.Background(), s.chainID, blocks[0].L1BlockNumber())
 		if err != nil {
 			return fmt.Errorf("failed to get the last committee root: %v", err)
 		}
-		if lastCommittee == nil {
-			return fmt.Errorf("the last committee root is nil")
+		s.lastCommittee = committee
+	}
+
+	logger.Infof("the last committee root is loaded: %d, %d", s.lastCommittee.EpochBlockNumber, s.lastCommittee.EpochNumber)
+
+	var lastCommittee *govtypes.CommitteeRoot
+	index := -1
+	for i, block := range blocks {
+		if block.L1BlockNumber() > s.lastCommittee.EpochBlockNumber {
+			index = i
+			break
 		}
-		if lastCommittee.TotalVotingPower == 0 {
-			return fmt.Errorf("the last committee root has 0 voting power")
-		}
-		s.lastCommittee = lastCommittee
-		if committee == nil {
-			lastCommittee.IsFinalized = true
-			committee = lastCommittee
-			if err := s.storage.UpdateCommitteeRoot(context.Background(), lastCommittee); err != nil {
-				return fmt.Errorf("failed to update the last committee root: %v", err)
-			}
+	}
+	if index >= 0 {
+		logger.Infof("the next committee root is loading: %v", blocks[index].L1BlockNumber())
+		blocks = blocks[:index+1]
+		lastCommittee, err = s.storage.GetCommitteeRoot(context.Background(), s.chainID, blocks[index].L1BlockNumber())
+		if err != nil {
+			return fmt.Errorf("failed to get the last committee root: %v", err)
 		}
 	}
 
-	logger.Infof("the registered nodes are loaded: %v", committee.Operators)
-
-	s.validators = types.NewValidatorSet(committee.Operators, committee.TotalVotingPower)
-	if s.validators.GetTotalVotingPower()*3 < committee.TotalVotingPower*2 {
-		return fmt.Errorf("the voting power of the registered nodes voting power %d is less than 2/3 of the total voting power %d", s.validators.GetTotalVotingPower(), committee.TotalVotingPower)
+	s.validators = types.NewValidatorSet(s.lastCommittee.Operators, s.lastCommittee.TotalVotingPower)
+	if s.validators.GetTotalVotingPower()*3 < s.lastCommittee.TotalVotingPower*2 {
+		return fmt.Errorf("the voting power of the registered nodes voting power %d is less than 2/3 of the total voting power %d", s.validators.GetTotalVotingPower(), s.lastCommittee.TotalVotingPower)
 	}
 
 	pubKey := utils.BlsPubKeyToHex(s.proposer.GetPublicKey())
 	s.rounds = make(map[uint64]*types.RoundState)
 
-	blockNumbers := make([]uint64, 0)
-	for _, block := range blocks {
+	for i, block := range blocks {
 		block.BlockHeader = &sequencertypes.BlockHeader{}
-		block.BlockHeader.CurrentCommittee = committee.CurrentCommitteeRoot
-		block.BlockHeader.NextCommittee = committee.CurrentCommitteeRoot
-		block.BlockHeader.EpochBlockNumber = committee.EpochBlockNumber
-		block.BlockHeader.TotalVotingPower = committee.TotalVotingPower
+		block.BlockHeader.CurrentCommittee = s.lastCommittee.CurrentCommitteeRoot
+		block.BlockHeader.NextCommittee = s.lastCommittee.CurrentCommitteeRoot
+		// check the committee root rotation
+		if index >= 0 && i == index {
+			block.BlockHeader.NextCommittee = lastCommittee.CurrentCommitteeRoot
+		}
+		block.BlockHeader.EpochBlockNumber = s.lastCommittee.EpochBlockNumber
+		block.BlockHeader.TotalVotingPower = s.lastCommittee.TotalVotingPower
 
 		// generate a proposer signature
 		blsSigHash := block.BlsSignature().Hash()
@@ -317,18 +311,13 @@ func (s *State) startRound(blockNumber uint64) error {
 		round := types.NewEmptyRoundState()
 		round.UpdateRoundState(block)
 		s.rounds[block.BlockNumber()] = round
-		blockNumbers = append(blockNumbers, block.BlockNumber())
 	}
 
-	if committee.EpochNumber < s.lastCommittee.EpochNumber {
-		// update the next committee of the last block
-		blocks[len(blocks)-1].BlockHeader.NextCommittee = s.lastCommittee.CurrentCommitteeRoot
-		s.lastCommittee.IsFinalized = true
-		if err := s.storage.UpdateCommitteeRoot(context.Background(), s.lastCommittee); err != nil {
-			return fmt.Errorf("failed to update the last committee root: %v", err)
-		}
+	if lastCommittee != nil {
+		s.lastCommittee = lastCommittee
 	}
-	logger.Infof("the next block batch is loaded: %v", blockNumbers)
+
+	logger.Infof("the next block batch is loaded: %v - %v", blocks[0].BlockNumber(), blocks[len(blocks)-1].BlockNumber())
 
 	return nil
 }
@@ -340,8 +329,8 @@ func (s *State) getNextBlocks(ctx context.Context, blockNumber uint64) ([]*seque
 	if err != nil && err != storetypes.ErrBlockNotFound {
 		return nil, err
 	}
-	if len(blocks) > 1 {
-		return blocks, err
+	if len(blocks) > 0 {
+		return blocks, nil
 	}
 	// in case the number of blocks is less than 2, wait for it to be added from the sequencer
 	ticker := time.NewTicker(CheckInterval)

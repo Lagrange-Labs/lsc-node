@@ -51,9 +51,26 @@ func (d *MemDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string, cha
 	return nil, nil
 }
 
-// GetLastBlock returns the last block that was submitted to the network.
+// GetLastFinalizedBlock returns the last finalized block for the given chainID.
 func (d *MemDB) GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*sequencertypes.Block, error) {
-	return d.blocks[len(d.blocks)-1], nil
+	for i := len(d.blocks) - 1; i >= 0; i-- {
+		if d.blocks[i].ChainHeader.GetChainId() == chainID && len(d.blocks[i].PubKeys) > 0 {
+			return d.blocks[i], nil
+		}
+	}
+
+	return nil, nil
+}
+
+// GetLastFinalizedBlockNumber returns the last finalized block number for the given chainID.
+func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, error) {
+	for i := len(d.blocks) - 1; i >= 0; i-- {
+		if d.blocks[i].ChainHeader.GetChainId() == chainID && len(d.blocks[i].PubKeys) > 0 {
+			return d.blocks[i].BlockNumber(), nil
+		}
+	}
+
+	return 0, nil
 }
 
 // GetBlock returns the block for the given block number.
@@ -103,19 +120,6 @@ func (d *MemDB) UpdateBlock(ctx context.Context, block *sequencertypes.Block) er
 	}
 
 	return nil
-}
-
-// GetLastFinalizedBlockNumber returns the last finalized block number.
-func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32) (uint64, bool, error) {
-	for i := len(d.blocks) - 1; i >= 0; i-- {
-		if len(d.blocks[i].AggSignature) != 0 {
-			return d.blocks[i].BlockNumber(), true, nil
-		}
-	}
-	if len(d.blocks) > 0 {
-		return d.blocks[0].BlockNumber(), false, nil
-	}
-	return 0, false, nil
 }
 
 // UpdateNode updates the node status in the database.
@@ -194,20 +198,10 @@ func (d *MemDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes
 	return nil
 }
 
-// GetLastCommitteeRoot returns the last committee root for the given chainID.
-func (d *MemDB) GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFinalized bool) (*govtypes.CommitteeRoot, error) {
-	for i := len(d.committeeRoots) - 1; i >= 0; i-- {
-		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].IsFinalized == isFinalized {
-			return d.committeeRoots[i], nil
-		}
-	}
-	return nil, nil
-}
-
 // GetCommitteeRoot returns the committee root for the given epoch block number.
 func (d *MemDB) GetCommitteeRoot(ctx context.Context, chainID uint32, epochBlockNumber uint64) (*govtypes.CommitteeRoot, error) {
-	for i := len(d.committeeRoots) - 1; i >= 0; i-- {
-		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].EpochBlockNumber == epochBlockNumber {
+	for i := 0; i < len(d.committeeRoots); i++ {
+		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].EpochBlockNumber >= epochBlockNumber {
 			return d.committeeRoots[i], nil
 		}
 	}
