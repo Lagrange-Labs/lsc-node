@@ -62,6 +62,7 @@ func (b *Block) BlsSignature() *BlsSignature {
 		ChainHeader:      b.ChainHeader,
 		CurrentCommittee: b.CurrentCommittee(),
 		NextCommittee:    b.NextCommittee(),
+		EpochBlockNumber: b.BlockHeader.GetEpochBlockNumber(),
 	}
 }
 
