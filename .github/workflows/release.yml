@@ -1,0 +1,61 @@
+name: Semantic Release and Push to Docker Hub
+
+on:
+  push:
+    branches:
+      - release
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 0
+
+      - name: Fetch all tags
+        run: git fetch --prune --tags
+
+      - name: List tags
+        run: git tag -l
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v2
+        with:
+          node-version: 21
+
+      - name: Install dependencies
+        run: npm install
+
+      - name: Check if PR was merged
+        id: check-merged
+        run: |
+          if [ "${{ github.event.pull_request.merged }}" == "true" ]; then
+          echo "PR was merged, proceeding with release..."
+          echo "::set-output name=merged::true"
+          else
+          echo "PR was not merged, stopping workflow..."
+          echo "::set-output name=merged::false"
+          fi
+
+      - name: Semantic Release
+        run: npx semantic-release
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          DEBUG: "semantic-release:*"
+
+      - name: Set up Docker Build
+        uses: docker/setup-buildx-action@v3
+
+      - name: Login to DockerHub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKER_USERNAME }}
+          password: ${{ secrets.DOCKER_PASSWORD }}
+
+      - name: Build and push Docker image
+        run: |
+          VERSION=$(git describe --tags `git rev-list --tags --max-count=1`)
+          docker buildx create --use
+          docker buildx build --platform linux/amd64,linux/arm64 -t lagrangelabs/lagrange-node:$VERSION . --push
