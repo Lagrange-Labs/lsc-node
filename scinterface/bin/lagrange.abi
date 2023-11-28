@@ -220,11 +220,6 @@
         "type": "address"
       },
       {
-        "internalType": "contract ISlashingAggregateVerifierTriage",
-        "name": "_AggVerify",
-        "type": "address"
-      },
-      {
         "internalType": "contract EvidenceVerifier",
         "name": "_evidenceVerifier",
         "type": "address"
@@ -388,11 +383,6 @@
             "internalType": "uint32",
             "name": "chainID",
             "type": "uint32"
-          },
-          {
-            "internalType": "bytes",
-            "name": "attestBlockHeader",
-            "type": "bytes"
           },
           {
             "internalType": "bytes",
