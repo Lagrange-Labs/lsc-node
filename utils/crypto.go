@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -123,6 +124,23 @@ func GetSigner(ctx context.Context, c *ethclient.Client, accHexPrivateKey string
 		return nil, err
 	}
 	return bind.NewKeyedTransactorWithChainID(privateKey, chainID)
+}
+
+// GetCaller returns a contract caller
+func GetCaller(ctx context.Context, c *ethclient.Client, accHexPrivateKey string) (*bind.CallOpts, error) {
+	if c == nil {
+		return nil, errors.New("ethclient is nil")
+	}
+	privateKey, err := crypto.HexToECDSA(strings.TrimPrefix(accHexPrivateKey, "0x"))
+	if err != nil {
+		return nil, err
+	}
+	return &bind.CallOpts{
+		Pending:     false,
+		From:        crypto.PubkeyToAddress(privateKey.PublicKey),
+		BlockNumber: nil,
+		Context:     ctx,
+	}, nil
 }
 
 // GetSignatureAffine returns the affine coordinates of the signature.
