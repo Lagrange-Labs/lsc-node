@@ -42,8 +42,6 @@ jobs:
 
       - name: Get Title For Release
         id: get_pr_details
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
         run: |
           # Fetch the full commit message of the most recent commit
           FULL_COMMIT_MESSAGE=$(git log -1 --pretty=format:%B)
@@ -56,8 +54,6 @@ jobs:
 
       - name: Create Release
         uses: actions/create-release@v1
-        env:
-          GITHUB_TOKEN: ${{ secrets.GIT_TOKEN }}
         with:
           tag_name: ${{ steps.new_tag.outputs.tag }}
           release_name: ${{ steps.get_pr_details.outputs.title }}
