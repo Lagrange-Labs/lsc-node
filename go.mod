@@ -12,7 +12,7 @@ require (
 	github.com/stretchr/testify v1.8.4
 	github.com/supranational/blst v0.3.11
 	github.com/umbracle/go-eth-consensus v0.1.3-0.20230304221055-e39ee9cb4167
-	github.com/urfave/cli/v2 v2.25.6
+	github.com/urfave/cli/v2 v2.26.0
 	go.mongodb.org/mongo-driver v1.13.0
 	golang.org/x/crypto v0.16.0
 	google.golang.org/grpc v1.58.2
