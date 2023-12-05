@@ -189,7 +189,7 @@ func (d *MemDB) GetEvidences(ctx context.Context, chainID uint32, fromBlockNumbe
 	evidences := make([]*contypes.Evidence, 0)
 	count := int64(0)
 	for _, evidence := range d.evidences {
-		if evidence.ChainID == chainID && evidence.BlockNumber >= fromBlockNumber && evidence.BlockNumber <= toBlockNumber && evidence.Status == false {
+		if evidence.ChainID == chainID && evidence.BlockNumber >= fromBlockNumber && evidence.BlockNumber <= toBlockNumber && !evidence.Status {
 			if count >= offset {
 				evidences = append(evidences, evidence)
 				if int64(len(evidences)) >= limit {
