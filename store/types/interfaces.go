@@ -35,7 +35,7 @@ type Storage interface {
 	// AddEvidences adds new evidences to the database.
 	AddEvidences(ctx context.Context, evidences []*contypes.Evidence) error
 	// GetEvidences returns the pending evidences for the given block number range.
-	GetEvidences(ctx context.Context, chainID uint32, fromBlockNumber, toBlockNumber uint64) ([]*contypes.Evidence, error)
+	GetEvidences(ctx context.Context, chainID uint32, fromBlockNumber, toBlockNumber uint64, limit, offset int64) ([]*contypes.Evidence, error)
 	// UpdateEvidence updates the evidence in the database.
 	UpdateEvidence(ctx context.Context, evidence *contypes.Evidence) error
 	// UpdateCommitteeRoot updates the committee root in the database.
