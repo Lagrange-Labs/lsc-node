@@ -121,5 +121,7 @@ func (s *Sequencer) Start() error {
 
 // Stop stops the sequencer.
 func (s *Sequencer) Stop() {
-	s.cancel()
+	if s != nil {
+		s.cancel()
+	}
 }

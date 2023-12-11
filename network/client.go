@@ -417,7 +417,9 @@ func (c *Client) TryCommitBlocks(blocks []*sequencertypes.Block) error {
 
 // Stop function stops the client node.
 func (c *Client) Stop() {
-	c.cancelFunc()
+	if c != nil {
+		c.cancelFunc()
+	}
 }
 
 var (
