@@ -67,8 +67,7 @@ func Load(ctx *cli.Context) (*Config, error) {
 	replacer := strings.NewReplacer(".", "_")
 	viper.SetEnvKeyReplacer(replacer)
 	viper.SetEnvPrefix("LAGRANGE_NODE")
-	err = viper.ReadInConfig()
-	if err != nil {
+	if err := viper.ReadInConfig(); err != nil {
 		_, ok := err.(viper.ConfigFileNotFoundError)
 		if !ok {
 			return nil, err
@@ -80,8 +79,7 @@ func Load(ctx *cli.Context) (*Config, error) {
 		viper.DecodeHook(mapstructure.ComposeDecodeHookFunc(mapstructure.TextUnmarshallerHookFunc(), mapstructure.StringToSliceHookFunc(","))),
 	}
 
-	err = viper.Unmarshal(&cfg, decodeHooks...)
-	if err != nil {
+	if err := viper.Unmarshal(cfg, decodeHooks...); err != nil {
 		return nil, err
 	}
 
