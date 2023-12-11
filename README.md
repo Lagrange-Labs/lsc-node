@@ -12,12 +12,14 @@ This is the Lagrange Node, a node that can be used to run a Lagrange network.
 ## Architecture
 
 The Lagrange Node consists of the following components:
+
 - Sequencer
 - Synchronizer
 - gRPC Sequencer Server
 - gRPC Client Node
 
 Here is the diagram of the architecture:
+
 <p align="center">
   <img src="./docs/highlevelflow.drawio.png"/>
 </p>
@@ -26,7 +28,7 @@ Here is the diagram of the architecture:
 
 ### Prerequisites
 
-This project is written in Go 1.18. You can download it from [here](https://golang.org/dl/).
+This project is written in Go 1.21. You can download it from [here](https://golang.org/dl/).
 
 ### Build
 
@@ -42,21 +44,21 @@ This will create a binary called `lagrange-node` in the `dist` directory.
 
 - To run the sequencer, run the following command:
 
-    ```bash
-    ./dist/lagrange-node run-sequencer -c <config-file>
-    ```
+  ```bash
+  ./dist/lagrange-node run-sequencer -c <config-file>
+  ```
 
 - To run the gRPC sequencer server, run the following command:
 
-    ```bash
-    ./dist/lagrange-node run-server -c <config-file>
-    ```
+  ```bash
+  ./dist/lagrange-node run-server -c <config-file>
+  ```
 
 - To join a network and run the client node, run the following command:
 
-    ```bash
-    ./dist/lagrange-node run-client -c <config-file>
-    ```
+  ```bash
+  ./dist/lagrange-node run-client -c <config-file>
+  ```
 
 ### Migration Tool
 

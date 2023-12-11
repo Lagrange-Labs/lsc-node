@@ -5,8 +5,8 @@ DATE := $(shell LANG=US date +"%a, %d %b %Y %X %z")
 
 GOBASE := $(shell pwd)
 GOBIN := $(GOBASE)/dist
-GOARCH := $(arch)
-GOENVVARS := GOBIN=$(GOBIN) CGO_ENABLED=1 GOOS=linux GOARCH=$(GOARCH)
+GOARCH := $(ARCH)
+GOENVVARS := GOBIN=$(GOBIN) CGO_ENABLED=1 GOOS=$(OS) GOARCH=$(GOARCH)
 GOBINARY := lagrange-node
 GOCMD := $(GOBASE)/cmd/baseapp/
 SCRIPTS_FOLDER=$(GOBASE)/scripts
@@ -24,7 +24,7 @@ build: ## Builds the binary locally into ./dist
 .PHONY: build
 
 docker-build: ## Builds a docker image with the node binary
-	sudo docker build -t lagrange-node -f ./Dockerfile .
+	docker build -t lagrange-node -f ./Dockerfile .
 .PHONY: docker-build
 
 
@@ -35,7 +35,7 @@ proto-gen:
 
 
 # Linting, Teseting, Benchmarking
-golangci_lint_cmd=github.com/golangci/golangci-lint/cmd/golangci-lint@v1.51.2
+golangci_lint_cmd=github.com/golangci/golangci-lint/cmd/golangci-lint@v1.55.2
 
 install-linter:
 	@echo "--> Installing linter"
