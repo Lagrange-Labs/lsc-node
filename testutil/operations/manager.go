@@ -9,7 +9,6 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
-	"github.com/urfave/cli/v2"
 )
 
 // Manager is a struct for test operations.
@@ -22,7 +21,7 @@ type Manager struct {
 
 // NewManager returns a operation manager.
 func NewManager() (*Manager, error) {
-	cfg, err := config.Load(&cli.Context{})
+	cfg, err := config.Default()
 	if err != nil {
 		return nil, err
 	}
