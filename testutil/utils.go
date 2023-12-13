@@ -28,7 +28,7 @@ func RegisterOperator(client *ethclient.Client, auth *bind.TransactOpts, stakeAd
 	if err != nil {
 		return err
 	}
-	addrHex := stakeAddr.Hash()
+	addrHex := stakeAddr.Hex()
 	callData := append(common.FromHex(optintoSig), addrHex[:]...)
 
 	tx := types.NewTransaction(
