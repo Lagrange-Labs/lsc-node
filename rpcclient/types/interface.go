@@ -1,6 +1,10 @@
 package types
 
-import "fmt"
+import (
+	"fmt"
+
+	"github.com/ethereum/go-ethereum/common"
+)
 
 var (
 	// ErrBlockNotFound is returned when the block is not found.
@@ -18,4 +22,10 @@ type RpcClient interface {
 	GetChainID() (uint32, error)
 	// GetL1BlockNumber returns the L1 block number for the given L2 block number.
 	GetL1BlockNumber(l2BlockNumber uint64) (uint64, error)
+}
+
+// L2 Block Header
+type L2BlockHeader struct {
+	L1BlockNumber uint64      `json:"l1BlockNumber"`
+	L2BlockHash   common.Hash `json:"l2BlockHash"`
 }
