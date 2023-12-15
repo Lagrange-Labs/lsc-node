@@ -214,17 +214,23 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 	wg.Add(len(res.Batch))
 	chError := make(chan error, len(res.Batch))
 
+	blockHeaders := make(map[uint64]*rpctypes.L2BlockHeader)
+	for _, block := range res.Batch {
+		blockHeader, err := c.rpcClient.GetBlockHeaderByNumber(block.BlockNumber())
+		if err != nil {
+			return nil, fmt.Errorf("failed to get the block header by number: %v", err)
+		}
+		blockHeaders[block.BlockNumber()] = blockHeader
+	}
+
 	// verify the L1 block number
 	for i, block := range res.Batch {
-		l1BlockNumber, err := c.rpcClient.GetL1BlockNumber(block.BlockNumber())
-		if err != nil {
-			return nil, fmt.Errorf("failed to get the L1 block number: %v", err)
-		}
+		l1BlockNumber := blockHeaders[block.BlockNumber()].L1BlockNumber
 		if l1BlockNumber != block.L1BlockNumber() {
 			return nil, fmt.Errorf("the L1 block number %d is not equal to the rpc L1 block number %d", block.L1BlockNumber(), l1BlockNumber)
 		}
-		if i > 0 && block.L1BlockNumber() < res.Batch[i-1].L1BlockNumber() {
-			return nil, fmt.Errorf("the batch blocks order is not sorted")
+		if i > 0 && block.BlockNumber() != res.Batch[i-1].BlockNumber()+1 {
+			return nil, fmt.Errorf("the batch blocks order is not sorted at index: %d the current block number: %d the previous block number: %d", i, block.BlockNumber(), res.Batch[i-1].BlockNumber())
 		}
 	}
 
@@ -249,11 +255,7 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 			}
 			// verify if the block hash is correct
 			blockHash := block.BlockHash()
-			rBlockHash, err := c.rpcClient.GetBlockHashByNumber(block.BlockNumber())
-			if err != nil {
-				chError <- fmt.Errorf("failed to fetch the block hash by number: %v", err)
-				return
-			}
+			rBlockHash := blockHeaders[block.BlockNumber()].L2BlockHash.Hex()
 			if blockHash != rBlockHash {
 				chError <- fmt.Errorf("the block hash %s is not equal to the rpc block hash %s", blockHash, rBlockHash)
 				return
@@ -272,6 +274,7 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 }
 
 func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
+	// TODO: figure out the c.nextCommitteeRoot initialization
 	// verify the committee root
 	if len(c.nextCommitteeRoot) > 0 && batch[0].CurrentCommittee() != c.nextCommitteeRoot {
 		return fmt.Errorf("the block committee root %s is not equal to the previous batch's next committee root %s", batch[0].CurrentCommittee(), c.nextCommitteeRoot)
@@ -288,10 +291,13 @@ func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
 	isRotated := false
 	if firstEpochNumber.Uint64() != lastEpochNumber.Uint64() || len(batch) == 1 {
 		// check the committee root rotation
-		l1BlockNumber, err := c.rpcClient.GetL1BlockNumber(lastBlock.BlockNumber() - 1)
-		if err != nil {
-			return fmt.Errorf("failed to get the L1 block number: %v", err)
-		}
+		l1BlockNumber := lastBlock.L1BlockNumber()
+		// TODO: figure out the last L1 block number fetching
+		// l1BlockNumber, err := c.rpcClient.GetL1BlockNumber(lastBlock.BlockNumber() - 1)
+		// if err != nil {
+		// 	return fmt.Errorf("failed to get the L1 block number: %v", err)
+		// }
+
 		if l1BlockNumber >= lastBlock.L1BlockNumber() {
 			if len(batch) > 1 {
 				return fmt.Errorf("the committee rotation is detected but no L1 block number changes")

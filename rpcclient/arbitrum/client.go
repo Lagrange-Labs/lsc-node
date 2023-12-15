@@ -6,6 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
@@ -46,17 +47,25 @@ func NewClient(rpcURL, l1RpcURL string, batchStorageAddr string) (*Client, error
 	}, nil
 }
 
-// GetL1BlockNumber returns the current L1 block number for the given L2 block number.
-func (c *Client) GetL1BlockNumber(l2BlockNumber uint64) (uint64, error) {
+// GetBlockHeaderByNumber returns the L2 block header for the given L2 block number.
+func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64) (*types.L2BlockHeader, error) {
 	rawHeader, err := c.GetRawHeaderByNumber(l2BlockNumber)
 	if err != nil {
-		return 0, fmt.Errorf("failed to get L2 block header: %w", err)
+		return nil, fmt.Errorf("failed to get L2 block header: %w", err)
 	}
 
 	var header L2Header
 	if err := json.Unmarshal(rawHeader, &header); err != nil {
-		return 0, fmt.Errorf("failed to unmarshal L2 block header: %w rawHeader: %s", err, rawHeader)
+		return nil, fmt.Errorf("failed to unmarshal L2 block header: %w rawHeader: %s", err, rawHeader)
 	}
 
-	return header.L1BlockNumber.ToInt().Uint64(), nil
+	var commonHeader ethtypes.Header
+	if err := json.Unmarshal(rawHeader, &commonHeader); err != nil {
+		return nil, fmt.Errorf("failed to unmarshal Eth block header: %w rawHeader: %s", err, rawHeader)
+	}
+
+	return &types.L2BlockHeader{
+		L1BlockNumber: header.L1BlockNumber.ToInt().Uint64(),
+		L2BlockHash:   commonHeader.Hash(),
+	}, nil
 }

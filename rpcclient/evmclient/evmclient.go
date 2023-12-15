@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"math/big"
 
+	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/hexutil"
 	"github.com/ethereum/go-ethereum/common/lru"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -49,21 +50,21 @@ func (c *Client) GetCurrentBlockNumber() (uint64, error) {
 }
 
 // GetBlockHashByNumber returns the block hash by the given block number.
-func (c *Client) GetBlockHashByNumber(blockNumber uint64) (string, error) {
+func (c *Client) GetBlockHashByNumber(blockNumber uint64) (common.Hash, error) {
 	rawHeader, err := c.GetRawHeaderByNumber(blockNumber)
 	if err == rpc.ErrNoResult {
-		return "", types.ErrBlockNotFound
+		return common.Hash{}, types.ErrBlockNotFound
 	}
 	if err != nil {
-		return "", fmt.Errorf("failed to get the raw header error: %w", err)
+		return common.Hash{}, fmt.Errorf("failed to get the raw header error: %w", err)
 	}
 
 	var header ethtypes.Header
 	if err := json.Unmarshal(rawHeader, &header); err != nil {
-		return "", fmt.Errorf("failed to unmarshal block header error: %w rawHeader: %s", err, rawHeader)
+		return common.Hash{}, fmt.Errorf("failed to unmarshal block header error: %w rawHeader: %s", err, rawHeader)
 	}
 
-	return header.Hash().Hex(), err
+	return header.Hash(), err
 }
 
 // GetChainID returns the chain ID.
