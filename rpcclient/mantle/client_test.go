@@ -22,9 +22,9 @@ func TestEndpoints(t *testing.T) {
 	require.NoError(t, err)
 	t.Logf("id: %d", id)
 
-	hash, err := c.GetBlockHashByNumber(1)
+	l2Hash, err := c.GetBlockHashByNumber(1) //nolint:staticcheck
 	require.NoError(t, err)
-	require.Equal(t, len(hash), 66)
+	require.Equal(t, len(l2Hash), 32)
 
 	num, err := c.GetFinalizedBlockNumber()
 	require.NoError(t, err)
