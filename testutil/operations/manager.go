@@ -13,8 +13,10 @@ import (
 
 // Manager is a struct for test operations.
 type Manager struct {
-	cfg     *config.Config
-	chainID uint32
+	cfg       *config.Config
+	chainID   uint32
+	sequencer *sequencer.Sequencer
+	gov       *governance.Governance
 	// Storage is a storage interface for test operations.
 	Storage storetypes.Storage
 }
@@ -81,20 +83,44 @@ func (m *Manager) RunClients() {
 }
 
 // RunSequencer runs a new sequencer instance.
-func (m *Manager) RunSequencer() {
-	sequencer, err := sequencer.NewSequencer(&m.cfg.Sequencer, m.Storage)
+func (m *Manager) RunSequencer(isGov bool) {
+	var err error
+	m.sequencer, err = sequencer.NewSequencer(&m.cfg.Sequencer, m.Storage)
 	if err != nil {
 		panic(err)
 	}
 	go func() {
-		if err := sequencer.Start(); err != nil {
+		if err := m.sequencer.Start(); err != nil {
 			panic(err)
 		}
 	}()
 
-	gov, err := governance.NewGovernance(&m.cfg.Governance, sequencer.GetChainID(), m.Storage)
+	if !isGov {
+		return
+	}
+	m.gov, err = governance.NewGovernance(&m.cfg.Governance, m.sequencer.GetChainID(), m.Storage)
 	if err != nil {
 		panic(err)
 	}
-	go gov.Start()
+	go m.gov.Start()
+}
+
+// GetChainID returns the chain id.
+func (m *Manager) GetChainID() uint32 {
+	if m.sequencer == nil {
+		return 0
+	}
+	return m.sequencer.GetChainID()
+}
+
+// Close closes the manager.
+func (m *Manager) Close() {
+	if m.sequencer != nil {
+		m.sequencer.Stop()
+		m.sequencer = nil
+	}
+	if m.gov != nil {
+		m.gov.Stop()
+		m.gov = nil
+	}
 }

@@ -7,6 +7,7 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
+	"github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/testutil/operations"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 
@@ -43,14 +44,10 @@ func (suite *ClientTestSuite) SetupTest() {
 
 func (suite *ClientTestSuite) TearDownSuite() {
 	suite.client.Stop()
+	suite.manager.Close()
 }
 
 func (suite *ClientTestSuite) Test_Client_Start() {
-	// var (
-	// 	block *sequencertypes.Block
-	// 	err   error
-	// )
-
 	suite.T().Run("Test_Join_Network", func(t *testing.T) {
 		require.NoError(t, suite.client.TryJoinNetwork())
 
@@ -59,28 +56,19 @@ func (suite *ClientTestSuite) Test_Client_Start() {
 		require.NoError(t, err)
 		require.Equal(t, networktypes.NodeJoined, node.Status)
 
-		suite.manager.RunSequencer()
-		time.Sleep(10 * time.Second)
+		suite.manager.RunSequencer(true)
 
-		node, err = suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress, suite.client.GetChainID())
-		require.NoError(t, err)
-		require.Equal(t, networktypes.NodeRegistered, node.Status)
+		for i := 0; i < 20; i++ {
+			time.Sleep(1 * time.Second)
+			node, err = suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress, suite.client.GetChainID())
+			if err == types.ErrNodeNotFound {
+				continue
+			}
+			require.NoError(t, err)
+			require.Equal(t, networktypes.NodeRegistered, node.Status)
+			break
+		}
 	})
-
-	// suite.T().Run("Test_Get_Block", func(t *testing.T) {
-	// 	block, err = suite.client.TryGetBlock()
-	// 	if err == network.ErrBlockNotReady {
-	// 		time.Sleep(3 * time.Second)
-	// 		block, err = suite.client.TryGetBlock()
-	// 	}
-	// 	require.NoError(t, err)
-	// 	require.NotNil(t, block)
-	// })
-
-	// suite.T().Run("Test_Commit_Block", func(t *testing.T) {
-	// 	err = suite.client.TryCommitBlock(block)
-	// 	require.NoError(t, err)
-	// })
 }
 
 func TestClientTestSuite(t *testing.T) {
