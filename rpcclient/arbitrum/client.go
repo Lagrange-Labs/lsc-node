@@ -63,7 +63,10 @@ func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64) (*types.L2BlockHea
 	if err := json.Unmarshal(rawHeader, &commonHeader); err != nil {
 		return nil, fmt.Errorf("failed to unmarshal Eth block header: %w rawHeader: %s", err, rawHeader)
 	}
-
+  if header.L1BlockNumber == nil {
+		return 0, fmt.Errorf("L1 block number is nil")
+	}
+  
 	return &types.L2BlockHeader{
 		L1BlockNumber: header.L1BlockNumber.ToInt().Uint64(),
 		L2BlockHash:   commonHeader.Hash(),
