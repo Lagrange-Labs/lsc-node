@@ -1,6 +1,7 @@
 package evmclient
 
 import (
+	"math"
 	"os"
 	"testing"
 
@@ -20,8 +21,8 @@ func TestEndpoints(t *testing.T) {
 
 	// pre-merge chain does not support this
 	num, err := c.GetFinalizedBlockNumber()
-	require.Equal(t, num, uint64(0))
-	require.Error(t, err)
+	require.Equal(t, num, uint64(math.MaxUint64))
+	require.NoError(t, err)
 
 	header, err := c.GetRawHeaderByNumber(1)
 	require.NoError(t, err)

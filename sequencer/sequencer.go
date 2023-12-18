@@ -45,7 +45,7 @@ func NewSequencer(cfg *Config, storage storageInterface) (*Sequencer, error) {
 	}
 
 	if cfg.FromBlockNumber > blockNumber {
-		blockNumber = cfg.FromBlockNumber - 1
+		blockNumber = cfg.FromBlockNumber
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
