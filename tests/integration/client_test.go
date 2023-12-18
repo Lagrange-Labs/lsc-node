@@ -56,7 +56,7 @@ func (suite *ClientTestSuite) Test_Client_Start() {
 		require.NoError(t, err)
 		require.Equal(t, networktypes.NodeJoined, node.Status)
 
-		suite.manager.RunSequencer()
+		suite.manager.RunSequencer(true)
 
 		for i := 0; i < 20; i++ {
 			time.Sleep(1 * time.Second)

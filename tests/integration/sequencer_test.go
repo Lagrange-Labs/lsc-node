@@ -22,7 +22,7 @@ func (suite *SequencerTestSuite) SetupTest() {
 	var err error
 	suite.manager, err = operations.NewManager()
 	suite.Require().NoError(err)
-	suite.manager.RunSequencer()
+	suite.manager.RunSequencer(false)
 }
 
 func (suite *SequencerTestSuite) TearDownSuite() {

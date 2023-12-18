@@ -83,7 +83,7 @@ func (m *Manager) RunClients() {
 }
 
 // RunSequencer runs a new sequencer instance.
-func (m *Manager) RunSequencer() {
+func (m *Manager) RunSequencer(isGov bool) {
 	var err error
 	m.sequencer, err = sequencer.NewSequencer(&m.cfg.Sequencer, m.Storage)
 	if err != nil {
@@ -95,6 +95,9 @@ func (m *Manager) RunSequencer() {
 		}
 	}()
 
+	if !isGov {
+		return
+	}
 	m.gov, err = governance.NewGovernance(&m.cfg.Governance, m.sequencer.GetChainID(), m.Storage)
 	if err != nil {
 		panic(err)
