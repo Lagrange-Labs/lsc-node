@@ -130,11 +130,11 @@ func GetSignatureAffine(sig string) []byte {
 	bytesData := common.FromHex(sig)
 
 	sigK := new(blstSignature).Uncompress(bytesData)
-	x := (*blst.Fp2)(unsafe.Pointer(getPrivateField(sigK, "x")))
-	y := (*blst.Fp2)(unsafe.Pointer(getPrivateField(sigK, "y")))
+	x := (*blst.Fp2)(GetPrivateField(sigK, "x"))
+	y := (*blst.Fp2)(GetPrivateField(sigK, "y"))
 
-	xfps := (*[2]blst.Fp)(unsafe.Pointer(getPrivateField(x, "fp")))
-	yfps := (*[2]blst.Fp)(unsafe.Pointer(getPrivateField(y, "fp")))
+	xfps := (*[2]blst.Fp)(GetPrivateField(x, "fp"))
+	yfps := (*[2]blst.Fp)(GetPrivateField(y, "fp"))
 
 	result := []byte{}
 	result = append(result, xfps[0].ToBEndian()...)
@@ -145,7 +145,7 @@ func GetSignatureAffine(sig string) []byte {
 	return result
 }
 
-func getPrivateField(instance interface{}, fieldName string) uintptr {
+func GetPrivateField(instance interface{}, fieldName string) unsafe.Pointer {
 	// Get the reflect.Value of the struct instance
 	value := reflect.ValueOf(instance)
 
@@ -153,5 +153,5 @@ func getPrivateField(instance interface{}, fieldName string) uintptr {
 	privateFieldValue := value.Elem().FieldByName(fieldName)
 
 	// Return the interface{} value of the private field
-	return privateFieldValue.UnsafeAddr()
+	return unsafe.Pointer(privateFieldValue.UnsafeAddr())
 }

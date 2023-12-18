@@ -88,7 +88,7 @@ func (s *Sequencer) Start() error {
 				}
 				continue
 			}
-			blockHash, err := s.rpcClient.GetBlockHashByNumber(lastBlockNumber)
+			blockHeader, err := s.rpcClient.GetBlockHeaderByNumber(lastBlockNumber)
 			if err != nil {
 				if err == rpctypes.ErrBlockNotFound {
 					logger.Infof("block %d not found", lastBlockNumber)
@@ -97,17 +97,13 @@ func (s *Sequencer) Start() error {
 				}
 				return err
 			}
-			l1BlockNumber, err := s.rpcClient.GetL1BlockNumber(lastBlockNumber)
-			if err != nil {
-				return err
-			}
 
 			if err := s.storage.AddBlock(s.ctx, &types.Block{
 				ChainHeader: &types.ChainHeader{
 					BlockNumber:   lastBlockNumber,
-					BlockHash:     blockHash,
+					BlockHash:     blockHeader.L2BlockHash.Hex(),
 					ChainId:       s.chainID,
-					L1BlockNumber: l1BlockNumber,
+					L1BlockNumber: blockHeader.L1BlockNumber,
 				},
 			}); err != nil {
 				return err

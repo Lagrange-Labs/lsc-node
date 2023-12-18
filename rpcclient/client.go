@@ -15,7 +15,7 @@ func NewClient(chain, rpcURL, ethURL, batchStorageAddr string) (types.RpcClient,
 	case "arbitrum":
 		return arbitrum.NewClient(rpcURL, ethURL, batchStorageAddr)
 	case "optimism":
-		return optimism.NewClient(rpcURL, ethURL, batchStorageAddr)
+		return optimism.NewClient(&optimism.Config{})
 	default:
 		return nil, nil
 	}
