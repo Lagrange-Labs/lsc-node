@@ -19,7 +19,7 @@ func TestL1BlockNumber(t *testing.T) {
 	cNum, err := c.GetCurrentBlockNumber()
 	require.NoError(t, err)
 
-	l1Num, err := c.GetL1BlockNumber(cNum)
+	header, err := c.GetBlockHeaderByNumber(cNum)
 	require.NoError(t, err)
-	require.Greater(t, l1Num, uint64(0))
+	require.Greater(t, header.L1BlockNumber, uint64(0))
 }
