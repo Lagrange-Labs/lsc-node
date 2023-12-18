@@ -58,5 +58,9 @@ func (c *Client) GetL1BlockNumber(l2BlockNumber uint64) (uint64, error) {
 		return 0, fmt.Errorf("failed to unmarshal L2 block header: %w rawHeader: %s", err, rawHeader)
 	}
 
+	if header.L1BlockNumber == nil {
+		return 0, fmt.Errorf("L1 block number is nil")
+	}
+
 	return header.L1BlockNumber.ToInt().Uint64(), nil
 }

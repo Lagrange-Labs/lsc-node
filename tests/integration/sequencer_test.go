@@ -2,12 +2,12 @@ package integration
 
 import (
 	"context"
+	"errors"
 	"testing"
 	"time"
 
-	"github.com/Lagrange-Labs/lagrange-node/sequencer"
+	"github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/testutil/operations"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )
@@ -15,46 +15,39 @@ import (
 type SequencerTestSuite struct {
 	suite.Suite
 
-	cfg       sequencer.Config
-	sequencer *sequencer.Sequencer
-	ethClient *ethclient.Client
-	manager   *operations.Manager
+	manager *operations.Manager
 }
 
 func (suite *SequencerTestSuite) SetupTest() {
-	suite.cfg = sequencer.Config{
-		Chain:           "arbitrum",
-		RPCURL:          "http://localhost:8545",
-		EthURL:          "http://localhost:8545",
-		FromBlockNumber: 1,
-	}
-
 	var err error
 	suite.manager, err = operations.NewManager()
 	suite.Require().NoError(err)
-	suite.manager.RunServer()
-	time.Sleep(1 * time.Second)
-	suite.manager.RunClients()
-	suite.sequencer, err = sequencer.NewSequencer(&suite.cfg, suite.manager.Storage)
-	suite.Require().NoError(err)
-	suite.ethClient, err = ethclient.Dial(suite.cfg.RPCURL)
-	suite.Require().NoError(err)
+	suite.manager.RunSequencer()
 }
 
 func (suite *SequencerTestSuite) TearDownSuite() {
-	suite.sequencer.Stop()
+	suite.manager.Close()
 }
 
 func (suite *SequencerTestSuite) Test_Sequencer_Block_Generation() {
-	go suite.sequencer.Start() // nolint:errcheck
-	time.Sleep(10 * time.Second)
-
-	block, err := suite.manager.Storage.GetBlock(context.Background(), suite.sequencer.GetChainID(), 150)
-	require.NoError(suite.T(), err)
-	require.NotNil(suite.T(), block)
-	require.NotNil(suite.T(), block.AggSignature)
-
-	suite.sequencer.Stop()
+	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
+	defer cancel()
+	for {
+		select {
+		case <-ctx.Done():
+			suite.T().Fatal("timeout")
+		default:
+		}
+		block, err := suite.manager.Storage.GetBlock(ctx, suite.manager.GetChainID(), 150)
+		if errors.Is(err, types.ErrBlockNotFound) {
+			time.Sleep(1 * time.Second)
+			continue
+		}
+		require.NoError(suite.T(), err)
+		require.NotNil(suite.T(), block)
+		require.NotNil(suite.T(), block.AggSignature)
+		break
+	}
 }
 
 func TestSequencerTestSuite(t *testing.T) {

@@ -210,7 +210,7 @@ func (g *Governance) updateCommittee() error {
 				return err
 			}
 
-			if err := g.storage.UpdateCommitteeRoot(g.ctx, committeeRoot); err != nil {
+			if err := g.storage.UpdateCommitteeRoot(context.Background(), committeeRoot); err != nil {
 				return err
 			}
 
@@ -229,7 +229,9 @@ func (g *Governance) updateCommittee() error {
 				return err
 			}
 			// wait for the transaction to be mined
-			receipt, err := bind.WaitMined(g.ctx, g.etherClient, tx)
+			ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+			defer cancel()
+			receipt, err := bind.WaitMined(ctx, g.etherClient, tx)
 			if err != nil {
 				return fmt.Errorf("failed to wait for transaction to be mined: %w", err)
 			}
