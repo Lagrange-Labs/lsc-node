@@ -9,7 +9,7 @@ require (
 	github.com/iden3/go-iden3-crypto v0.0.15
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/sirupsen/logrus v1.9.3
-	github.com/spf13/viper v1.18.1
+	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.8.4
 	github.com/supranational/blst v0.3.11
 	github.com/umbracle/go-eth-consensus v0.1.3-0.20230304221055-e39ee9cb4167
