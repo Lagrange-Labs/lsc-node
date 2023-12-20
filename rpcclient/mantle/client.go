@@ -43,13 +43,13 @@ func init() {
 }
 
 // NewClient creates a new Client instance.
-func NewClient(rpcURL, l1RpcURL string, batchStorageAddr string) (*Client, error) {
-	client, err := evmclient.NewClient(rpcURL)
+func NewClient(cfg *Config) (*Client, error) {
+	client, err := evmclient.NewClient(cfg.RPCURL)
 	if err != nil {
 		return nil, err
 	}
 
-	ethClient, err := ethclient.Dial(l1RpcURL)
+	ethClient, err := ethclient.Dial(cfg.L1RPCURL)
 	if err != nil {
 		return nil, err
 	}
@@ -57,7 +57,7 @@ func NewClient(rpcURL, l1RpcURL string, batchStorageAddr string) (*Client, error
 	return &Client{
 		Client:       *client,
 		ethClient:    ethClient,
-		batchStorage: common.HexToAddress(batchStorageAddr),
+		batchStorage: common.HexToAddress(cfg.BatchStorageAddr),
 	}, nil
 }
 
@@ -96,7 +96,7 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 }
 
 // GetBlockHeaderByNumber returns the L2 block header for the given L2 block number.
-func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64) (*types.L2BlockHeader, error) {
+func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64, l1TxHash common.Hash) (*types.L2BlockHeader, error) {
 	// TODO: This is a temporary workaround for testing.
 	hash, err := c.GetBlockHashByNumber(l2BlockNumber)
 	return &types.L2BlockHeader{

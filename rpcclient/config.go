@@ -1,8 +1,14 @@
 package rpcclient
 
-import "github.com/Lagrange-Labs/lagrange-node/rpcclient/optimism"
+import (
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient/arbitrum"
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient/mantle"
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient/optimism"
+)
 
-// RpcClientConfig is a config for rpc client.
-type RpcClientConfig struct {
-	Optimism *optimism.Config `yaml:"optimism"`
+// Config is a config for rpc client.
+type Config struct {
+	Optimism *optimism.Config `yaml:"Optimism"`
+	Mantle   *mantle.Config   `yaml:"Mantle"`
+	Arbitrum *arbitrum.Config `yaml:"Arbitrum"`
 }

@@ -17,7 +17,7 @@ type Evidence struct {
 	CurrentCommitteeRoot [32]byte `json:"current_committee_root" bson:"current_committee_root"`
 	NextCommitteeRoot    [32]byte `json:"next_committee_root" bson:"next_committee_root"`
 	BlockNumber          uint64   `json:"block_number" bson:"block_number"`
-	EpochBlockNumber     uint64   `json:"epoch_block_number" bson:"epoch_block_number"`
+	L1BlockNumber        uint64   `json:"l1_block_number" bson:"l1_block_number"`
 	BlockSignature       []byte   `json:"block_signature" bson:"block_signature"`
 	CommitSignature      []byte   `json:"commit_signature" bson:"commit_signature"`
 	ChainID              uint32   `json:"chain_id" bson:"chain_id"`
@@ -26,12 +26,12 @@ type Evidence struct {
 
 // GetCommitRequestHash returns the hash of the commit block request.
 func GetCommitRequestHash(sig *sequencertypes.BlsSignature) []byte {
-	var blockNumberBuf, epochNumberBuf common.Hash
+	var blockNumberBuf, l1BlockNumberBuf common.Hash
 	blockHash := common.FromHex(sig.ChainHeader.BlockHash)[:]
 	currentCommitteeRoot := common.FromHex(sig.CurrentCommittee)[:]
 	nextCommitteeRoot := common.FromHex(sig.NextCommittee)[:]
 	blockNumber := big.NewInt(int64(sig.BlockNumber())).FillBytes(blockNumberBuf[:])
-	epochNumber := big.NewInt(int64(sig.EpochBlockNumber)).FillBytes(epochNumberBuf[:])
+	l1BlockNumber := big.NewInt(int64(sig.L1BlockNumber())).FillBytes(l1BlockNumberBuf[:])
 	blockSignature := utils.GetSignatureAffine(sig.BlsSignature)
 	chainID := make([]byte, 4)
 	binary.BigEndian.PutUint32(chainID, sig.ChainHeader.ChainId)
@@ -41,7 +41,7 @@ func GetCommitRequestHash(sig *sequencertypes.BlsSignature) []byte {
 		currentCommitteeRoot,
 		nextCommitteeRoot,
 		blockNumber,
-		epochNumber,
+		l1BlockNumber,
 		blockSignature,
 		chainID,
 	)
@@ -66,7 +66,6 @@ func GetEvidence(sig *sequencertypes.BlsSignature) (*Evidence, error) {
 		CurrentCommitteeRoot: common.HexToHash(sig.CurrentCommittee),
 		NextCommitteeRoot:    common.HexToHash(sig.NextCommittee),
 		BlockNumber:          sig.BlockNumber(),
-		EpochBlockNumber:     sig.EpochBlockNumber,
 		BlockSignature:       common.FromHex(sig.BlsSignature),
 		CommitSignature:      signature,
 		ChainID:              sig.ChainHeader.ChainId,
@@ -84,7 +83,7 @@ func GetBlsSignature(evidence *Evidence) *sequencertypes.BlsSignature {
 		CurrentCommittee: common.Bytes2Hex(evidence.CurrentCommitteeRoot[:]),
 		NextCommittee:    common.Bytes2Hex(evidence.NextCommitteeRoot[:]),
 		BlsSignature:     common.Bytes2Hex(evidence.BlockSignature),
-		EpochBlockNumber: evidence.EpochBlockNumber,
-		EcdsaSignature:   common.Bytes2Hex(evidence.CommitSignature),
+
+		EcdsaSignature: common.Bytes2Hex(evidence.CommitSignature),
 	}
 }

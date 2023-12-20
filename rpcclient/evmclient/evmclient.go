@@ -18,6 +18,8 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 )
 
+const CacheSize = 128
+
 // Client is an EVM client.
 type Client struct {
 	rpcClient *rpc.Client
@@ -38,7 +40,7 @@ func NewClient(rpcURL string) (*Client, error) {
 		rpcClient: client,
 		ethClient: ethclient.NewClient(client),
 		rpcURL:    rpcURL,
-		cache:     lru.NewCache[uint64, json.RawMessage](128),
+		cache:     lru.NewCache[uint64, json.RawMessage](CacheSize),
 	}, nil
 }
 

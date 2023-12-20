@@ -296,7 +296,6 @@ func (s *State) startRound(blockNumber uint64) error {
 		if index >= 0 && i == index {
 			block.BlockHeader.NextCommittee = lastCommittee.CurrentCommitteeRoot
 		}
-		block.BlockHeader.EpochBlockNumber = s.lastCommittee.EpochBlockNumber
 		block.BlockHeader.TotalVotingPower = s.lastCommittee.TotalVotingPower
 
 		// generate a proposer signature
@@ -346,9 +345,6 @@ func (s *State) getNextBlocks(ctx context.Context, blockNumber uint64) ([]*seque
 					continue
 				}
 				return nil, err
-			}
-			if len(blocks) < 2 {
-				continue
 			}
 			return blocks, nil
 		}

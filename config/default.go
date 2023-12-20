@@ -8,7 +8,6 @@ GRPCPort = "9090"
 [Client]
 GrpcURL = "127.0.0.1:9090"
 Chain = "mantle"
-RPCEndpoint = "http://localhost:8545"
 EthereumURL = "http://localhost:8545"
 CommitteeSCAddress = "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f"
 BLSPrivateKey = "0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f654a"
@@ -21,10 +20,24 @@ DBPath = "mongodb://127.0.0.1:27017"
 
 [Sequencer]
 Chain = "mantle"
-RPCURL = "http://localhost:8545"
-EthURL = "http://localhost:8545"
-BatchStorageAddr = "0x2f947E51B9A7cF1d6651D0a568261673233ba42b"
 FromBlockNumber = 80
+
+[RpcClient]
+
+	[RpcClient.Optimism]
+	RPCURL = "http://localhost:8545"
+	L1RPCURL = "http://localhost:8545"
+	BeginBlockNumber = 80
+	BatchInbox = "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f"
+	BatchSender = "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f"
+	
+	[RpcClient.Arbitrum]
+	RPCURL = "http://localhost:8545"
+
+	[RpcClient.Mantle]
+	RPCURL = "http://localhost:8545"
+	L1RPCURL = "http://localhost:8545"
+	BatchStorageAddr = "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f"
 
 [Governance]
 EthereumURL = "http://localhost:8545"

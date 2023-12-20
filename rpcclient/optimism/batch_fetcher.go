@@ -161,6 +161,26 @@ func (f *Fetcher) getL2BlockHeader(blockNumber uint64) (*types.L2BlockHeader, er
 	return raw.(*types.L2BlockHeader), nil
 }
 
+// getL2BlockHeaderByTxHash returns the L2 block header for the given L1 transaction hash.
+func (f *Fetcher) getL2BlockHeaderByTxHash(blockNumber uint64, l1TxHash common.Hash) (*types.L2BlockHeader, error) {
+	tx, _, err := f.l1Client.TransactionByHash(context.Background(), l1TxHash)
+	if err != nil {
+		return nil, err
+	}
+	if !f.validTransaction(tx) {
+		return nil, types.ErrBlockNotFound
+	}
+	receipt, err := f.l1Client.TransactionReceipt(context.Background(), l1TxHash)
+	if err != nil {
+		return nil, err
+	}
+	if err := f.decodeBatchTx(receipt.BlockNumber.Uint64(), tx); err != nil {
+		return nil, err
+	}
+
+	return f.getL2BlockHeader(blockNumber)
+}
+
 // validTransaction returns true if the given transaction is valid.
 func (f *Fetcher) validTransaction(tx *coretypes.Transaction) bool {
 	if tx == nil || tx.To() == nil {

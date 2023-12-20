@@ -15,6 +15,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -78,6 +79,23 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	return &types.JoinNetworkResponse{
 		Result:  true,
 		Message: "Joined successfully",
+	}, nil
+}
+
+// GetBlock is a method to get the block.
+func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequest) (*types.GetBlockResponse, error) {
+	block, err := s.storage.GetBlock(ctx, s.chainID, req.BlockNumber)
+	if err != nil {
+		if err == storetypes.ErrBlockNotFound {
+			return &types.GetBlockResponse{
+				Block: nil,
+			}, nil
+		}
+		return nil, err
+	}
+
+	return &types.GetBlockResponse{
+		Block: block,
 	}, nil
 }
 
