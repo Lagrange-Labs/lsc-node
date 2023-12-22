@@ -37,7 +37,7 @@ FromBlockNumber = 80
 	[RpcClient.Mantle]
 	RPCURL = "http://localhost:8545"
 	L1RPCURL = "http://localhost:8545"
-	BatchStorageAddr = "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f"
+	BatchStorageAddr = "0x2f947E51B9A7cF1d6651D0a568261673233ba42b"
 
 [Governance]
 EthereumURL = "http://localhost:8545"
