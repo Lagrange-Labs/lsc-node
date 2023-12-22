@@ -65,6 +65,7 @@ func NewClient(cfg *Config) (*Client, error) {
 func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 	b, err := c.ethClient.BlockNumber(context.Background())
 	if err != nil {
+		logger.Errorf("failed to get block number: %v", err)
 		return 0, err
 	}
 
@@ -86,6 +87,7 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 			logger.Infof("Missing trie node error: %v", err)
 			return math.MaxUint64, nil
 		}
+		logger.Errorf("failed to call L1BatchStorage contract: %v", err)
 		return 0, err
 	}
 

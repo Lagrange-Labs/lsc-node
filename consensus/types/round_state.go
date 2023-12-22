@@ -130,6 +130,7 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 		pubKey, err := utils.HexToBlsPubKey(pubKeyRaw)
 		if err != nil {
 			// it is a critical error if the public key is not valid because it is from the database
+			logger.Errorf("failed to deserialize public key %v: %v", pubKeyRaw, err)
 			return err
 		}
 		sig, err := utils.HexToBlsSignature(commit.BlsSignature)
@@ -166,6 +167,7 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 		}
 		verified, err := signatures[i].VerifyByte(pubKeys[i], commitHash)
 		if err != nil {
+			logger.Errorf("failed to verify the signature: %v", err)
 			return err
 		}
 		if !verified {
@@ -179,6 +181,8 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 		rs.evidences = append(rs.evidences, rs.commitSignatures[key])
 		delete(rs.commitSignatures, key)
 	}
+
+	logger.Errorf("invalid aggregated signature: %v", rs.proposalBlock)
 
 	return ErrInvalidAggregativeSignature
 }

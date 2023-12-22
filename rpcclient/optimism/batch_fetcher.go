@@ -80,6 +80,7 @@ func (f *Fetcher) Fetch() error {
 		}
 		for i := lastSyncedBlockNumber; i <= blockNumber-EthereumFinalityDepth; i++ {
 			if err := ctx.Err(); err != nil {
+				logger.Errorf("context error: %v", err)
 				return err
 			}
 
@@ -119,6 +120,7 @@ func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64) error {
 func (f *Fetcher) decodeBatchTx(blockNumber uint64, tx *coretypes.Transaction) error {
 	frames, err := derive.ParseFrames(tx.Data())
 	if err != nil {
+		logger.Errorf("failed to parse frames: %v", err)
 		return err
 	}
 
@@ -130,6 +132,7 @@ func (f *Fetcher) decodeBatchTx(blockNumber uint64, tx *coretypes.Transaction) e
 	for _, batch := range batches {
 		parentL2Block, err := f.l2Client.BlockByHash(context.Background(), batch.ParentHash)
 		if err != nil {
+			logger.Errorf("failed to get L2 block: %v", err)
 			return err
 		}
 		// wait for the cache to be consumed

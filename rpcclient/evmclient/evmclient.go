@@ -15,6 +15,7 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 
+	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 )
 
@@ -60,6 +61,7 @@ func (c *Client) GetBlockHashByNumber(blockNumber uint64) (common.Hash, error) {
 		return common.Hash{}, types.ErrBlockNotFound
 	}
 	if err != nil {
+		logger.Errorf("failed to get the raw header error: %v", err)
 		return common.Hash{}, fmt.Errorf("failed to get the raw header error: %w", err)
 	}
 
@@ -87,6 +89,7 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 		if strings.Contains(err.Error(), "'finalized' tag not supported on pre-merge network") {
 			return math.MaxUint64, nil
 		}
+		logger.Errorf("failed to get finalized block number error: %v", err)
 		return 0, err
 	}
 	return header.Number.Uint64(), nil

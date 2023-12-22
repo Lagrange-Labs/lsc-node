@@ -4,6 +4,7 @@ import (
 	"encoding/binary"
 	"math/big"
 
+	"github.com/Lagrange-Labs/lagrange-node/logger"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
@@ -53,6 +54,7 @@ func GetEvidence(sig *sequencertypes.BlsSignature) (*Evidence, error) {
 	signature := common.FromHex(sig.EcdsaSignature)
 	pubKey, err := crypto.SigToPub(hash, signature)
 	if err != nil {
+		logger.Errorf("failed to recover public key from signature: %v", err)
 		return nil, err
 	}
 	// convert the signature to the legacy format which be able to be verified in Solidity

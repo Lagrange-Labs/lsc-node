@@ -256,6 +256,7 @@ func (s *State) startRound(blockNumber uint64) error {
 	if s.lastCommittee == nil {
 		committee, err := s.storage.GetCommitteeRoot(context.Background(), s.chainID, blocks[0].L1BlockNumber())
 		if err != nil {
+			logger.Errorf("failed to get the last committee root: %v", err)
 			return fmt.Errorf("failed to get the last committee root: %v", err)
 		}
 		s.lastCommittee = committee
@@ -276,6 +277,7 @@ func (s *State) startRound(blockNumber uint64) error {
 		blocks = blocks[:index+1]
 		lastCommittee, err = s.storage.GetCommitteeRoot(context.Background(), s.chainID, blocks[index].L1BlockNumber())
 		if err != nil {
+			logger.Errorf("failed to get the last committee root: %v", err)
 			return fmt.Errorf("failed to get the last committee root: %v", err)
 		}
 	}
@@ -302,6 +304,7 @@ func (s *State) startRound(blockNumber uint64) error {
 		blsSigHash := block.BlsSignature().Hash()
 		signature, err := s.proposer.Sign(blsSigHash)
 		if err != nil {
+			logger.Errorf("failed to sign the block %d: %v", block.BlockNumber(), err)
 			return err
 		}
 		block.BlockHeader.ProposerSignature = utils.BlsSignatureToHex(signature)
@@ -326,6 +329,7 @@ func (s *State) startRound(blockNumber uint64) error {
 func (s *State) getNextBlocks(ctx context.Context, blockNumber uint64) ([]*sequencertypes.Block, error) {
 	blocks, err := s.storage.GetBlocks(ctx, uint32(s.chainID), blockNumber, s.batchSize)
 	if err != nil && err != storetypes.ErrBlockNotFound {
+		logger.Errorf("failed to get the next block batch from %d: %v", blockNumber, err)
 		return nil, err
 	}
 	if len(blocks) > 0 {
@@ -344,6 +348,7 @@ func (s *State) getNextBlocks(ctx context.Context, blockNumber uint64) ([]*seque
 				if err == storetypes.ErrBlockNotFound {
 					continue
 				}
+				logger.Errorf("failed to get the next block batch from %d: %v", blockNumber, err)
 				return nil, err
 			}
 			return blocks, nil
@@ -363,6 +368,7 @@ func (s *State) processRound(ctx context.Context) bool {
 					logger.Warnf("the aggregated signature is invalid for the block %d", round.GetCurrentBlockNumber())
 					return false, nil
 				}
+				logger.Errorf("failed to check the aggregated signature for the block %d: %v", round.GetCurrentBlockNumber(), err)
 				return false, err
 			}
 			return true, nil

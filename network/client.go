@@ -189,15 +189,18 @@ func (c *Client) TryJoinNetwork() error {
 	}
 	reqMsg, err := proto.Marshal(req)
 	if err != nil {
+		logger.Errorf("failed to marshal the request: %v", err)
 		return err
 	}
 	sig, err := c.blsPrivateKey.Sign(reqMsg)
 	if err != nil {
+		logger.Errorf("failed to sign the request: %v", err)
 		return err
 	}
 	req.Signature = utils.BlsSignatureToHex(sig)
 	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
 	if err != nil {
+		logger.Errorf("failed to join the network: %v", err)
 		return err
 	}
 	if !res.Result {

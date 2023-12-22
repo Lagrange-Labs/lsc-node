@@ -155,10 +155,12 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 			reqHash := contypes.GetCommitRequestHash(signature)
 			isVerified, addr, err := utils.VerifyECDSASignature(reqHash, common.FromHex(signature.EcdsaSignature))
 			if err != nil || !isVerified {
+				logger.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)
 				chError <- fmt.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)
 				return
 			}
 			if addr != common.HexToAddress(node.StakeAddress) {
+				logger.Errorf("the stake address is not matched in ECDSA signature: %v, %v", addr, node.StakeAddress)
 				chError <- fmt.Errorf("the stake address is not matched in ECDSA signature: %v, %v", addr, node.StakeAddress)
 				return
 			}

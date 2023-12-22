@@ -1,6 +1,7 @@
 package optimism
 
 import (
+	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/ethereum/go-ethereum/common"
@@ -53,6 +54,7 @@ func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64, l1TxHash common.Ha
 			// from the client
 			return c.fetcher.getL2BlockHeaderByTxHash(l2BlockNumber, l1TxHash)
 		}
+		logger.Errorf("failed to get L2 block header: %v", err)
 		return nil, err
 	}
 
