@@ -10,6 +10,7 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/lru"
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/umbracle/go-eth-consensus/bls"
@@ -28,27 +29,35 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
+const CommitteeCacheSize = 10
+
+type NextBlockInfo struct {
+	NextCommitteeRoot string
+	L1BlockNumber     uint64
+}
+
 // Client is a gRPC client to join the network
 type Client struct {
 	types.NetworkServiceClient
 	rpcClient   rpctypes.RpcClient
 	committeeSC *committee.Committee
 
-	chainID           uint32
-	blsPrivateKey     *bls.SecretKey
-	blsPublicKey      string
-	ecdsaPrivateKey   *ecdsa.PrivateKey
-	stakeAddress      string
-	lastBlockNumber   uint64
-	pullInterval      time.Duration
-	nextCommitteeRoot string
+	chainID         uint32
+	blsPrivateKey   *bls.SecretKey
+	blsPublicKey    string
+	ecdsaPrivateKey *ecdsa.PrivateKey
+	stakeAddress    string
+	lastBlockNumber uint64
+	pullInterval    time.Duration
+	nextBlockInfo   NextBlockInfo
+	committeeCache  *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
 
 	ctx        context.Context
 	cancelFunc context.CancelFunc
 }
 
 // NewClient creates a new client.
-func NewClient(cfg *ClientConfig) (*Client, error) {
+func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	opts := []grpc.DialOption{
@@ -95,7 +104,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 	}
 	stakeAddress := crypto.PubkeyToAddress(ecdsaPriv.PublicKey).Hex()
 
-	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCEndpoint, cfg.EthereumURL, "")
+	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg)
 	if err != nil {
 		panic(err)
 	}
@@ -124,7 +133,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 		committeeSC:          committeeSC,
 		chainID:              chainID,
 		lastBlockNumber:      1,
-		nextCommitteeRoot:    "",
+		committeeCache:       lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
 
 		ctx:        ctx,
 		cancelFunc: cancel,
@@ -180,15 +189,18 @@ func (c *Client) TryJoinNetwork() error {
 	}
 	reqMsg, err := proto.Marshal(req)
 	if err != nil {
+		logger.Errorf("failed to marshal the request: %v", err)
 		return err
 	}
 	sig, err := c.blsPrivateKey.Sign(reqMsg)
 	if err != nil {
+		logger.Errorf("failed to sign the request: %v", err)
 		return err
 	}
 	req.Signature = utils.BlsSignatureToHex(sig)
 	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
 	if err != nil {
+		logger.Errorf("failed to join the network: %v", err)
 		return err
 	}
 	if !res.Result {
@@ -216,7 +228,7 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 
 	blockHeaders := make(map[uint64]*rpctypes.L2BlockHeader)
 	for _, block := range res.Batch {
-		blockHeader, err := c.rpcClient.GetBlockHeaderByNumber(block.BlockNumber())
+		blockHeader, err := c.rpcClient.GetBlockHeaderByNumber(block.BlockNumber(), block.L1TxHash())
 		if err != nil {
 			return nil, fmt.Errorf("failed to get the block header by number: %v", err)
 		}
@@ -273,81 +285,92 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 	return res.Batch, nil
 }
 
-func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
-	// TODO: figure out the c.nextCommitteeRoot initialization
-	// verify the committee root
-	if len(c.nextCommitteeRoot) > 0 && batch[0].CurrentCommittee() != c.nextCommitteeRoot {
-		return fmt.Errorf("the block committee root %s is not equal to the previous batch's next committee root %s", batch[0].CurrentCommittee(), c.nextCommitteeRoot)
+func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommitteeCommitteeData, error) {
+	if committeeData, ok := c.committeeCache.Get(blockNumber); ok {
+		return committeeData, nil
 	}
-	lastBlock := batch[len(batch)-1]
-	firstEpochNumber, err := c.committeeSC.GetEpochNumber(nil, c.chainID, big.NewInt(int64(batch[0].L1BlockNumber())))
-	if err != nil {
-		return fmt.Errorf("failed to get the epoch number from SC: %v", err)
-	}
-	lastEpochNumber, err := c.committeeSC.GetEpochNumber(nil, c.chainID, big.NewInt(int64(lastBlock.L1BlockNumber())))
-	if err != nil {
-		return fmt.Errorf("failed to get the epoch number from SC: %v", err)
-	}
-	isRotated := false
-	if firstEpochNumber.Uint64() != lastEpochNumber.Uint64() || len(batch) == 1 {
-		// check the committee root rotation
-		l1BlockNumber := lastBlock.L1BlockNumber()
-		// TODO: figure out the last L1 block number fetching
-		// l1BlockNumber, err := c.rpcClient.GetL1BlockNumber(lastBlock.BlockNumber() - 1)
-		// if err != nil {
-		// 	return fmt.Errorf("failed to get the L1 block number: %v", err)
-		// }
 
-		if l1BlockNumber >= lastBlock.L1BlockNumber() {
-			if len(batch) > 1 {
-				return fmt.Errorf("the committee rotation is detected but no L1 block number changes")
+	committeeData, err := c.committeeSC.GetCommittee(nil, c.chainID, big.NewInt(int64(blockNumber)))
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the committee data: %v", err)
+	}
+	c.committeeCache.Add(blockNumber, &committeeData.CurrentCommittee)
+
+	return &committeeData.CurrentCommittee, nil
+}
+
+func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
+	// initialize the next block info
+	if len(c.nextBlockInfo.NextCommitteeRoot) == 0 {
+		previousBlock, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: batch[0].BlockNumber() - 1})
+		if err != nil {
+			return fmt.Errorf("failed to get the previous block: %v", err)
+		}
+		if previousBlock.Block == nil {
+			c.nextBlockInfo = NextBlockInfo{
+				NextCommitteeRoot: batch[0].CurrentCommittee(),
+				L1BlockNumber:     batch[0].L1BlockNumber(),
 			}
 		} else {
-			prevEpochNumber, err := c.committeeSC.GetEpochNumber(nil, c.chainID, big.NewInt(int64(l1BlockNumber)))
+			blockHeader, err := c.rpcClient.GetBlockHeaderByNumber(previousBlock.Block.BlockNumber(), previousBlock.Block.L1TxHash())
 			if err != nil {
-				return fmt.Errorf("failed to get the epoch number from SC: %v", err)
+				return fmt.Errorf("failed to get the block header by number: %v", err)
 			}
-			if prevEpochNumber.Uint64() >= lastEpochNumber.Uint64() {
-				if len(batch) > 1 {
-					return fmt.Errorf("the committee rotation is detected but no epoch number changes")
-				}
-			} else {
-				isRotated = true
-				prevCommitteeData, err := c.committeeSC.GetCommittee(nil, c.chainID, big.NewInt(int64(l1BlockNumber)))
-				if err != nil {
-					return fmt.Errorf("failed to get the previous committee data")
-				}
-				currentCommitteeData, err := c.committeeSC.GetCommittee(nil, c.chainID, big.NewInt(int64(lastBlock.L1BlockNumber())))
-				if err != nil {
-					return fmt.Errorf("failed to get the current committee data")
-				}
+			if previousBlock.Block.L1BlockNumber() != blockHeader.L1BlockNumber {
+				return fmt.Errorf("the previous block L1 block number %d is not equal to the rpc L1 block number %d", previousBlock.Block.L1BlockNumber(), blockHeader.L1BlockNumber)
+			}
 
-				if lastBlock.CurrentCommittee() != common.Bytes2Hex(prevCommitteeData.CurrentCommittee.Root.Bytes()) {
-					return fmt.Errorf("the current committee root %s of the next epoch beginning block is not equal to the prev committee %v", lastBlock.CurrentCommittee(), prevCommitteeData)
-				}
-				if lastBlock.NextCommittee() != common.Bytes2Hex(currentCommitteeData.CurrentCommittee.Root.Bytes()) {
-					return fmt.Errorf("the next committee root %s of the next epoch beginning block is not equal to the current committee %v", lastBlock.NextCommittee(), currentCommitteeData)
-				}
+			previousCommitteeData, err := c.getCommitteeRoot(blockHeader.L1BlockNumber)
+			if err != nil {
+				return fmt.Errorf("failed to get the previous committee root: %v", err)
+			}
+			if previousBlock.Block.NextCommittee() != common.Bytes2Hex(previousCommitteeData.Root.Bytes()) {
+				return fmt.Errorf("the previous block next committee root %s is not equal to the epoch committee root %s", previousBlock.Block.NextCommittee(), common.Bytes2Hex(previousCommitteeData.Root.Bytes()))
+			}
+
+			c.nextBlockInfo = NextBlockInfo{
+				NextCommitteeRoot: previousBlock.Block.NextCommittee(),
+				L1BlockNumber:     previousBlock.Block.L1BlockNumber(),
 			}
 		}
 	}
-	committeeData, err := c.committeeSC.GetCommittee(nil, c.chainID, big.NewInt(int64(batch[0].L1BlockNumber())))
+	// verify the previous block's next committee root
+	if len(c.nextBlockInfo.NextCommitteeRoot) > 0 && batch[0].CurrentCommittee() != c.nextBlockInfo.NextCommitteeRoot {
+		return fmt.Errorf("the block committee root %s is not equal to the previous batch's next committee root %s", batch[0].CurrentCommittee(), c.nextBlockInfo.NextCommitteeRoot)
+	}
+	for i, block := range batch {
+		if i > 0 && block.CurrentCommittee() != batch[i-1].NextCommittee() {
+			return fmt.Errorf("the block %d committee root %s is not equal to the previous block's next committee root %s", i, block.CurrentCommittee(), batch[i-1].NextCommittee())
+		}
+	}
+
+	lastBlock := batch[len(batch)-1]
+	previousBlockNumber := c.nextBlockInfo.L1BlockNumber
+	if len(batch) > 1 {
+		previousBlockNumber = batch[len(batch)-2].L1BlockNumber()
+	}
+	previousCommitteeData, err := c.getCommitteeRoot(previousBlockNumber)
 	if err != nil {
-		return fmt.Errorf("failed to get the committee data: %v chainID: %d Batch: %v", err, c.chainID, batch)
+		return fmt.Errorf("failed to get the previous committee root: %v", err)
 	}
-	currentCommitteeRoot := common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes())
-	for i := range batch {
-		if batch[i].CurrentCommittee() != currentCommitteeRoot {
-			if i != len(batch)-1 || !isRotated {
-				return fmt.Errorf("the block committee root %s is not equal to the current root %v", batch[i].CurrentCommittee(), committeeData)
-			}
+	for _, block := range batch {
+		if block.CurrentCommittee() != common.Bytes2Hex(previousCommitteeData.Root.Bytes()) {
+			return fmt.Errorf("the block %d committee root %s is not equal to the epoch committee root %s", block.BlockNumber(), block.CurrentCommittee(), common.Bytes2Hex(previousCommitteeData.Root.Bytes()))
 		}
-		if i > 0 && batch[i].NextCommittee() != batch[i-1].CurrentCommittee() {
-			return fmt.Errorf("the block next committee root %s is not equal to the next block's committee root %s", batch[i].NextCommittee(), batch[i-1].CurrentCommittee())
-		}
+	}
+	// still can verify the next committee root even if the committee epoch rotates
+	committeeData, err := c.getCommitteeRoot(lastBlock.L1BlockNumber())
+	if err != nil {
+		return fmt.Errorf("failed to get the committee root: %v", err)
+	}
+	if lastBlock.NextCommittee() != common.Bytes2Hex(committeeData.Root.Bytes()) {
+		return fmt.Errorf("the last block %d next committee root %s is not equal to the epoch committee root %s", lastBlock.BlockNumber(), lastBlock.NextCommittee(), common.Bytes2Hex(committeeData.Root.Bytes()))
 	}
 
-	c.nextCommitteeRoot = lastBlock.CurrentCommittee()
+	c.nextBlockInfo = NextBlockInfo{
+		NextCommitteeRoot: lastBlock.NextCommittee(),
+		L1BlockNumber:     lastBlock.L1BlockNumber(),
+	}
 
 	return nil
 }

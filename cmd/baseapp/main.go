@@ -98,7 +98,7 @@ func runServer(ctx *cli.Context) error {
 	}
 
 	// Get the chain ID.
-	rpcClient, err := rpcclient.NewClient(cfg.Sequencer.Chain, cfg.Sequencer.RPCURL, cfg.Sequencer.EthURL, cfg.Sequencer.BatchStorageAddr)
+	rpcClient, err := rpcclient.NewClient(cfg.Sequencer.Chain, &cfg.RpcClient)
 	if err != nil {
 		return err
 	}
@@ -130,7 +130,7 @@ func runClient(ctx *cli.Context) error {
 		return err
 	}
 	logger.Infof("Starting client with config: %v", cfg.Client)
-	client, err := network.NewClient(&cfg.Client)
+	client, err := network.NewClient(&cfg.Client, &cfg.RpcClient)
 	if err != nil {
 		return err
 	}
@@ -156,7 +156,7 @@ func runSequencer(ctx *cli.Context) error {
 		return fmt.Errorf("failed to create storage: %w", err)
 	}
 	logger.Infof("Starting sequencer with config: %v", cfg.Sequencer)
-	sequencer, err := sequencer.NewSequencer(&cfg.Sequencer, storage)
+	sequencer, err := sequencer.NewSequencer(&cfg.Sequencer, &cfg.RpcClient, storage)
 	if err != nil {
 		return fmt.Errorf("failed to create sequencer: %w", err)
 	}

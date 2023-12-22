@@ -15,8 +15,12 @@ func TestEndpoints(t *testing.T) {
 	if ethURL == "" {
 		t.Skip("ETH_RPC not set")
 	}
-
-	c, err := NewClient("http://localhost:8545", ethURL, GOERLI_BATCHSTORSGE_ADDR)
+	cfg := &Config{
+		RPCURL:           "http://localhost:8545",
+		L1RPCURL:         ethURL,
+		BatchStorageAddr: GOERLI_BATCHSTORSGE_ADDR,
+	}
+	c, err := NewClient(cfg)
 	require.NoError(t, err)
 	id, err := c.GetChainID()
 	require.NoError(t, err)
@@ -32,7 +36,12 @@ func TestEndpoints(t *testing.T) {
 }
 
 func TestFinalizedL2BlockNumberMock(t *testing.T) {
-	c, err := NewClient("http://localhost:8545", "http://localhost:8545", LOCAL_BATCHSTORSGE_ADDR)
+	cfg := &Config{
+		RPCURL:           "http://localhost:8545",
+		L1RPCURL:         "http://localhost:8545",
+		BatchStorageAddr: LOCAL_BATCHSTORSGE_ADDR,
+	}
+	c, err := NewClient(cfg)
 	require.NoError(t, err)
 
 	// pre-merge chain does not support this

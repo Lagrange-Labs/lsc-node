@@ -15,7 +15,7 @@ type RpcClient interface {
 	// GetCurrentBlockNumber returns the current L2 block number.
 	GetCurrentBlockNumber() (uint64, error)
 	// GetBlockHeaderByNumber returns the L2 block header by the given block number.
-	GetBlockHeaderByNumber(blockNumber uint64) (*L2BlockHeader, error)
+	GetBlockHeaderByNumber(blockNumber uint64, l1TxHash common.Hash) (*L2BlockHeader, error)
 	// GetFinalizedBlockNumber returns the L2 finalized block number.
 	GetFinalizedBlockNumber() (uint64, error)
 	// GetChainID returns the chain ID.

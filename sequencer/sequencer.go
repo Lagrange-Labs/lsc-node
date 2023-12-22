@@ -4,6 +4,8 @@ import (
 	"context"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
@@ -28,8 +30,8 @@ type Sequencer struct {
 }
 
 // NewSequencer creates a new sequencer instance.
-func NewSequencer(cfg *Config, storage storageInterface) (*Sequencer, error) {
-	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCURL, cfg.EthURL, cfg.BatchStorageAddr)
+func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterface) (*Sequencer, error) {
+	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg)
 	if err != nil {
 		return nil, err
 	}
@@ -88,7 +90,7 @@ func (s *Sequencer) Start() error {
 				}
 				continue
 			}
-			blockHeader, err := s.rpcClient.GetBlockHeaderByNumber(lastBlockNumber)
+			blockHeader, err := s.rpcClient.GetBlockHeaderByNumber(lastBlockNumber, common.Hash{})
 			if err != nil {
 				if err == rpctypes.ErrBlockNotFound {
 					logger.Infof("block %d not found", lastBlockNumber)

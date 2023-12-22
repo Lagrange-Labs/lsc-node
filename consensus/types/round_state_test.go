@@ -13,9 +13,11 @@ import (
 
 func createTestRoundState() (*RoundState, []*bls.SecretKey, *ValidatorSet) {
 	chainHeader := &sequencertypes.ChainHeader{
-		ChainId:     1,
-		BlockNumber: 1,
-		BlockHash:   utils.RandomHex(32),
+		ChainId:       1,
+		BlockNumber:   1,
+		BlockHash:     utils.RandomHex(32),
+		L1BlockNumber: 1,
+		L1TxHash:      utils.RandomHex(32),
 	}
 	proposerSecKey, proposerPubKey := utils.RandomBlsKey()
 	pBlock := &sequencertypes.Block{
@@ -24,7 +26,6 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey, *ValidatorSet) {
 			TotalVotingPower: 10,
 			CurrentCommittee: utils.RandomHex(32),
 			NextCommittee:    utils.RandomHex(32),
-			EpochBlockNumber: 1,
 		},
 		ChainHeader: chainHeader,
 	}

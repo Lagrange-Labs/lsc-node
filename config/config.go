@@ -8,6 +8,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
 	governance "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/network"
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 	"github.com/mitchellh/mapstructure"
@@ -28,6 +29,7 @@ type Config struct {
 	Sequencer  sequencer.Config
 	Governance governance.Config
 	Consensus  consensus.Config
+	RpcClient  rpcclient.Config
 }
 
 // Default parses the default configuration values.

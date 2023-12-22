@@ -18,6 +18,11 @@ func (b *Block) BlockNumber() uint64 {
 	return b.ChainHeader.BlockNumber
 }
 
+// L1TxHash returns the L1 tx hash of the chain header.
+func (b *Block) L1TxHash() common.Hash {
+	return common.HexToHash(b.ChainHeader.L1TxHash)
+}
+
 // L1BlockNumber returns the L1 block number of the chain header.
 func (b *Block) L1BlockNumber() uint64 {
 	return b.ChainHeader.L1BlockNumber
@@ -51,18 +56,12 @@ func (b *Block) ProposerSignature() string {
 	return b.BlockHeader.ProposerSignature
 }
 
-// EpochBlockNumber returns the epoch block number of the block.
-func (b *Block) EpochBlockNumber() uint64 {
-	return b.BlockHeader.EpochBlockNumber
-}
-
 // BlsSignature returns the bls signature of the block.
 func (b *Block) BlsSignature() *BlsSignature {
 	return &BlsSignature{
 		ChainHeader:      b.ChainHeader,
 		CurrentCommittee: b.CurrentCommittee(),
 		NextCommittee:    b.NextCommittee(),
-		EpochBlockNumber: b.BlockHeader.GetEpochBlockNumber(),
 	}
 }
 
@@ -88,6 +87,11 @@ func (b *BlsSignature) Hash() []byte {
 // BlockNumber returns the block number of the bls signature.
 func (b *BlsSignature) BlockNumber() uint64 {
 	return b.ChainHeader.BlockNumber
+}
+
+// L1BlockNumber returns the L1 block number of the bls signature.
+func (b *BlsSignature) L1BlockNumber() uint64 {
+	return b.ChainHeader.L1BlockNumber
 }
 
 // Clone returns a clone of the bls signature.

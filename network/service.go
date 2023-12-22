@@ -15,6 +15,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -81,6 +82,23 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	}, nil
 }
 
+// GetBlock is a method to get the block.
+func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequest) (*types.GetBlockResponse, error) {
+	block, err := s.storage.GetBlock(ctx, s.chainID, req.BlockNumber)
+	if err != nil {
+		if err == storetypes.ErrBlockNotFound {
+			return &types.GetBlockResponse{
+				Block: nil,
+			}, nil
+		}
+		return nil, err
+	}
+
+	return &types.GetBlockResponse{
+		Block: block,
+	}, nil
+}
+
 // GetBatch is a method to get the proposed batch.
 func (s *sequencerService) GetBatch(ctx context.Context, req *types.GetBatchRequest) (*types.GetBatchResponse, error) {
 	// verify the registered node
@@ -137,10 +155,12 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 			reqHash := contypes.GetCommitRequestHash(signature)
 			isVerified, addr, err := utils.VerifyECDSASignature(reqHash, common.FromHex(signature.EcdsaSignature))
 			if err != nil || !isVerified {
+				logger.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)
 				chError <- fmt.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)
 				return
 			}
 			if addr != common.HexToAddress(node.StakeAddress) {
+				logger.Errorf("the stake address is not matched in ECDSA signature: %v, %v", addr, node.StakeAddress)
 				chError <- fmt.Errorf("the stake address is not matched in ECDSA signature: %v, %v", addr, node.StakeAddress)
 				return
 			}
