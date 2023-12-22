@@ -80,6 +80,7 @@ func (f *Fetcher) Fetch() error {
 		}
 		for i := lastSyncedBlockNumber; i <= blockNumber-EthereumFinalityDepth; i++ {
 			if err := ctx.Err(); err != nil {
+				logger.Errorf("context error: %v", err)
 				return err
 			}
 
@@ -119,6 +120,7 @@ func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64) error {
 func (f *Fetcher) decodeBatchTx(blockNumber uint64, tx *coretypes.Transaction) error {
 	frames, err := derive.ParseFrames(tx.Data())
 	if err != nil {
+		logger.Errorf("failed to parse frames: %v", err)
 		return err
 	}
 
@@ -130,6 +132,7 @@ func (f *Fetcher) decodeBatchTx(blockNumber uint64, tx *coretypes.Transaction) e
 	for _, batch := range batches {
 		parentL2Block, err := f.l2Client.BlockByHash(context.Background(), batch.ParentHash)
 		if err != nil {
+			logger.Errorf("failed to get L2 block: %v", err)
 			return err
 		}
 		// wait for the cache to be consumed
@@ -159,6 +162,26 @@ func (f *Fetcher) getL2BlockHeader(blockNumber uint64) (*types.L2BlockHeader, er
 	f.cacheCount.Add(-1)
 
 	return raw.(*types.L2BlockHeader), nil
+}
+
+// getL2BlockHeaderByTxHash returns the L2 block header for the given L1 transaction hash.
+func (f *Fetcher) getL2BlockHeaderByTxHash(blockNumber uint64, l1TxHash common.Hash) (*types.L2BlockHeader, error) {
+	tx, _, err := f.l1Client.TransactionByHash(context.Background(), l1TxHash)
+	if err != nil {
+		return nil, err
+	}
+	if !f.validTransaction(tx) {
+		return nil, types.ErrBlockNotFound
+	}
+	receipt, err := f.l1Client.TransactionReceipt(context.Background(), l1TxHash)
+	if err != nil {
+		return nil, err
+	}
+	if err := f.decodeBatchTx(receipt.BlockNumber.Uint64(), tx); err != nil {
+		return nil, err
+	}
+
+	return f.getL2BlockHeader(blockNumber)
 }
 
 // validTransaction returns true if the given transaction is valid.

@@ -8,14 +8,14 @@ import (
 )
 
 // NewClient creates a new rpc client.
-func NewClient(chain, rpcURL, ethURL, batchStorageAddr string) (types.RpcClient, error) {
+func NewClient(chain string, cfg *Config) (types.RpcClient, error) {
 	switch chain {
 	case "mantle":
-		return mantle.NewClient(rpcURL, ethURL, batchStorageAddr)
+		return mantle.NewClient(cfg.Mantle)
 	case "arbitrum":
-		return arbitrum.NewClient(rpcURL, ethURL, batchStorageAddr)
+		return arbitrum.NewClient(cfg.Arbitrum)
 	case "optimism":
-		return optimism.NewClient(&optimism.Config{})
+		return optimism.NewClient(cfg.Optimism)
 	default:
 		return nil, nil
 	}

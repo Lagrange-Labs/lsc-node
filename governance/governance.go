@@ -198,6 +198,7 @@ func (g *Governance) updateCommittee() error {
 
 	currentEpochNumber, err := g.committeeSC.GetEpochNumber(nil, g.chainID, big.NewInt(int64(blockNumber)))
 	if err != nil {
+		logger.Errorf("failed to get current epoch number: %w", err)
 		return err
 	}
 
@@ -220,12 +221,14 @@ func (g *Governance) updateCommittee() error {
 		// check if the committee tree needs to be updated
 		updatable, err := g.committeeSC.IsUpdatable(nil, g.chainID, big.NewInt(int64(epochNumber)))
 		if err != nil {
+			logger.Errorf("failed to check if the committee tree is updatable: %w", err)
 			return err
 		}
 		if updatable {
 			logger.Infof("updating committee tree for epoch %d", epochNumber)
 			tx, err := g.committeeSC.Update(g.auth, g.chainID, big.NewInt(int64(epochNumber)))
 			if err != nil {
+				logger.Errorf("failed to update committee tree: %w", err)
 				return err
 			}
 			// wait for the transaction to be mined
@@ -233,9 +236,11 @@ func (g *Governance) updateCommittee() error {
 			defer cancel()
 			receipt, err := bind.WaitMined(ctx, g.etherClient, tx)
 			if err != nil {
+				logger.Errorf("failed to wait for transaction to be mined: %w", err)
 				return fmt.Errorf("failed to wait for transaction to be mined: %w", err)
 			}
 			if receipt.Status != 1 {
+				logger.Errorf("transaction failed: %v", receipt)
 				return fmt.Errorf("transaction failed: %v", receipt)
 			}
 
@@ -255,6 +260,7 @@ func (g *Governance) fetchCommitteeRoot(blockNumber, epochNumber uint64) (*types
 	committeeData, err := g.committeeSC.GetCommittee(nil, g.chainID, big.NewInt(int64(blockNumber)))
 
 	if err != nil {
+		logger.Errorf("failed to get committee data for block number %d, epoch number %d: %w", blockNumber, epochNumber, err)
 		return nil, err
 	}
 

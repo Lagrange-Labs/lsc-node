@@ -94,7 +94,7 @@ func TestUploadEvidence(t *testing.T) {
 		CurrentCommitteeRoot: committeeRoot,
 		NextCommitteeRoot:    committeeRoot,
 		BlockNumber:          1,
-		EpochBlockNumber:     1,
+		L1BlockNumber:        1,
 		BlockSignature:       common.FromHex(utils.RandomHex(32)),
 		CommitSignature:      common.FromHex(utils.RandomHex(32)),
 		ChainID:              1,

@@ -27,7 +27,7 @@ func NewManager() (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	rpcClient, err := rpcclient.NewClient(cfg.Sequencer.Chain, cfg.Sequencer.RPCURL, cfg.Sequencer.EthURL, cfg.Sequencer.BatchStorageAddr)
+	rpcClient, err := rpcclient.NewClient(cfg.Sequencer.Chain, &cfg.RpcClient)
 	if err != nil {
 		return nil, err
 	}
@@ -56,7 +56,7 @@ func (m *Manager) RunServer() {
 
 // RunClient runs a new client instance.
 func (m *Manager) RunClient(clientCfg *network.ClientConfig) {
-	client, err := network.NewClient(clientCfg)
+	client, err := network.NewClient(clientCfg, &m.cfg.RpcClient)
 	if err != nil {
 		panic(err)
 	}
@@ -85,7 +85,7 @@ func (m *Manager) RunClients() {
 // RunSequencer runs a new sequencer instance.
 func (m *Manager) RunSequencer(isGov bool) {
 	var err error
-	m.sequencer, err = sequencer.NewSequencer(&m.cfg.Sequencer, m.Storage)
+	m.sequencer, err = sequencer.NewSequencer(&m.cfg.Sequencer, &m.cfg.RpcClient, m.Storage)
 	if err != nil {
 		panic(err)
 	}
@@ -123,4 +123,9 @@ func (m *Manager) Close() {
 		m.gov.Stop()
 		m.gov = nil
 	}
+}
+
+// GetRpcConfig returns the rpc config.
+func (m *Manager) GetRpcConfig() *rpcclient.Config {
+	return &m.cfg.RpcClient
 }
