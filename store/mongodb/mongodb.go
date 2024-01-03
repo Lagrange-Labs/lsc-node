@@ -281,10 +281,10 @@ func (db *MongoDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *govty
 	return err
 }
 
-// GetCommitteeRoot returns the committee root for the given epoch block number.
-func (db *MongoDB) GetCommitteeRoot(ctx context.Context, chainID uint32, epochBlockNumber uint64) (*govtypes.CommitteeRoot, error) {
+// GetCommitteeRoot returns the first committee root which EpochBlockNumber is greater than or equal to the given l1BlockNumber.
+func (db *MongoDB) GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*govtypes.CommitteeRoot, error) {
 	collection := db.client.Database("state").Collection("committee_roots")
-	filter := bson.M{"chain_id": chainID, "epoch_block_number": bson.M{"$gte": epochBlockNumber}}
+	filter := bson.M{"chain_id": chainID, "epoch_block_number": bson.M{"$gte": l1BlockNumber}}
 	sortOptions := options.FindOne().SetSort(bson.D{{"epoch_block_number", 1}}) //nolint:govet
 	committeeRoot := govtypes.CommitteeRoot{}
 	err := collection.FindOne(ctx, filter, sortOptions).Decode(&committeeRoot)
