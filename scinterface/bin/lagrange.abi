@@ -366,7 +366,7 @@
           },
           {
             "internalType": "uint256",
-            "name": "epochBlockNumber",
+            "name": "l1BlockNumber",
             "type": "uint256"
           },
           {
