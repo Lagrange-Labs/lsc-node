@@ -16,7 +16,7 @@ require (
 	github.com/urfave/cli/v2 v2.27.1
 	go.mongodb.org/mongo-driver v1.13.1
 	golang.org/x/crypto v0.17.0
-	golang.org/x/sync v0.5.0
+	golang.org/x/sync v0.6.0
 	google.golang.org/grpc v1.60.1
 	google.golang.org/protobuf v1.32.0
 )
