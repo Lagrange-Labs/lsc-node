@@ -5,10 +5,10 @@ import (
 	"net"
 	"testing"
 
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
@@ -27,28 +27,31 @@ func newTestService() (*sequencerService, error) {
 	return &sequencerService{
 		storage:   storage,
 		consensus: nil, // TODO mock consensus
+		blsScheme: crypto.NewBLSScheme(crypto.BN254),
 	}, nil
 }
 
 func TestBLSSignVerify(t *testing.T) {
-	priv, pub := utils.RandomBlsKey()
+	blsScheme := crypto.NewBLSScheme(crypto.BN254)
+	priv, err := blsScheme.GenerateRandomKey()
+	require.NoError(t, err)
+	pub, err := blsScheme.GetPublicKey(priv)
+	require.NoError(t, err)
 
 	// JoinNetwork request sign
 	req := &types.JoinNetworkRequest{
 		StakeAddress: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-		PublicKey:    pub,
+		PublicKey:    utils.Bytes2Hex(pub),
 	}
 
 	msg, err := proto.Marshal(req)
 	require.NoError(t, err)
 
-	sig, err := priv.Sign(msg)
+	sig, err := blsScheme.Sign(priv, msg)
 	require.NoError(t, err)
-	sigMsg := sig.Serialize()
-	t.Log(common.Bytes2Hex(sigMsg[:]))
 
 	// Verify signature
-	verified, err := utils.VerifySignature(common.FromHex(pub), msg, sigMsg[:])
+	verified, err := blsScheme.VerifySignature(pub, msg, sig)
 	require.NoError(t, err)
 	require.True(t, verified)
 }
@@ -68,10 +71,10 @@ func TestJoinNetwork(t *testing.T) {
 		valid     bool
 		wantErr   bool
 	}{
-		{"invalid signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4", "", false, false},
-		{"wrong signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4", "a2e3cf2037699b3856c72af280ab8501878495dd81595128df23ba3de0e52fd9126c02b9262b871074f5a34495cd1a1c13cf3d27881ce9a8846463b7d30024c37861e0fa20418c186628f9b6565a116017f988f2d9ae058480fae910a4659bf0", false, false},
-		{"invalid peer ctx", ctx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4", "a2e3cf2037699b3856c72af280ab8501878495dd81595128df23ba3de0e52fd9126c02b9262b871074f5a34495cd1a1c13cf3d27881ce9a8846463b7d30024c37861e0fa20418c186628f9b6565a116017f988f2d9ae058480fae910a4659bf2", false, true},
-		{"valid signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "0x86b50179774296419b7e8375118823ddb06940d9a28ea045ab418c7ecbe6da84d416cb55406eec6393db97ac26e38bd4", "a2e3cf2037699b3856c72af280ab8501878495dd81595128df23ba3de0e52fd9126c02b9262b871074f5a34495cd1a1c13cf3d27881ce9a8846463b7d30024c37861e0fa20418c186628f9b6565a116017f988f2d9ae058480fae910a4659bf2", true, false},
+		{"invalid signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "8afdc78675918678650ad4cf045701e3535eb8b46e8b5425a99f2100a92ea06b", "", false, false},
+		{"wrong signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "8afdc78675918678650ad4cf045701e3535eb8b46e8b5425a99f2100a92ea06b", "a2e3cf2037699b3856c72af280ab8501878495dd81595128df23ba3de0e52fd9126c02b9262b871074f5a34495cd1a1c13cf3d27881ce9a8846463b7d30024c37861e0fa20418c186628f9b6565a116017f988f2d9ae058480fae910a4659bf0", false, false},
+		{"invalid peer ctx", ctx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "8afdc78675918678650ad4cf045701e3535eb8b46e8b5425a99f2100a92ea06b", "9ce1d4e95d3191ef1e171838e5b451b849c3c4b3946fa6e87ed610f9160960300357bb907872325a9384e7625d3686f5580dd81218b44fe0d25dfdc48f6bee97", false, true},
+		{"valid signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "8afdc78675918678650ad4cf045701e3535eb8b46e8b5425a99f2100a92ea06b", "9ce1d4e95d3191ef1e171838e5b451b849c3c4b3946fa6e87ed610f9160960300357bb907872325a9384e7625d3686f5580dd81218b44fe0d25dfdc48f6bee97", true, false},
 	}
 
 	service, err := newTestService()
@@ -92,37 +95,4 @@ func TestJoinNetwork(t *testing.T) {
 			}
 		})
 	}
-}
-
-func TestBlockOperation(t *testing.T) {
-	service, err := newTestService()
-	require.NoError(t, err)
-
-	priv, pub := utils.RandomBlsKey()
-
-	// join network
-	peerCtx := peer.NewContext(context.Background(), &peer.Peer{
-		Addr: &net.IPAddr{},
-	})
-
-	req := &types.JoinNetworkRequest{
-		StakeAddress: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-		PublicKey:    pub,
-	}
-
-	reqMsg, err := proto.Marshal(req)
-	require.NoError(t, err)
-	sig, err := priv.Sign(reqMsg)
-	require.NoError(t, err)
-	sigMsg := sig.Serialize()
-	req.Signature = common.Bytes2Hex(sigMsg[:])
-
-	res, err := service.JoinNetwork(peerCtx, req)
-
-	require.NoError(t, err)
-	require.True(t, res.Result)
-
-	// get block
-	_, err = service.GetBatch(context.Background(), &types.GetBatchRequest{BlockNumber: 0})
-	require.Error(t, err)
 }

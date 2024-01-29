@@ -8,13 +8,13 @@ import (
 	"time"
 
 	"github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/umbracle/go-eth-consensus/bls"
 )
 
 const CheckInterval = 1 * time.Second
@@ -26,29 +26,33 @@ type State struct {
 	rounds          map[uint64]*types.RoundState
 	lastBlockNumber uint64
 	rwMutex         *sync.RWMutex
+	blsScheme       crypto.BLSScheme
 
-	proposer      *bls.SecretKey
-	storage       storageInterface
-	roundLimit    time.Duration
-	roundInterval time.Duration
-	batchSize     uint32
-	chainID       uint32
-	lastCommittee *govtypes.CommitteeRoot
+	proposerPrivKey []byte
+	proposerPubKey  string // hex string
+	storage         storageInterface
+	roundLimit      time.Duration
+	roundInterval   time.Duration
+	batchSize       uint32
+	chainID         uint32
+	lastCommittee   *govtypes.CommitteeRoot
 
 	chStop chan struct{}
 }
 
 // NewState returns a new State.
 func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
-	privKey, err := utils.HexToBlsPrivKey(cfg.ProposerPrivateKey)
+	privKey := utils.Hex2Bytes(cfg.ProposerPrivateKey)
+	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
+	pubKey, err := blsScheme.GetPublicKey(privKey)
 	if err != nil {
-		logger.Fatalf("failed to parse the proposer private key: %v", err)
+		logger.Fatalf("failed to get the public key: %v", err)
 	}
 
 	if err := storage.AddNode(context.Background(),
 		&networktypes.ClientNode{
 			StakeAddress: cfg.OperatorAddress,
-			PublicKey:    utils.BlsPubKeyToHex(privKey.GetPublicKey()),
+			PublicKey:    pubKey,
 			ChainID:      chainID,
 		},
 	); err != nil {
@@ -63,16 +67,23 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 	chStop := make(chan struct{})
 
 	return &State{
-		proposer:      privKey,
-		storage:       storage,
-		roundLimit:    time.Duration(cfg.RoundLimit),
-		roundInterval: time.Duration(cfg.RoundInterval),
-		chainID:       chainID,
-		lastCommittee: lastCommittee,
-		batchSize:     cfg.BatchSize,
-		chStop:        chStop,
-		rwMutex:       &sync.RWMutex{},
+		lastCommittee:   lastCommittee,
+		batchSize:       cfg.BatchSize,
+		chStop:          chStop,
+		rwMutex:         &sync.RWMutex{},
+		blsScheme:       blsScheme,
+		proposerPrivKey: privKey,
+		proposerPubKey:  utils.Bytes2Hex(pubKey),
+		storage:         storage,
+		roundLimit:      time.Duration(cfg.RoundLimit),
+		roundInterval:   time.Duration(cfg.RoundInterval),
+		chainID:         chainID,
 	}
+}
+
+// GetBLSScheme returns the BLS scheme.
+func (s *State) GetBLSScheme() crypto.BLSScheme {
+	return s.blsScheme
 }
 
 // OnStart loads the first unverified block and starts the round.
@@ -196,7 +207,7 @@ func (s *State) OnStop() {
 }
 
 // AddCommit adds the commit to the round.
-func (s *State) AddCommit(commit *sequencertypes.BlsSignature, pubKey, stakeAddr string) error {
+func (s *State) AddCommit(commit *sequencertypes.BlsSignature, pubKey []byte, stakeAddr string) error {
 	s.rwMutex.Lock()
 	defer s.rwMutex.Unlock()
 
@@ -294,7 +305,6 @@ func (s *State) startRound(blockNumber uint64) error {
 		return fmt.Errorf("the voting power of the registered nodes voting power %d is less than 2/3 of the total voting power %d", s.validators.GetTotalVotingPower(), committee.TotalVotingPower)
 	}
 
-	pubKey := utils.BlsPubKeyToHex(s.proposer.GetPublicKey())
 	s.rounds = make(map[uint64]*types.RoundState)
 
 	blockNumbers := make([]uint64, 0)
@@ -307,14 +317,14 @@ func (s *State) startRound(blockNumber uint64) error {
 
 		// generate a proposer signature
 		blsSigHash := block.BlsSignature().Hash()
-		signature, err := s.proposer.Sign(blsSigHash)
+		signature, err := s.blsScheme.Sign(s.proposerPrivKey, blsSigHash)
 		if err != nil {
 			return err
 		}
-		block.BlockHeader.ProposerSignature = utils.BlsSignatureToHex(signature)
-		block.BlockHeader.ProposerPubKey = pubKey
+		block.BlockHeader.ProposerSignature = utils.Bytes2Hex(signature)
+		block.BlockHeader.ProposerPubKey = s.proposerPubKey
 
-		round := types.NewEmptyRoundState()
+		round := types.NewEmptyRoundState(s.blsScheme)
 		round.UpdateRoundState(block)
 		s.rounds[block.BlockNumber()] = round
 		blockNumbers = append(blockNumbers, block.BlockNumber())

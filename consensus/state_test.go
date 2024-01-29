@@ -7,6 +7,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
@@ -20,6 +21,7 @@ func createTestState(t *testing.T) (*State, chan *sequencertypes.BlsSignature) {
 		ProposerPrivateKey: utils.BlsPrivKeyToHex(priv),
 		RoundLimit:         utils.TimeDuration(5 * time.Second),
 		RoundInterval:      utils.TimeDuration(2 * time.Second),
+		BLSCurve:           string(crypto.BN254),
 	}
 
 	memDB, err := memdb.NewMemDB()

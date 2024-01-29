@@ -12,6 +12,7 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
@@ -28,14 +29,16 @@ type sequencerService struct {
 	consensus consensusInterface
 	types.UnimplementedNetworkServiceServer
 
-	chainID uint32
+	blsScheme crypto.BLSScheme
+	chainID   uint32
 }
 
 // NewSequencerService creates the sequencer service.
-func NewSequencerService(storage storageInterface, consensus consensusInterface, chainID uint32) (types.NetworkServiceServer, error) {
+func NewSequencerService(storage storageInterface, consensus consensusInterface, blsScheme crypto.BLSScheme, chainID uint32) (types.NetworkServiceServer, error) {
 	return &sequencerService{
 		storage:   storage,
 		consensus: consensus,
+		blsScheme: blsScheme,
 		chainID:   chainID,
 	}, nil
 }
@@ -51,11 +54,11 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	if err != nil {
 		return nil, err
 	}
-	verified, err := utils.VerifySignature(common.FromHex(req.PublicKey), msg, common.FromHex(sigMessage))
+	verified, err := s.blsScheme.VerifySignature(utils.Hex2Bytes(req.PublicKey), msg, utils.Hex2Bytes(sigMessage))
 	if err != nil || !verified {
 		return &types.JoinNetworkResponse{
 			Result:  false,
-			Message: fmt.Sprintf("Signature verification failed: %v", err),
+			Message: fmt.Sprintf("BLS signature verification failed: %v", err),
 		}, nil
 	}
 	// Register node
@@ -66,7 +69,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	if err := s.storage.AddNode(ctx,
 		&types.ClientNode{
 			StakeAddress: req.StakeAddress,
-			PublicKey:    req.PublicKey,
+			PublicKey:    utils.Hex2Bytes(req.PublicKey),
 			IPAddress:    ip,
 			ChainID:      s.chainID,
 		}); err != nil {

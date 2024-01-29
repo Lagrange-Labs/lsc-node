@@ -37,7 +37,7 @@ func NewMemDB() (*MemDB, error) {
 func (d *MemDB) AddNode(ctx context.Context, node *networktypes.ClientNode) error {
 	node.Status = networktypes.NodeRegistered
 	node.VotingPower = 1
-	d.nodes[node.PublicKey] = *node
+	d.nodes[utils.Bytes2Hex(node.PublicKey)] = *node
 	return nil
 }
 
@@ -120,7 +120,7 @@ func (d *MemDB) GetLastFinalizedBlockNumber(ctx context.Context, chainID uint32)
 
 // UpdateNode updates the node status in the database.
 func (d *MemDB) UpdateNode(ctx context.Context, node *networktypes.ClientNode) error {
-	d.nodes[node.PublicKey] = *node
+	d.nodes[utils.Bytes2Hex(node.PublicKey)] = *node
 	return nil
 }
 

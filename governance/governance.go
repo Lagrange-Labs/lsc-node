@@ -210,7 +210,7 @@ func (g *Governance) updateCommittee() error {
 			operators = append(operators, networktypes.ClientNode{
 				StakeAddress: addr.String(),
 				VotingPower:  uint64(operator.Amount.Int64()),
-				PublicKey:    common.Bytes2Hex(operator.BlsPubKey),
+				PublicKey:    operator.BlsPubKey,
 			})
 		}
 
