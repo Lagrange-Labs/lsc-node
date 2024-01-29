@@ -6,7 +6,7 @@ import (
 
 // Validator defines a validator state.
 type Validator struct {
-	BlsPubKey    string
+	BlsPubKey    []byte
 	StakeAddress string
 	VotingPower  uint64
 }

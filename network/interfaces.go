@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
@@ -18,6 +19,7 @@ type storageInterface interface {
 
 type consensusInterface interface {
 	GetOpenRoundBlocks(blockNumber uint64) []*sequencertypes.Block
-	AddCommit(commit *sequencertypes.BlsSignature, pubKey string, stakeAddr string) error
+	AddCommit(commit *sequencertypes.BlsSignature, pubKey []byte, stakeAddr string) error
 	IsFinalized(blockNumber uint64) bool
+	GetBLSScheme() crypto.BLSScheme
 }
