@@ -1,6 +1,6 @@
 module github.com/Lagrange-Labs/lagrange-node
 
-go 1.18
+go 1.21
 
 require (
 	github.com/consensys/gnark-crypto v0.9.1-0.20230105202408-1a7a29904a7c

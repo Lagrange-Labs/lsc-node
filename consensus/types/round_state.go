@@ -172,7 +172,9 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 		}
 		verified, err := rs.blsScheme.VerifySignature(pubKeyRaw, commitHash, signatures[i])
 		if err != nil {
-			return err
+			logger.Errorf("failed to verify the signature: %v", err)
+			rs.evidences = append(rs.evidences, rs.commitSignatures[i].Signature)
+			continue
 		}
 		if !verified {
 			logger.Errorf("invalid signature: %v", commit)

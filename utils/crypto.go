@@ -137,7 +137,7 @@ func GetSigner(ctx context.Context, c *ethclient.Client, accHexPrivateKey string
 
 // GetSignatureAffine returns the affine coordinates of the signature.
 func GetSignatureAffine(sig string) []byte {
-	bytesData := common.Hex2Bytes(sig)
+	bytesData := common.FromHex(sig)
 
 	sigK := new(blstSignature).Uncompress(bytesData)
 	x := (*blst.Fp2)(unsafe.Pointer(getPrivateField(sigK, "x")))
