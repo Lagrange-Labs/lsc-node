@@ -63,7 +63,7 @@ func TestUpdateNodeStatus(t *testing.T) {
 	storage, gov, _, auth := createTestGovernance(t)
 	// join the network
 	clientNode := networktypes.ClientNode{
-		PublicKey:    "0x123",
+		PublicKey:    utils.Hex2Bytes("0x123"),
 		IPAddress:    "127.0.0.1",
 		StakeAddress: auth.From.Hex(),
 		ChainID:      chainID,

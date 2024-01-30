@@ -3,15 +3,16 @@ package types
 import (
 	"testing"
 
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/go-eth-consensus/bls"
 )
 
-func createTestRoundState() (*RoundState, []*bls.SecretKey, *ValidatorSet) {
+func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, *ValidatorSet) {
+	blsScheme := crypto.NewBLSScheme(blsCurve)
+
 	chainHeader := &sequencertypes.ChainHeader{
 		ChainId:       1,
 		BlockNumber:   1,
@@ -19,10 +20,11 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey, *ValidatorSet) {
 		L1BlockNumber: 1,
 		L1TxHash:      utils.RandomHex(32),
 	}
-	proposerSecKey, proposerPubKey := utils.RandomBlsKey()
+	proposerSecKey, _ := blsScheme.GenerateRandomKey()
+	proposerPubKey, _ := blsScheme.GetPublicKey(proposerSecKey)
 	pBlock := &sequencertypes.Block{
 		BlockHeader: &sequencertypes.BlockHeader{
-			ProposerPubKey:   proposerPubKey,
+			ProposerPubKey:   utils.Bytes2Hex(proposerPubKey),
 			TotalVotingPower: 10,
 			CurrentCommittee: utils.RandomHex(32),
 			NextCommittee:    utils.RandomHex(32),
@@ -31,14 +33,14 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey, *ValidatorSet) {
 	}
 
 	blsSigHash := pBlock.BlsSignature().Hash()
-	proposerSigMsg, _ := proposerSecKey.Sign(blsSigHash)
-	pBlock.BlockHeader.ProposerSignature = utils.BlsSignatureToHex(proposerSigMsg)
+	proposerSigMsg, _ := blsScheme.Sign(proposerSecKey, blsSigHash)
+	pBlock.BlockHeader.ProposerSignature = utils.Bytes2Hex(proposerSigMsg)
 
-	secKeys := []*bls.SecretKey{}
-
+	secKeys := make([][]byte, 0)
 	nodes := []networktypes.ClientNode{}
 	for i := 0; i < 10; i++ {
-		secKey, pubKey := utils.RandomBlsKey()
+		secKey, _ := blsScheme.GenerateRandomKey()
+		pubKey, _ := blsScheme.GetPublicKey(secKey)
 		secKeys = append(secKeys, secKey)
 		node := networktypes.ClientNode{
 			PublicKey:    pubKey,
@@ -50,14 +52,14 @@ func createTestRoundState() (*RoundState, []*bls.SecretKey, *ValidatorSet) {
 
 	vs := NewValidatorSet(nodes, uint64(len(nodes)))
 
-	rs := NewEmptyRoundState()
+	rs := NewEmptyRoundState(blsScheme)
 	rs.UpdateRoundState(pBlock)
 
 	return rs, secKeys, vs
 }
 
 func TestCheckVotingPower(t *testing.T) {
-	rs, _, vs := createTestRoundState()
+	rs, _, vs := createTestRoundState(crypto.BN254)
 
 	// Test 1: not enough case
 	for i := 0; i < 6; i++ {
@@ -70,7 +72,8 @@ func TestCheckVotingPower(t *testing.T) {
 }
 
 func TestCheckAggregatedSignature(t *testing.T) {
-	rs, secKeys, vs := createTestRoundState()
+	rs, secKeys, vs := createTestRoundState(crypto.BN254)
+	blsScheme := crypto.NewBLSScheme(crypto.BN254)
 
 	blsSignature := rs.GetCurrentBlock().BlsSignature()
 	sigHash := blsSignature.Hash()
@@ -78,15 +81,11 @@ func TestCheckAggregatedSignature(t *testing.T) {
 	// Test 1: valid case
 	for i := 0; i < len(secKeys); i++ {
 		blsSign := blsSignature.Clone()
-		signature, err := secKeys[i].Sign(sigHash)
+		signature, err := blsScheme.Sign(secKeys[i], sigHash)
 		require.NoError(t, err)
-		signatureMsg := signature.Serialize()
-		blsSign.BlsSignature = common.Bytes2Hex(signatureMsg[:])
+		blsSign.BlsSignature = utils.Bytes2Hex(signature)
 
-		pubKey := new(bls.PublicKey)
-		require.NoError(t, pubKey.Deserialize(common.FromHex(vs.validators[i].BlsPubKey)))
-
-		verified, err := signature.VerifyByte(pubKey, sigHash)
+		verified, err := blsScheme.VerifySignature(vs.validators[i].BlsPubKey, sigHash, signature)
 		require.NoError(t, err)
 		require.True(t, verified)
 
@@ -97,8 +96,8 @@ func TestCheckAggregatedSignature(t *testing.T) {
 
 	// Test 2: invalid case
 	wrongSignature := ""
-	rs, secKeys, vs = createTestRoundState()
-
+	rs, secKeys, vs = createTestRoundState(crypto.BLS12381)
+	blsScheme = crypto.NewBLSScheme(crypto.BLS12381)
 	blsSignature = rs.GetCurrentBlock().BlsSignature()
 	sigHash = blsSignature.Hash()
 
@@ -107,10 +106,9 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		if i == 8 {
 			blsSign.NextCommittee = "0x111" // wrong contents
 		}
-		signature, err := secKeys[i].Sign(sigHash)
+		signature, err := blsScheme.Sign(secKeys[i], sigHash)
 		require.NoError(t, err)
-		signatureMsg := signature.Serialize()
-		blsSign.BlsSignature = common.Bytes2Hex(signatureMsg[:])
+		blsSign.BlsSignature = utils.Bytes2Hex(signature)
 		if i == 7 {
 			blsSign.BlsSignature = "0x000" // invalid signature
 		} else if i == 8 {
@@ -118,10 +116,8 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		} else if i == 9 {
 			blsSign.BlsSignature = wrongSignature // wrong signature
 		}
-		pubKey := new(bls.PublicKey)
-		require.NoError(t, pubKey.Deserialize(common.FromHex(vs.validators[i].BlsPubKey)))
 
-		verified, err := signature.VerifyByte(pubKey, sigHash)
+		verified, err := blsScheme.VerifySignature(vs.validators[i].BlsPubKey, sigHash, signature)
 		require.NoError(t, err)
 		require.True(t, verified)
 

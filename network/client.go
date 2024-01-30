@@ -11,15 +11,15 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/lru"
-	"github.com/ethereum/go-ethereum/crypto"
+	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"github.com/umbracle/go-eth-consensus/bls"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/proto"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
@@ -41,9 +41,10 @@ type Client struct {
 	types.NetworkServiceClient
 	rpcClient   rpctypes.RpcClient
 	committeeSC *committee.Committee
+	blsScheme   crypto.BLSScheme
 
 	chainID         uint32
-	blsPrivateKey   *bls.SecretKey
+	blsPrivateKey   []byte
 	blsPublicKey    string
 	ecdsaPrivateKey *ecdsa.PrivateKey
 	stakeAddress    string
@@ -93,39 +94,42 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		}
 	}
 
-	blsPriv, err := utils.HexToBlsPrivKey(cfg.BLSPrivateKey)
+	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
+	blsPriv := utils.Hex2Bytes(cfg.BLSPrivateKey)
+	pubkey, err := blsScheme.GetPublicKey(blsPriv)
 	if err != nil {
-		panic(err)
+		logger.Fatalf("failed to get the bls public key: %v", err)
 	}
-	pubkey := utils.BlsPubKeyToHex(blsPriv.GetPublicKey())
-	ecdsaPriv, err := crypto.HexToECDSA(strings.TrimPrefix(cfg.ECDSAPrivateKey, "0x"))
+
+	ecdsaPriv, err := ecrypto.HexToECDSA(strings.TrimPrefix(cfg.ECDSAPrivateKey, "0x"))
 	if err != nil {
-		panic(err)
+		logger.Fatalf("failed to get the ecdsa private key: %v", err)
 	}
-	stakeAddress := crypto.PubkeyToAddress(ecdsaPriv.PublicKey).Hex()
+	stakeAddress := ecrypto.PubkeyToAddress(ecdsaPriv.PublicKey).Hex()
 
 	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg)
 	if err != nil {
-		panic(err)
+		logger.Fatalf("failed to create the rpc client: %v", err)
 	}
 	etherClient, err := ethclient.Dial(cfg.EthereumURL)
 	if err != nil {
-		panic(err)
+		logger.Fatalf("failed to create the ethereum client: %v", err)
 	}
 	committeeSC, err := committee.NewCommittee(common.HexToAddress(cfg.CommitteeSCAddress), etherClient)
 	if err != nil {
-		panic(err)
+		logger.Fatalf("failed to create the committee smart contract: %v", err)
 	}
 
 	chainID, err := rpcClient.GetChainID()
 	if err != nil {
-		panic(err)
+		logger.Fatalf("failed to get the chain ID: %v", err)
 	}
 
 	return &Client{
 		NetworkServiceClient: types.NewNetworkServiceClient(conn),
+		blsScheme:            blsScheme,
 		blsPrivateKey:        blsPriv,
-		blsPublicKey:         pubkey,
+		blsPublicKey:         utils.Bytes2Hex(pubkey),
 		ecdsaPrivateKey:      ecdsaPriv,
 		stakeAddress:         stakeAddress,
 		pullInterval:         time.Duration(cfg.PullInterval),
@@ -192,12 +196,12 @@ func (c *Client) TryJoinNetwork() error {
 		logger.Errorf("failed to marshal the request: %v", err)
 		return err
 	}
-	sig, err := c.blsPrivateKey.Sign(reqMsg)
+	sig, err := c.blsScheme.Sign(c.blsPrivateKey, reqMsg)
 	if err != nil {
 		logger.Errorf("failed to sign the request: %v", err)
 		return err
 	}
-	req.Signature = utils.BlsSignatureToHex(sig)
+	req.Signature = utils.Bytes2Hex(sig)
 	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
 	if err != nil {
 		logger.Errorf("failed to join the network: %v", err)
@@ -260,7 +264,7 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 			}
 			blsSigHash := block.BlsSignature().Hash()
 			// verify the proposer signature
-			verified, err := utils.VerifySignature(common.FromHex(block.ProposerPubKey()), blsSigHash, common.FromHex(block.ProposerSignature()))
+			verified, err := c.blsScheme.VerifySignature(common.FromHex(block.ProposerPubKey()), blsSigHash, common.FromHex(block.ProposerSignature()))
 			if err != nil || !verified {
 				chError <- fmt.Errorf("failed to verify the proposer signature: %v", err)
 				return
@@ -387,16 +391,16 @@ func (c *Client) TryCommitBlocks(blocks []*sequencertypes.Block) error {
 		go func(block *sequencertypes.Block) {
 			defer wg.Done()
 			blsSignature := block.BlsSignature()
-			blsSig, err := c.blsPrivateKey.Sign(blsSignature.Hash())
+			blsSig, err := c.blsScheme.Sign(c.blsPrivateKey, blsSignature.Hash())
 			if err != nil {
 				chError <- fmt.Errorf("failed to sign the BLS signature: %v", err)
 				return
 			}
-			blsSignature.BlsSignature = utils.BlsSignatureToHex(blsSig)
+			blsSignature.BlsSignature = utils.Bytes2Hex(blsSig)
 
 			// generate the ECDSA signature
 			msg := contypes.GetCommitRequestHash(blsSignature)
-			sig, err := crypto.Sign(msg, c.ecdsaPrivateKey)
+			sig, err := ecrypto.Sign(msg, c.ecdsaPrivateKey)
 			if err != nil {
 				chError <- fmt.Errorf("failed to ecdsa sign the block: %v", err)
 				return
