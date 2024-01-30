@@ -228,7 +228,7 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 		if res.Batch[i].EpochBlockNumber() != res.Batch[0].EpochBlockNumber() {
 			return nil, fmt.Errorf("the epoch block number is not equal: %d, %d", res.Batch[i].EpochBlockNumber(), res.Batch[0].EpochBlockNumber())
 		}
-		if res.Batch[i].CurrentCommittee() != common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes()) {
+		if res.Batch[i].CurrentCommittee() != common.Bytes2Hex(committeeData.CurrentCommittee.Root[:]) {
 			return nil, fmt.Errorf("the block committee root %s is not equal to the current root %v", res.Batch[i].CurrentCommittee(), committeeData)
 		}
 		if i > 0 && res.Batch[i].NextCommittee() != res.Batch[i-1].CurrentCommittee() {

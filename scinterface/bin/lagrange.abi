@@ -7,8 +7,8 @@
         "type": "address"
       },
       {
-        "internalType": "contract IServiceManager",
-        "name": "_serviceManager",
+        "internalType": "contract IStakeManager",
+        "name": "_stakeManager",
         "type": "address"
       }
     ],
@@ -26,6 +26,19 @@
       }
     ],
     "name": "Initialized",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      }
+    ],
+    "name": "OperatorDeregistered",
     "type": "event"
   },
   {
@@ -55,9 +68,34 @@
         "internalType": "address",
         "name": "operator",
         "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint32",
+        "name": "chainID",
+        "type": "uint32"
       }
     ],
-    "name": "OperatorSlashed",
+    "name": "OperatorSubscribed",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint32",
+        "name": "chainID",
+        "type": "uint32"
+      }
+    ],
+    "name": "OperatorUnsubscribed",
     "type": "event"
   },
   {
@@ -80,103 +118,16 @@
     "type": "event"
   },
   {
-    "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
-        "internalType": "address",
-        "name": "operator",
-        "type": "address"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "blockHash",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "currentCommitteeRoot",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes32",
-        "name": "nextCommitteeRoot",
-        "type": "bytes32"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "blockNumber",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint256",
-        "name": "epochNumber",
-        "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "blockSignature",
-        "type": "bytes"
-      },
-      {
-        "indexed": false,
-        "internalType": "bytes",
-        "name": "commitSignature",
-        "type": "bytes"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint32",
-        "name": "chainID",
-        "type": "uint32"
+        "internalType": "address[]",
+        "name": "operators",
+        "type": "address[]"
       }
     ],
-    "name": "UploadEvidence",
-    "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "UPDATE_TYPE_AMOUNT_CHANGE",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "UPDATE_TYPE_REGISTER",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "UPDATE_TYPE_UNREGISTER",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
+    "name": "addOperatorsToWhitelist",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -200,39 +151,35 @@
     "type": "function"
   },
   {
-    "inputs": [],
-    "name": "evidenceVerifier",
-    "outputs": [
-      {
-        "internalType": "contract EvidenceVerifier",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [
       {
         "internalType": "address",
         "name": "initialOwner",
-        "type": "address"
-      },
-      {
-        "internalType": "contract ISlashingAggregateVerifierTriage",
-        "name": "_AggVerify",
-        "type": "address"
-      },
-      {
-        "internalType": "contract EvidenceVerifier",
-        "name": "_evidenceVerifier",
         "type": "address"
       }
     ],
     "name": "initialize",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "operatorWhitelist",
+    "outputs": [
+      {
+        "internalType": "bool",
+        "name": "",
+        "type": "bool"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -251,17 +198,25 @@
   {
     "inputs": [
       {
-        "internalType": "bytes",
+        "internalType": "uint256[2]",
         "name": "_blsPubKey",
-        "type": "bytes"
-      },
-      {
-        "internalType": "uint32",
-        "name": "serveUntilBlock",
-        "type": "uint32"
+        "type": "uint256[2]"
       }
     ],
     "name": "register",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address[]",
+        "name": "operators",
+        "type": "address[]"
+      }
+    ],
+    "name": "removeOperatorsFromWhitelist",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -275,10 +230,10 @@
   },
   {
     "inputs": [],
-    "name": "serviceManager",
+    "name": "stakeManager",
     "outputs": [
       {
-        "internalType": "contract IServiceManager",
+        "internalType": "contract IStakeManager",
         "name": "",
         "type": "address"
       }
@@ -321,96 +276,6 @@
       }
     ],
     "name": "unsubscribe",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "components": [
-          {
-            "internalType": "address",
-            "name": "operator",
-            "type": "address"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "blockHash",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "correctBlockHash",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "currentCommitteeRoot",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "correctCurrentCommitteeRoot",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "nextCommitteeRoot",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "bytes32",
-            "name": "correctNextCommitteeRoot",
-            "type": "bytes32"
-          },
-          {
-            "internalType": "uint256",
-            "name": "blockNumber",
-            "type": "uint256"
-          },
-          {
-            "internalType": "uint256",
-            "name": "epochBlockNumber",
-            "type": "uint256"
-          },
-          {
-            "internalType": "bytes",
-            "name": "blockSignature",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "commitSignature",
-            "type": "bytes"
-          },
-          {
-            "internalType": "uint32",
-            "name": "chainID",
-            "type": "uint32"
-          },
-          {
-            "internalType": "bytes",
-            "name": "attestBlockHeader",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "sigProof",
-            "type": "bytes"
-          },
-          {
-            "internalType": "bytes",
-            "name": "aggProof",
-            "type": "bytes"
-          }
-        ],
-        "internalType": "struct EvidenceVerifier.Evidence",
-        "name": "evidence",
-        "type": "tuple"
-      }
-    ],
-    "name": "uploadEvidence",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

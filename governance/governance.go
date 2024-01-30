@@ -115,18 +115,16 @@ func (g *Governance) updateNodeStatuses() error {
 		logger.Infof("updating nodes %v", nodes)
 	}
 	for _, node := range nodes {
-		sNode, err := g.committeeSC.Operators(nil, common.HexToAddress(node.StakeAddress))
+		votingPower, err := g.committeeSC.GetOperatorVotingPower(nil, common.HexToAddress(node.StakeAddress), g.chainID)
 		if err != nil {
-			logger.Warnf("failed to get node %s: %v", node.StakeAddress, err)
+			logger.Warnf("failed to get operator voting power %s: %v", node.StakeAddress, err)
 			continue
 		}
-		logger.Infof("node found %v", sNode)
-		node.VotingPower = uint64(sNode.Amount.Int64())
+		logger.Infof("node found %v", node)
+		node.VotingPower = votingPower.Uint64()
 		if node.VotingPower == 0 {
 			logger.Infof("node %s has 0 voting power", node.StakeAddress)
 			node.Status = networktypes.NodeUnstaked
-		} else if sNode.Slashed {
-			node.Status = networktypes.NodeSlashed
 		} else {
 			node.Status = networktypes.NodeRegistered
 		}
@@ -187,7 +185,7 @@ func (g *Governance) updateCommittee() error {
 
 		committeeRoot := &types.CommitteeRoot{
 			ChainID:              g.chainID,
-			CurrentCommitteeRoot: common.Bytes2Hex(committeeData.CurrentCommittee.Root.Bytes()),
+			CurrentCommitteeRoot: common.Bytes2Hex(committeeData.CurrentCommittee.Root[:]),
 			TotalVotingPower:     committeeData.CurrentCommittee.TotalVotingPower.Uint64(),
 			EpochBlockNumber:     blockNumber,
 			EpochNumber:          epochNumber.Uint64(),
@@ -198,19 +196,26 @@ func (g *Governance) updateCommittee() error {
 			return fmt.Errorf("total voting power is 0")
 		}
 		operators := make([]networktypes.ClientNode, 0)
-		for i := int64(0); i < committeeData.CurrentCommittee.Height.Int64(); i++ {
+		for i := int64(0); i < committeeData.CurrentCommittee.LeafCount.Int64(); i++ {
 			addr, err := g.committeeSC.CommitteeAddrs(nil, g.chainID, big.NewInt(i))
 			if err != nil {
 				return err
 			}
-			operator, err := g.committeeSC.Operators(nil, addr)
+			votingPower, err := g.committeeSC.GetOperatorVotingPower(nil, addr, g.chainID)
 			if err != nil {
 				return err
 			}
+			blsPubKey, err := g.committeeSC.GetBlsPubKey(nil, addr)
+			if err != nil {
+				return err
+			}
+			pubKey := make([]byte, 0)
+			pubKey = append(pubKey, blsPubKey[0].Bytes()...)
+			pubKey = append(pubKey, blsPubKey[1].Bytes()...)
 			operators = append(operators, networktypes.ClientNode{
 				StakeAddress: addr.String(),
-				VotingPower:  uint64(operator.Amount.Int64()),
-				PublicKey:    operator.BlsPubKey,
+				VotingPower:  votingPower.Uint64(),
+				PublicKey:    pubKey,
 			})
 		}
 
