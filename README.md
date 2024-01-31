@@ -12,12 +12,13 @@ This is the Lagrange Node, a node that can be used to run a Lagrange network.
 ## Architecture
 
 The Lagrange Node consists of the following components:
+
 - Sequencer
-- Synchronizer
 - gRPC Sequencer Server
 - gRPC Client Node
 
 Here is the diagram of the architecture:
+
 <p align="center">
   <img src="./docs/highlevelflow.drawio.png"/>
 </p>
@@ -42,21 +43,21 @@ This will create a binary called `lagrange-node` in the `dist` directory.
 
 - To run the sequencer, run the following command:
 
-    ```bash
-    ./dist/lagrange-node run-sequencer -c <config-file>
-    ```
+  ```bash
+  ./dist/lagrange-node run-sequencer -c <config-file>
+  ```
 
 - To run the gRPC sequencer server, run the following command:
 
-    ```bash
-    ./dist/lagrange-node run-server -c <config-file>
-    ```
+  ```bash
+  ./dist/lagrange-node run-server -c <config-file>
+  ```
 
 - To join a network and run the client node, run the following command:
 
-    ```bash
-    ./dist/lagrange-node run-client -c <config-file>
-    ```
+  ```bash
+  ./dist/lagrange-node run-client -c <config-file>
+  ```
 
 ### Migration Tool
 
