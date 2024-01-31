@@ -2,7 +2,6 @@ package testutil
 
 import (
 	"context"
-	"math"
 	"math/big"
 	"time"
 
@@ -52,6 +51,6 @@ func RegisterOperator(client *ethclient.Client, auth *bind.TransactOpts, stakeAd
 	if err != nil {
 		return err
 	}
-	_, err = service.Register(auth, []byte{}, math.MaxUint32)
+	_, err = service.Register(auth, [2]*big.Int{big.NewInt(0), big.NewInt(0)})
 	return err
 }

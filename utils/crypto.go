@@ -65,6 +65,16 @@ func VerifySignature(pubKey, message, signature []byte) (bool, error) {
 	return sig.VerifyByte(pub, message)
 }
 
+// Hex2Bytes converts a hex string to bytes.
+func Hex2Bytes(hex string) []byte {
+	return common.FromHex(hex)
+}
+
+// Bytes2Hex converts bytes to a hex string.
+func Bytes2Hex(bytes []byte) string {
+	return common.Bytes2Hex(bytes)
+}
+
 // HexToBlsPrivKey converts a hex string to a BLS private key.
 func HexToBlsPrivKey(hex string) (*bls.SecretKey, error) {
 	priv := new(bls.SecretKey)
@@ -127,7 +137,7 @@ func GetSigner(ctx context.Context, c *ethclient.Client, accHexPrivateKey string
 
 // GetSignatureAffine returns the affine coordinates of the signature.
 func GetSignatureAffine(sig string) []byte {
-	bytesData := common.Hex2Bytes(sig)
+	bytesData := common.FromHex(sig)
 
 	sigK := new(blstSignature).Uncompress(bytesData)
 	x := (*blst.Fp2)(unsafe.Pointer(getPrivateField(sigK, "x")))

@@ -8,10 +8,13 @@ import (
 )
 
 const GOERLI_BATCHSTORSGE_ADDR = "0xe5d639b1283352f32477a95b5d4109bcf9d4acf3"
-const LOCAL_BATCHSTORSGE_ADDR = "0x2f947E51B9A7cF1d6651D0a568261673233ba42b"
+const LOCAL_BATCHSTORSGE_ADDR = "0xbB9dDB1020F82F93e45DA0e2CFbd27756DA36956"
 
 func TestEndpoints(t *testing.T) {
 	ethURL := os.Getenv("ETH_RPC")
+	if len(ethURL) == 0 {
+		t.Skip()
+	}
 	c, err := NewClient("http://localhost:8545", ethURL, GOERLI_BATCHSTORSGE_ADDR)
 	require.NoError(t, err)
 	id, err := c.GetChainID()
