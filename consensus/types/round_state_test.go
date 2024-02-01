@@ -21,7 +21,7 @@ func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, *Val
 		L1TxHash:      utils.RandomHex(32),
 	}
 	proposerSecKey, _ := blsScheme.GenerateRandomKey()
-	proposerPubKey, _ := blsScheme.GetPublicKey(proposerSecKey)
+	proposerPubKey, _ := blsScheme.GetPublicKey(proposerSecKey, true)
 	pBlock := &sequencertypes.Block{
 		BlockHeader: &sequencertypes.BlockHeader{
 			ProposerPubKey:   utils.Bytes2Hex(proposerPubKey),
@@ -40,7 +40,7 @@ func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, *Val
 	nodes := []networktypes.ClientNode{}
 	for i := 0; i < 10; i++ {
 		secKey, _ := blsScheme.GenerateRandomKey()
-		pubKey, _ := blsScheme.GetPublicKey(secKey)
+		pubKey, _ := blsScheme.GetPublicKey(secKey, true)
 		secKeys = append(secKeys, secKey)
 		node := networktypes.ClientNode{
 			PublicKey:    pubKey,

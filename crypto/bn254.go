@@ -53,14 +53,18 @@ func (s *BN254Scheme) GenerateRandomKey() ([]byte, error) {
 	return privKey, nil
 }
 
-func (s *BN254Scheme) GetPublicKey(privKey []byte) ([]byte, error) {
+func (s *BN254Scheme) GetPublicKey(privKey []byte, isCompressed bool) ([]byte, error) {
 	scalar := new(big.Int)
 	scalar.SetBytes(privKey[:sizeFr])
 
 	pubKey := new(bn254.G1Affine)
 	pubKey.ScalarMultiplication(&g, scalar)
 
-	pubKeyRaw := pubKey.Bytes()
+	if isCompressed {
+		pubKeyRaw := pubKey.Bytes()
+		return pubKeyRaw[:sizeFp], nil
+	}
+	pubKeyRaw := pubKey.RawBytes()
 	return pubKeyRaw[:], nil
 }
 

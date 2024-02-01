@@ -108,11 +108,17 @@ func (s *BLS12381Scheme) GenerateRandomKey() ([]byte, error) {
 	return privRaw[:], nil
 }
 
-func (s *BLS12381Scheme) GetPublicKey(privKey []byte) ([]byte, error) {
+func (s *BLS12381Scheme) GetPublicKey(privKey []byte, isCompressed bool) ([]byte, error) {
 	priv := new(bls.SecretKey)
 	if err := priv.Unmarshal(privKey); err != nil {
 		return nil, err
 	}
+
 	pubRaw := priv.GetPublicKey().Serialize()
-	return pubRaw[:], nil
+	if isCompressed {
+		return pubRaw[:], nil
+	}
+
+	pubKey := new(blst.P1Affine).Uncompress(pubRaw[:])
+	return pubKey.Serialize(), nil
 }

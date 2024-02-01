@@ -18,9 +18,14 @@ func (s *BlsTestSuite) TestKeyGeneration() {
 	s.Require().NoError(err)
 	s.Require().NotNil(privKey)
 
-	pubKey, err := s.scheme.GetPublicKey(privKey)
+	pubKey, err := s.scheme.GetPublicKey(privKey, true)
 	s.Require().NoError(err)
 	s.Require().NotNil(pubKey)
+
+	pubKey, err = s.scheme.GetPublicKey(privKey, false)
+	s.Require().NoError(err)
+	s.Require().NotNil(pubKey)
+
 }
 
 func (s *BlsTestSuite) TestSignature() {
@@ -28,7 +33,7 @@ func (s *BlsTestSuite) TestSignature() {
 	s.Require().NoError(err)
 	s.Require().NotNil(privKey)
 
-	pubKey, err := s.scheme.GetPublicKey(privKey)
+	pubKey, err := s.scheme.GetPublicKey(privKey, true)
 	s.Require().NoError(err)
 	s.Require().NotNil(pubKey)
 
@@ -55,7 +60,7 @@ func (s *BlsTestSuite) TestAggregation() {
 		s.Require().NoError(err)
 		s.Require().NotNil(privKey)
 
-		pubKey, err := s.scheme.GetPublicKey(privKey)
+		pubKey, err := s.scheme.GetPublicKey(privKey, true)
 		s.Require().NoError(err)
 		s.Require().NotNil(pubKey)
 
@@ -114,7 +119,7 @@ func BenchmarkAggregation(b *testing.B) {
 					if err != nil {
 						b.Fatal(err)
 					}
-					pubKey, err := scheme.GetPublicKey(privKey)
+					pubKey, err := scheme.GetPublicKey(privKey, true)
 					if err != nil {
 						b.Fatal(err)
 					}
