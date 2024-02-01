@@ -33,7 +33,7 @@ func GetCommitRequestHash(sig *sequencertypes.BlsSignature) []byte {
 	nextCommitteeRoot := common.FromHex(sig.NextCommittee)[:]
 	blockNumber := big.NewInt(int64(sig.BlockNumber())).FillBytes(blockNumberBuf[:])
 	l1BlockNumber := big.NewInt(int64(sig.L1BlockNumber())).FillBytes(l1BlockNumberBuf[:])
-	blockSignature := utils.GetSignatureAffine(sig.BlsSignature)
+	blockSignature := utils.Hex2Bytes(sig.BlsSignature)
 	chainID := make([]byte, 4)
 	binary.BigEndian.PutUint32(chainID, sig.ChainHeader.ChainId)
 

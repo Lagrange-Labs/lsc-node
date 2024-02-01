@@ -328,8 +328,8 @@ func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
 			if err != nil {
 				return fmt.Errorf("failed to get the previous committee root: %v", err)
 			}
-			if previousBlock.Block.NextCommittee() != common.Bytes2Hex(previousCommitteeData.Root.Bytes()) {
-				return fmt.Errorf("the previous block next committee root %s is not equal to the epoch committee root %s", previousBlock.Block.NextCommittee(), common.Bytes2Hex(previousCommitteeData.Root.Bytes()))
+			if previousBlock.Block.NextCommittee() != utils.Bytes2Hex(previousCommitteeData.Root[:]) {
+				return fmt.Errorf("the previous block next committee root %s is not equal to the epoch committee root %s", previousBlock.Block.NextCommittee(), utils.Bytes2Hex(previousCommitteeData.Root[:]))
 			}
 
 			c.nextBlockInfo = NextBlockInfo{
@@ -358,8 +358,8 @@ func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
 		return fmt.Errorf("failed to get the previous committee root: %v", err)
 	}
 	for _, block := range batch {
-		if block.CurrentCommittee() != common.Bytes2Hex(previousCommitteeData.Root.Bytes()) {
-			return fmt.Errorf("the block %d committee root %s is not equal to the epoch committee root %s", block.BlockNumber(), block.CurrentCommittee(), common.Bytes2Hex(previousCommitteeData.Root.Bytes()))
+		if block.CurrentCommittee() != utils.Bytes2Hex(previousCommitteeData.Root[:]) {
+			return fmt.Errorf("the block %d committee root %s is not equal to the epoch committee root %s", block.BlockNumber(), block.CurrentCommittee(), utils.Bytes2Hex(previousCommitteeData.Root[:]))
 		}
 	}
 	// still can verify the next committee root even if the committee epoch rotates
@@ -367,8 +367,8 @@ func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
 	if err != nil {
 		return fmt.Errorf("failed to get the committee root: %v", err)
 	}
-	if lastBlock.NextCommittee() != common.Bytes2Hex(committeeData.Root.Bytes()) {
-		return fmt.Errorf("the last block %d next committee root %s is not equal to the epoch committee root %s", lastBlock.BlockNumber(), lastBlock.NextCommittee(), common.Bytes2Hex(committeeData.Root.Bytes()))
+	if lastBlock.NextCommittee() != utils.Bytes2Hex(committeeData.Root[:]) {
+		return fmt.Errorf("the last block %d next committee root %s is not equal to the epoch committee root %s", lastBlock.BlockNumber(), lastBlock.NextCommittee(), utils.Bytes2Hex(committeeData.Root[:]))
 	}
 
 	c.nextBlockInfo = NextBlockInfo{
