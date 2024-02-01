@@ -44,7 +44,7 @@ type State struct {
 func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 	privKey := utils.Hex2Bytes(cfg.ProposerPrivateKey)
 	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
-	pubKey, err := blsScheme.GetPublicKey(privKey)
+	pubKey, err := blsScheme.GetPublicKey(privKey, true)
 	if err != nil {
 		logger.Fatalf("failed to get the public key: %v", err)
 	}

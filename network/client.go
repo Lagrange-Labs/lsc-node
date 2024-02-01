@@ -87,7 +87,7 @@ func NewClient(cfg *ClientConfig) (*Client, error) {
 
 	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
 	blsPriv := utils.Hex2Bytes(cfg.BLSPrivateKey)
-	pubkey, err := blsScheme.GetPublicKey(blsPriv)
+	pubkey, err := blsScheme.GetPublicKey(blsPriv, true)
 	if err != nil {
 		logger.Fatalf("failed to get the bls public key: %v", err)
 	}
