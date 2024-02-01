@@ -35,6 +35,12 @@
         "internalType": "uint256",
         "name": "freezeDuration",
         "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "quorumNumber",
+        "type": "uint8"
       }
     ],
     "name": "InitCommittee",
@@ -93,32 +99,6 @@
   },
   {
     "inputs": [],
-    "name": "ACCOUNT_CREATION_HASH",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "AUTHORISE_TYPEHASH",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
     "name": "COMMITTEE_CURRENT",
     "outputs": [
       {
@@ -145,12 +125,12 @@
   },
   {
     "inputs": [],
-    "name": "DOMAIN_SEPARATOR",
+    "name": "INNER_NODE_PREFIX",
     "outputs": [
       {
-        "internalType": "bytes32",
-        "name": "domainSeparator",
-        "type": "bytes32"
+        "internalType": "bytes1",
+        "name": "",
+        "type": "bytes1"
       }
     ],
     "stateMutability": "view",
@@ -158,51 +138,12 @@
   },
   {
     "inputs": [],
-    "name": "EIP712DOMAIN_HASH",
+    "name": "LEAF_NODE_PREFIX",
     "outputs": [
       {
-        "internalType": "bytes32",
+        "internalType": "bytes1",
         "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "HERMEZ_NETWORK_HASH",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "NAME_HASH",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "VERSION_HASH",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
+        "type": "bytes1"
       }
     ],
     "stateMutability": "view",
@@ -216,14 +157,9 @@
         "type": "address"
       },
       {
-        "internalType": "bytes",
+        "internalType": "uint256[2]",
         "name": "blsPubKey",
-        "type": "bytes"
-      },
-      {
-        "internalType": "uint32",
-        "name": "serveUntilBlock",
-        "type": "uint32"
+        "type": "uint256[2]"
       }
     ],
     "name": "addOperator",
@@ -319,9 +255,9 @@
     "name": "committeeNodes",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "bytes32",
         "name": "",
-        "type": "uint256"
+        "type": "bytes32"
       }
     ],
     "stateMutability": "view",
@@ -351,6 +287,11 @@
         "internalType": "uint256",
         "name": "freezeDuration",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "quorumNumber",
+        "type": "uint8"
       }
     ],
     "stateMutability": "view",
@@ -372,13 +313,13 @@
     "name": "committees",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "bytes32",
         "name": "root",
-        "type": "uint256"
+        "type": "bytes32"
       },
       {
         "internalType": "uint256",
-        "name": "height",
+        "name": "leafCount",
         "type": "uint256"
       },
       {
@@ -398,38 +339,12 @@
         "type": "address"
       }
     ],
-    "name": "freezeOperator",
-    "outputs": [],
-    "stateMutability": "nonpayable",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "operator",
-        "type": "address"
-      }
-    ],
     "name": "getBlsPubKey",
     "outputs": [
       {
-        "internalType": "bytes",
+        "internalType": "uint256[2]",
         "name": "",
-        "type": "bytes"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "getChainId",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "chainId",
-        "type": "uint256"
+        "type": "uint256[2]"
       }
     ],
     "stateMutability": "view",
@@ -453,13 +368,13 @@
       {
         "components": [
           {
-            "internalType": "uint256",
+            "internalType": "bytes32",
             "name": "root",
-            "type": "uint256"
+            "type": "bytes32"
           },
           {
             "internalType": "uint256",
-            "name": "height",
+            "name": "leafCount",
             "type": "uint256"
           },
           {
@@ -473,9 +388,9 @@
         "type": "tuple"
       },
       {
-        "internalType": "uint256",
+        "internalType": "bytes32",
         "name": "nextRoot",
-        "type": "uint256"
+        "type": "bytes32"
       }
     ],
     "stateMutability": "view",
@@ -513,12 +428,29 @@
         "type": "address"
       }
     ],
-    "name": "getLeafHash",
+    "name": "getOperatorStatus",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "uint8",
         "name": "",
-        "type": "uint256"
+        "type": "uint8"
+      },
+      {
+        "components": [
+          {
+            "internalType": "uint32",
+            "name": "chainID",
+            "type": "uint32"
+          },
+          {
+            "internalType": "uint256",
+            "name": "blockNumber",
+            "type": "uint256"
+          }
+        ],
+        "internalType": "struct ILagrangeCommittee.UnsubscribedParam[]",
+        "name": "",
+        "type": "tuple[]"
       }
     ],
     "stateMutability": "view",
@@ -528,35 +460,21 @@
     "inputs": [
       {
         "internalType": "address",
-        "name": "operator",
+        "name": "opAddr",
         "type": "address"
-      }
-    ],
-    "name": "getServeUntilBlock",
-    "outputs": [
+      },
       {
         "internalType": "uint32",
-        "name": "",
+        "name": "chainID",
         "type": "uint32"
       }
     ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "operator",
-        "type": "address"
-      }
-    ],
-    "name": "getSlashed",
+    "name": "getOperatorVotingPower",
     "outputs": [
       {
-        "internalType": "bool",
+        "internalType": "uint96",
         "name": "",
-        "type": "bool"
+        "type": "uint96"
       }
     ],
     "stateMutability": "view",
@@ -567,36 +485,6 @@
       {
         "internalType": "address",
         "name": "initialOwner",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_poseidon1Elements",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_poseidon2Elements",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_poseidon3Elements",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_poseidon4Elements",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_poseidon5Elements",
-        "type": "address"
-      },
-      {
-        "internalType": "address",
-        "name": "_poseidon6Elements",
         "type": "address"
       }
     ],
@@ -678,45 +566,6 @@
     "type": "function"
   },
   {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "operators",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "amount",
-        "type": "uint256"
-      },
-      {
-        "internalType": "bytes",
-        "name": "blsPubKey",
-        "type": "bytes"
-      },
-      {
-        "internalType": "bool",
-        "name": "slashed",
-        "type": "bool"
-      },
-      {
-        "internalType": "uint32",
-        "name": "serveUntilBlock",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint256",
-        "name": "unsubscribedBlockNumber",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
     "inputs": [],
     "name": "owner",
     "outputs": [
@@ -745,6 +594,11 @@
         "internalType": "uint256",
         "name": "freezeDuration",
         "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "quorunNumber",
+        "type": "uint8"
       }
     ],
     "name": "registerChain",
@@ -864,6 +718,11 @@
         "internalType": "address",
         "name": "operator",
         "type": "address"
+      },
+      {
+        "internalType": "uint32",
+        "name": "chainID",
+        "type": "uint32"
       }
     ],
     "name": "updateOperatorAmount",
