@@ -35,7 +35,7 @@ func TestBLSSignVerify(t *testing.T) {
 	blsScheme := crypto.NewBLSScheme(crypto.BN254)
 	priv, err := blsScheme.GenerateRandomKey()
 	require.NoError(t, err)
-	pub, err := blsScheme.GetPublicKey(priv)
+	pub, err := blsScheme.GetPublicKey(priv, true)
 	require.NoError(t, err)
 
 	// JoinNetwork request sign
