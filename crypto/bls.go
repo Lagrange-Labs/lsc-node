@@ -15,7 +15,7 @@ type BLSScheme interface {
 	VerifyAggregatedSignature(pubKeys [][]byte, message, signature []byte) (bool, error)
 	Sign(privKey, message []byte) ([]byte, error)
 	GenerateRandomKey() ([]byte, error)
-	GetPublicKey(privKey []byte) ([]byte, error)
+	GetPublicKey(privKey []byte, isCompressed bool) ([]byte, error)
 }
 
 // NewBLSScheme returns a new BLS scheme implementation.
