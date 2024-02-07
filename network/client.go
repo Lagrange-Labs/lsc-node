@@ -231,8 +231,8 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 		if res.Batch[i].CurrentCommittee() != common.Bytes2Hex(committeeData.CurrentCommittee.Root[:]) {
 			return nil, fmt.Errorf("the block committee root %s is not equal to the current root %v", res.Batch[i].CurrentCommittee(), committeeData)
 		}
-		if i > 0 && res.Batch[i].NextCommittee() != res.Batch[i-1].CurrentCommittee() {
-			return nil, fmt.Errorf("the block next committee root %s is not equal to the next block's committee root %s", res.Batch[i].NextCommittee(), res.Batch[i-1].CurrentCommittee())
+		if i > 0 && res.Batch[i-1].NextCommittee() != res.Batch[i].CurrentCommittee() {
+			return nil, fmt.Errorf("the block next committee root %s is not equal to the next block's committee root %s", res.Batch[i-1].NextCommittee(), res.Batch[i].CurrentCommittee())
 		}
 	}
 	c.nextCommitteeRoot = res.Batch[len(res.Batch)-1].NextCommittee()
