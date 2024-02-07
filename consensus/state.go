@@ -338,7 +338,8 @@ func (s *State) startRound(blockNumber uint64) error {
 			return fmt.Errorf("failed to update the last committee root: %v", err)
 		}
 	}
-	logger.Infof("the next block batch is loaded: %v", blocks)
+
+	logger.Infof("the next block batch is loaded: %v blocks: %v", blockNumbers, blocks)
 
 	return nil
 }
