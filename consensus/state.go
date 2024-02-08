@@ -308,10 +308,16 @@ func (s *State) startRound(blockNumber uint64) error {
 	s.rounds = make(map[uint64]*types.RoundState)
 
 	blockNumbers := make([]uint64, 0)
-	for _, block := range blocks {
+	for i, block := range blocks {
 		block.BlockHeader = &sequencertypes.BlockHeader{}
 		block.BlockHeader.CurrentCommittee = committee.CurrentCommitteeRoot
 		block.BlockHeader.NextCommittee = committee.CurrentCommitteeRoot
+		if i == len(blocks)-1 {
+			if committee.EpochNumber < s.lastCommittee.EpochNumber {
+				// update the next committee of the last block
+				blocks[i].BlockHeader.NextCommittee = s.lastCommittee.CurrentCommitteeRoot
+			}
+		}
 		block.BlockHeader.EpochBlockNumber = committee.EpochBlockNumber
 		block.BlockHeader.TotalVotingPower = committee.TotalVotingPower
 
@@ -331,8 +337,6 @@ func (s *State) startRound(blockNumber uint64) error {
 	}
 
 	if committee.EpochNumber < s.lastCommittee.EpochNumber {
-		// update the next committee of the last block
-		blocks[len(blocks)-1].BlockHeader.NextCommittee = s.lastCommittee.CurrentCommitteeRoot
 		s.lastCommittee.IsFinalized = true
 		if err := s.storage.UpdateCommitteeRoot(context.Background(), s.lastCommittee); err != nil {
 			return fmt.Errorf("failed to update the last committee root: %v", err)

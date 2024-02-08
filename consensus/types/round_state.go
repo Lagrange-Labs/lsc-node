@@ -15,7 +15,6 @@ import (
 type CommitSignature struct {
 	Signature *sequencertypes.BlsSignature
 	PubKey    []byte
-	StakeAddr string
 }
 
 // RoundState defines the internal consensus state.
@@ -23,7 +22,7 @@ type RoundState struct {
 	blsScheme     crypto.BLSScheme
 	proposalBlock *sequencertypes.Block
 
-	commitSignatures []CommitSignature
+	commitSignatures map[string]CommitSignature
 	evidences        []*sequencertypes.BlsSignature // to determine slashing
 
 	rwMutex   sync.RWMutex // to protect the round state updates
@@ -44,7 +43,7 @@ func (rs *RoundState) UpdateRoundState(proposalBlock *sequencertypes.Block) {
 	defer rs.rwMutex.Unlock()
 
 	rs.proposalBlock = proposalBlock
-	rs.commitSignatures = make([]CommitSignature, 0)
+	rs.commitSignatures = make(map[string]CommitSignature)
 	rs.isBlocked = false
 }
 
@@ -58,11 +57,10 @@ func (rs *RoundState) AddCommit(commit *sequencertypes.BlsSignature, pubKey []by
 		return
 	}
 
-	rs.commitSignatures = append(rs.commitSignatures, CommitSignature{
+	rs.commitSignatures[stakeAddr] = CommitSignature{
 		Signature: commit,
 		PubKey:    pubKey,
-		StakeAddr: stakeAddr,
-	})
+	}
 }
 
 // BlockCommit blocks adds a commit to the round state.
@@ -119,8 +117,8 @@ func (rs *RoundState) CheckEnoughVotingPower(vs *ValidatorSet) bool {
 	defer rs.rwMutex.RUnlock()
 
 	votingPower := uint64(0)
-	for _, commit := range rs.commitSignatures {
-		votingPower += vs.GetVotingPower(commit.StakeAddr)
+	for stakeAddr := range rs.commitSignatures {
+		votingPower += vs.GetVotingPower(stakeAddr)
 	}
 
 	logger.Infof("committed voting power: %v, validator set voting power: %v", votingPower, vs.GetTotalVotingPower())
@@ -162,23 +160,22 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 	}
 
 	// find the invalid signature
-	for i, pubKeyRaw := range pubKeys {
-		commit := rs.commitSignatures[i]
+	for _, commit := range rs.commitSignatures {
 		commitHash := commit.Signature.Hash()
 		if !bytes.Equal(commitHash, sigHash) {
 			logger.Errorf("wrong commit message: %v, original: %v", utils.Bytes2Hex(commitHash), utils.Bytes2Hex(sigHash))
-			rs.evidences = append(rs.evidences, rs.commitSignatures[i].Signature)
+			rs.evidences = append(rs.evidences, commit.Signature)
 			continue
 		}
-		verified, err := rs.blsScheme.VerifySignature(pubKeyRaw, commitHash, signatures[i])
+		verified, err := rs.blsScheme.VerifySignature(commit.PubKey, commitHash, utils.Hex2Bytes(commit.Signature.BlsSignature))
 		if err != nil {
 			logger.Errorf("failed to verify the signature: %v", err)
-			rs.evidences = append(rs.evidences, rs.commitSignatures[i].Signature)
+			rs.evidences = append(rs.evidences, commit.Signature)
 			continue
 		}
 		if !verified {
 			logger.Errorf("invalid signature: %v", commit)
-			rs.evidences = append(rs.evidences, rs.commitSignatures[i].Signature)
+			rs.evidences = append(rs.evidences, commit.Signature)
 		}
 	}
 
