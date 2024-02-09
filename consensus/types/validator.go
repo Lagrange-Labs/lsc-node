@@ -44,6 +44,11 @@ func NewValidatorSet(nodes []networktypes.ClientNode, committeeVotingPower uint6
 	}
 }
 
+// GetValidatorCount returns the number of validators.
+func (vs *ValidatorSet) GetValidatorCount() int {
+	return len(vs.validators)
+}
+
 // GetVotingPower returns the voting power of a validator.
 func (vs *ValidatorSet) GetVotingPower(stakeAddr string) uint64 {
 	return vs.votingPowerMap[stakeAddr]

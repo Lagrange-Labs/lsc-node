@@ -2,6 +2,7 @@ package sequencer
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
@@ -103,6 +104,7 @@ func (s *Sequencer) Start() error {
 					BlockHash:   blockHash,
 					ChainId:     s.chainID,
 				},
+				SequencedTime: fmt.Sprintf("%d", time.Now().UnixMicro()),
 			}); err != nil {
 				return err
 			}

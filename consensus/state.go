@@ -162,7 +162,9 @@ func (s *State) OnStart() {
 				failedRounds[blockNumber] = round
 				continue
 			}
-			if err := s.storage.UpdateBlock(context.Background(), round.GetCurrentBlock()); err != nil {
+			block := round.GetCurrentBlock()
+			block.FinalizedTime = fmt.Sprintf("%d", time.Now().UnixMicro())
+			if err := s.storage.UpdateBlock(context.Background(), block); err != nil {
 				logger.Errorf("failed to update the block %d: %v", round.GetCurrentBlockNumber(), err)
 				continue
 			}
@@ -182,7 +184,9 @@ func (s *State) OnStart() {
 			logger.Error("the infinite loop is started!")
 			_ = s.processRound(context.Background())
 			for blockNumber, round := range s.rounds {
-				if err := s.storage.UpdateBlock(context.Background(), round.GetCurrentBlock()); err != nil {
+				block := round.GetCurrentBlock()
+				block.FinalizedTime = fmt.Sprintf("%d", time.Now().UnixMicro())
+				if err := s.storage.UpdateBlock(context.Background(), block); err != nil {
 					logger.Errorf("failed to update the block %d: %v", round.GetCurrentBlockNumber(), err)
 					continue
 				}
