@@ -84,5 +84,8 @@ func ConvertMongoToBlock(m bson.M) *sequencertypes.Block {
 		}
 	}
 
+	block.SequencedTime = m["sequenced_time"].(string)
+	block.FinalizedTime = m["finalized_time"].(string)
+
 	return block
 }
