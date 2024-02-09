@@ -2,6 +2,7 @@ package sequencer
 
 import (
 	"context"
+	"fmt"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -107,6 +108,7 @@ func (s *Sequencer) Start() error {
 					ChainId:       s.chainID,
 					L1BlockNumber: blockHeader.L1BlockNumber,
 				},
+				SequencedTime: fmt.Sprintf("%d", time.Now().UnixMicro()),
 			}); err != nil {
 				return err
 			}
