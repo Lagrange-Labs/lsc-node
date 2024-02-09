@@ -156,7 +156,7 @@ func (s *State) OnStart() {
 				continue
 			}
 			block := round.GetCurrentBlock()
-			block.FianlizedTime = fmt.Sprintf("%d", time.Now().UnixMicro())
+			block.FinalizedTime = fmt.Sprintf("%d", time.Now().UnixMicro())
 			if err := s.storage.UpdateBlock(context.Background(), block); err != nil {
 				logger.Errorf("failed to update the block %d: %v", round.GetCurrentBlockNumber(), err)
 				failedRounds[blockNumber] = round
@@ -179,7 +179,7 @@ func (s *State) OnStart() {
 			_ = s.processRound(context.Background())
 			for blockNumber, round := range s.rounds {
 				block := round.GetCurrentBlock()
-				block.FianlizedTime = fmt.Sprintf("%d", time.Now().UnixMicro())
+				block.FinalizedTime = fmt.Sprintf("%d", time.Now().UnixMicro())
 				if err := s.storage.UpdateBlock(context.Background(), block); err != nil {
 					logger.Errorf("failed to update the block %d: %v", round.GetCurrentBlockNumber(), err)
 					continue

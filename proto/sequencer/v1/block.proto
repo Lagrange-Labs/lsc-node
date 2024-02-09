@@ -29,7 +29,7 @@ message Block {
     repeated string pub_keys = 3;
     string agg_signature = 4;
     string sequenced_time = 5;
-    string fianlized_time = 6;
+    string finalized_time = 6;
 }
 
 // BlsSignature is the BLS signature of the given round
