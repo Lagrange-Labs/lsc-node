@@ -1,7 +1,9 @@
 package mongodb
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
@@ -28,7 +30,9 @@ func TestConvertProtobufToMongo(t *testing.T) {
 			utils.RandomHex(32),
 			utils.RandomHex(32),
 		},
-		AggSignature: utils.RandomHex(96),
+		AggSignature:  utils.RandomHex(96),
+		SequencedTime: fmt.Sprintf("%d", time.Now().UnixMicro()),
+		FinalizedTime: fmt.Sprintf("%d", time.Now().UnixMicro()),
 	}
 	mBlock, err := ConvertProtobufToMongo(block)
 	require.NoError(t, err)
@@ -41,6 +45,8 @@ func TestConvertProtobufToMongo(t *testing.T) {
 	require.Equal(t, block.PubKeys[0], mBlock["pub_keys"].([]string)[0])
 	require.Equal(t, block.PubKeys[1], mBlock["pub_keys"].([]string)[1])
 	require.Equal(t, block.AggSignature, mBlock["agg_signature"])
+	require.Equal(t, block.SequencedTime, mBlock["sequenced_time"])
+	require.Equal(t, block.FinalizedTime, mBlock["finalized_time"])
 }
 
 func TestConvertMongoToBlock(t *testing.T) {
@@ -61,7 +67,9 @@ func TestConvertMongoToBlock(t *testing.T) {
 			utils.RandomHex(32),
 			utils.RandomHex(32),
 		},
-		"agg_signature": utils.RandomHex(96),
+		"agg_signature":  utils.RandomHex(96),
+		"sequenced_time": fmt.Sprintf("%d", time.Now().UnixMicro()),
+		"finalized_time": fmt.Sprintf("%d", time.Now().UnixMicro()),
 	}
 	block := ConvertMongoToBlock(m)
 	require.Equal(t, m["block_header"].(bson.M)["epoch_block_number"], int64(block.BlockHeader.EpochBlockNumber))
@@ -73,4 +81,6 @@ func TestConvertMongoToBlock(t *testing.T) {
 	require.Equal(t, m["pub_keys"].(bson.A)[0], block.PubKeys[0])
 	require.Equal(t, m["pub_keys"].(bson.A)[1], block.PubKeys[1])
 	require.Equal(t, m["agg_signature"], block.AggSignature)
+	require.Equal(t, m["sequenced_time"], block.SequencedTime)
+	require.Equal(t, m["finalized_time"], block.FinalizedTime)
 }
