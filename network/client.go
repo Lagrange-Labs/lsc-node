@@ -31,7 +31,7 @@ import (
 
 const CommitteeCacheSize = 10
 
-type NextBlockInfo struct {
+type PreviousBatchInfo struct {
 	NextCommitteeRoot string
 	L1BlockNumber     uint64
 }
@@ -50,7 +50,7 @@ type Client struct {
 	stakeAddress    string
 	lastBlockNumber uint64
 	pullInterval    time.Duration
-	nextBlockInfo   NextBlockInfo
+	prevBatchInfo   PreviousBatchInfo
 	committeeCache  *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
 
 	ctx        context.Context
@@ -304,14 +304,14 @@ func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommi
 }
 
 func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
-	// initialize the next block info
-	if len(c.nextBlockInfo.NextCommitteeRoot) == 0 {
+	// initialize the previous batch info
+	if len(c.prevBatchInfo.NextCommitteeRoot) == 0 {
 		previousBlock, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: batch[0].BlockNumber() - 1})
 		if err != nil {
 			return fmt.Errorf("failed to get the previous block: %v", err)
 		}
 		if previousBlock.Block == nil {
-			c.nextBlockInfo = NextBlockInfo{
+			c.prevBatchInfo = PreviousBatchInfo{
 				NextCommitteeRoot: batch[0].CurrentCommittee(),
 				L1BlockNumber:     batch[0].L1BlockNumber(),
 			}
@@ -332,15 +332,15 @@ func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
 				return fmt.Errorf("the previous block next committee root %s is not equal to the epoch committee root %s", previousBlock.Block.NextCommittee(), utils.Bytes2Hex(previousCommitteeData.Root[:]))
 			}
 
-			c.nextBlockInfo = NextBlockInfo{
+			c.prevBatchInfo = PreviousBatchInfo{
 				NextCommitteeRoot: previousBlock.Block.NextCommittee(),
 				L1BlockNumber:     previousBlock.Block.L1BlockNumber(),
 			}
 		}
 	}
 	// verify the previous block's next committee root
-	if len(c.nextBlockInfo.NextCommitteeRoot) > 0 && batch[0].CurrentCommittee() != c.nextBlockInfo.NextCommitteeRoot {
-		return fmt.Errorf("the block committee root %s is not equal to the previous batch's next committee root %s", batch[0].CurrentCommittee(), c.nextBlockInfo.NextCommitteeRoot)
+	if len(c.prevBatchInfo.NextCommitteeRoot) > 0 && batch[0].CurrentCommittee() != c.prevBatchInfo.NextCommitteeRoot {
+		return fmt.Errorf("the block committee root %s is not equal to the previous batch's next committee root %s", batch[0].CurrentCommittee(), c.prevBatchInfo.NextCommitteeRoot)
 	}
 	for i, block := range batch {
 		if i > 0 && block.CurrentCommittee() != batch[i-1].NextCommittee() {
@@ -349,7 +349,7 @@ func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
 	}
 
 	lastBlock := batch[len(batch)-1]
-	previousBlockNumber := c.nextBlockInfo.L1BlockNumber
+	previousBlockNumber := c.prevBatchInfo.L1BlockNumber
 	if len(batch) > 1 {
 		previousBlockNumber = batch[len(batch)-2].L1BlockNumber()
 	}
@@ -371,7 +371,7 @@ func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
 		return fmt.Errorf("the last block %d next committee root %s is not equal to the epoch committee root %s", lastBlock.BlockNumber(), lastBlock.NextCommittee(), utils.Bytes2Hex(committeeData.Root[:]))
 	}
 
-	c.nextBlockInfo = NextBlockInfo{
+	c.prevBatchInfo = PreviousBatchInfo{
 		NextCommitteeRoot: lastBlock.NextCommittee(),
 		L1BlockNumber:     lastBlock.L1BlockNumber(),
 	}

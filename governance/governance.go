@@ -115,7 +115,7 @@ func (g *Governance) Start() {
 	}()
 
 	if err := g.updateCommittee(); err != nil {
-		logger.Fatalf("failed to update committee root: %w", err)
+		logger.Errorf("failed to update committee root: %w", err)
 	}
 
 	ticker := time.NewTicker(g.stakingInterval)
