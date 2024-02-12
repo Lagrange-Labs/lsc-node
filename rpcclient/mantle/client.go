@@ -82,7 +82,12 @@ func (c *Client) GetL2FinalizedBlockNumber() (uint64, error) {
 			logger.Infof("Missing trie node error: %v", err)
 			return math.MaxUint64, nil
 		}
-		return 0, err
+		// TODO: This is a temporary workaround for the storage contract not being deployed yet.
+		curL2Number, err := c.GetCurrentBlockNumber()
+		if err != nil {
+			return 0, err
+		}
+		return curL2Number - 1000, nil
 	}
 
 	var blockNumber *big.Int
