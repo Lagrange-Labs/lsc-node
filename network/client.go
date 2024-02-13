@@ -212,6 +212,8 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 		return nil, ErrBlockNotReady
 	}
 
+	logger.Infof("got the block batch: %d, %d\n", res.Batch[0].BlockNumber(), res.Batch[len(res.Batch)-1].BlockNumber())
+
 	wg := sync.WaitGroup{}
 	wg.Add(len(res.Batch))
 	chError := make(chan error, len(res.Batch))
@@ -278,7 +280,6 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 
 // TryCommitBlocks tries to commit the signature to the network.
 func (c *Client) TryCommitBlocks(blocks []*sequencertypes.Block) error {
-
 	wg := sync.WaitGroup{}
 	wg.Add(len(blocks))
 	chError := make(chan error, len(blocks))

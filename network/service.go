@@ -108,7 +108,7 @@ func (s *sequencerService) GetBatch(ctx context.Context, req *types.GetBatchRequ
 
 // CommitBatch is a method to commit the proposed batch.
 func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream types.NetworkService_CommitBatchServer) error {
-	logger.Infof("CommitBatch request from %v\n", req.StakeAddress)
+	logger.Infof("CommitBatch request from %v", req.StakeAddress)
 	// verify the registered node
 	ip, err := getIPAddress(stream.Context())
 	if err != nil {
@@ -125,15 +125,34 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 		return fmt.Errorf("the node is not registered: %v", node.Status)
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(len(req.BlsSignatures))
-	chError := make(chan error, len(req.BlsSignatures))
-	lastBlockNumber := uint64(0)
+	// verify if the requested block number is matched with the open round
+	blocks := s.consensus.GetOpenRoundBlocks(0)
+	if len(blocks) == 0 {
+		return fmt.Errorf("the current batch is not valid: %v", req.BlsSignatures[0].BlockNumber())
+	}
 
+	if len(blocks) != len(req.BlsSignatures) {
+		return ErrWrongBlockNumber
+	}
+
+	signatures := make(map[uint64]*sequencertypes.BlsSignature)
+	st, en := blocks[0].BlockNumber(), blocks[len(blocks)-1].BlockNumber()
 	for _, signature := range req.BlsSignatures {
-		if signature.BlockNumber() > lastBlockNumber {
-			lastBlockNumber = signature.BlockNumber()
+		blockNumber := signature.BlockNumber()
+		if st <= blockNumber && blockNumber <= en {
+			signatures[blockNumber] = signature
 		}
+	}
+
+	if len(signatures) != len(blocks) {
+		return ErrWrongBlockNumber
+	}
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(signatures))
+	chError := make(chan error, len(signatures))
+
+	for _, signature := range signatures {
 		go func(signature *sequencertypes.BlsSignature) {
 			defer wg.Done()
 			// verify the peer signature
@@ -171,12 +190,11 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 		case <-timeoutCtx.Done():
 			return fmt.Errorf("failed to commit the batch: %v", timeoutCtx.Err())
 		default:
-			if s.consensus.IsFinalized(lastBlockNumber) {
+			if s.consensus.IsFinalized(en) {
 				return stream.Send(&types.CommitBatchResponse{
 					Result: true,
 				})
 			}
-			time.Sleep(200 * time.Millisecond)
 		}
 	}
 }

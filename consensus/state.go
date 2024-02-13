@@ -238,9 +238,7 @@ func (s *State) GetOpenRoundBlocks(blockNumber uint64) []*sequencertypes.Block {
 
 	blocks := make([]*sequencertypes.Block, 0)
 	for _, round := range s.rounds {
-		if !round.IsFinalized() {
-			blocks = append(blocks, round.GetCurrentBlock())
-		}
+		blocks = append(blocks, round.GetCurrentBlock())
 	}
 
 	// sort the blocks by the block number
