@@ -19,7 +19,11 @@ func init() {
 
 	// Set the log level and format
 	log.SetLevel(logrus.DebugLevel)
-	log.SetFormatter(&logrus.TextFormatter{})
+	log.SetFormatter(&logrus.TextFormatter{
+		TimestampFormat: "2006-01-02T15:04:05.000Z07:00",
+		FullTimestamp:   true,
+		DisableQuote:    true,
+	})
 }
 
 func sprintStackTrace(st []tracerr.Frame) string {
@@ -42,7 +46,8 @@ func appendStackTraceMaybeArgs(args []interface{}) []interface{} {
 		if err, ok := args[i].(error); ok {
 			err = tracerr.Wrap(err)
 			st := tracerr.StackTrace(err)
-			return append(args, sprintStackTrace(st))
+			stackTrace := sprintStackTrace(st)
+			args[i] = fmt.Sprintf("%v\nStack trace: %s", err, stackTrace)
 		}
 	}
 	return args

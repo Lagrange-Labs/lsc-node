@@ -86,13 +86,16 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 
 // GetBatch is a method to get the proposed batch.
 func (s *sequencerService) GetBatch(ctx context.Context, req *types.GetBatchRequest) (*types.GetBatchResponse, error) {
+	logger.Infof("GetBatch request from %v, %d", req.StakeAddress, req.BlockNumber)
 	// verify the registered node
 	ip, err := getIPAddress(ctx)
 	if err != nil {
+		logger.Warnf("Failed to get IP address: %v", err)
 		return nil, err
 	}
 	node, err := s.storage.GetNodeByStakeAddr(ctx, req.StakeAddress, s.chainID)
 	if err != nil {
+		logger.Warnf("Failed to get the node: %v err: %v", req.StakeAddress, err)
 		return nil, err
 	}
 	if node.IPAddress != ip {
@@ -108,20 +111,23 @@ func (s *sequencerService) GetBatch(ctx context.Context, req *types.GetBatchRequ
 
 // CommitBatch is a method to commit the proposed batch.
 func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream types.NetworkService_CommitBatchServer) error {
-	logger.Infof("CommitBatch request from %v", req.StakeAddress)
+	logger.Infof("CommitBatch request from %v, %d", req.StakeAddress, req.BlsSignatures[0].BlockNumber())
 	// verify the registered node
 	ip, err := getIPAddress(stream.Context())
 	if err != nil {
+		logger.Warnf("Failed to get IP address: %v", err)
 		return err
 	}
 	node, err := s.storage.GetNodeByStakeAddr(context.Background(), req.StakeAddress, s.chainID)
 	if err != nil {
+		logger.Warnf("Failed to get the node: %v err: %v", req.StakeAddress, err)
 		return err
 	}
 	if node.IPAddress != ip {
-		logger.Warnf("The IP address is not matched: %v, %v\n", node.IPAddress, ip)
+		logger.Warnf("The IP address is not matched: %v, %v", node.IPAddress, ip)
 	}
 	if node.Status != types.NodeRegistered {
+		logger.Warnf("The node is not registered: %v", node.Status)
 		return fmt.Errorf("the node is not registered: %v", node.Status)
 	}
 
@@ -145,6 +151,7 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 	}
 
 	if len(signatures) != len(blocks) {
+		logger.Warnf("The number of signatures is not matched: %v open blocks: %d request blocks: %d", req.StakeAddress, len(blocks), len(signatures))
 		return ErrWrongBlockNumber
 	}
 
@@ -179,6 +186,7 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 	close(chError)
 
 	for err := range chError {
+		logger.Warnf("Failed to commit the batch: %v err: %v", req.StakeAddress, err)
 		return err
 	}
 
@@ -188,6 +196,7 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 	for {
 		select {
 		case <-timeoutCtx.Done():
+			logger.Warnf("Failed to commit the batch: %v err: %v", req.StakeAddress, timeoutCtx.Err())
 			return fmt.Errorf("failed to commit the batch: %v", timeoutCtx.Err())
 		default:
 			if s.consensus.IsFinalized(en) {

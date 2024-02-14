@@ -20,7 +20,6 @@ import (
 
 const (
 	privateKey = "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
-	chainID    = 1337
 )
 
 var (
@@ -53,7 +52,9 @@ func createTestGovernance(t *testing.T) (storetypes.Storage, *Governance, *ethcl
 	require.NoError(t, err)
 	auth, err := utils.GetSigner(context.Background(), client, privateKey)
 	require.NoError(t, err)
-	gov, err := NewGovernance(&govCfg, chainID, storage)
+	chainID, err := client.ChainID(context.Background())
+	require.NoError(t, err)
+	gov, err := NewGovernance(&govCfg, uint32(chainID.Int64()), storage)
 	require.NoError(t, err)
 	return storage, gov, client, auth
 }
@@ -66,7 +67,7 @@ func TestUpdateNodeStatus(t *testing.T) {
 		PublicKey:    utils.Hex2Bytes("0x123"),
 		IPAddress:    "127.0.0.1",
 		StakeAddress: auth.From.Hex(),
-		ChainID:      chainID,
+		ChainID:      gov.chainID,
 	}
 	require.NoError(t, storage.AddNode(context.Background(), &clientNode))
 	// update the node status
