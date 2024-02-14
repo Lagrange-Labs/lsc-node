@@ -30,18 +30,23 @@ type Sequencer struct {
 
 // NewSequencer creates a new sequencer instance.
 func NewSequencer(cfg *Config, storage storageInterface) (*Sequencer, error) {
+	logger.Infof("Creating sequencer with config: %+v", cfg)
+
 	rpcClient, err := rpcclient.NewClient(cfg.Chain, cfg.RPCURL, cfg.EthURL, cfg.BatchStorageAddr)
 	if err != nil {
+		logger.Errorf("failed to create rpc client: %v", err)
 		return nil, err
 	}
 
 	chainID, err := rpcClient.GetChainID()
 	if err != nil {
+		logger.Errorf("failed to get chain ID: %v", err)
 		return nil, err
 	}
 
 	blockNumber, err := storage.GetLastBlockNumber(context.Background(), chainID)
 	if err != nil {
+		logger.Errorf("failed to get last block number: %v", err)
 		return nil, err
 	}
 
@@ -69,10 +74,11 @@ func (s *Sequencer) GetChainID() uint32 {
 func (s *Sequencer) Start() error {
 	finalizedBlockNumber, err := s.rpcClient.GetL2FinalizedBlockNumber()
 	if err != nil {
+		logger.Errorf("failed to get finalized block number: %v", err)
 		return err
 	}
 
-	logger.Infof("sequencer started from %d", finalizedBlockNumber)
+	logger.Infof("Sequencer started from %d", finalizedBlockNumber)
 
 	for {
 		select {
