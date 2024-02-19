@@ -214,6 +214,10 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 
 	logger.Infof("got the block batch: %d, %d\n", res.Batch[0].BlockNumber(), res.Batch[len(res.Batch)-1].BlockNumber())
 
+	if c.lastBlockNumber < res.Batch[0].BlockNumber() {
+		c.nextCommitteeRoot = ""
+	}
+
 	wg := sync.WaitGroup{}
 	wg.Add(len(res.Batch))
 	chError := make(chan error, len(res.Batch))
