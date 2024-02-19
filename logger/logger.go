@@ -22,7 +22,6 @@ func init() {
 	log.SetFormatter(&logrus.TextFormatter{
 		TimestampFormat: "2006-01-02T15:04:05.000Z07:00",
 		FullTimestamp:   true,
-		DisableQuote:    true,
 	})
 }
 
