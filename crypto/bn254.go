@@ -64,8 +64,26 @@ func (s *BN254Scheme) GetPublicKey(privKey []byte, isCompressed bool) ([]byte, e
 		pubKeyRaw := pubKey.Bytes()
 		return pubKeyRaw[:sizeFp], nil
 	}
+
 	pubKeyRaw := pubKey.RawBytes()
 	return pubKeyRaw[:], nil
+}
+
+func (s *BN254Scheme) ConvertPublicKey(pubKey []byte, isCompressed bool) ([]byte, error) {
+	publicKey := new(bn254.G1Affine)
+	_, err := publicKey.SetBytes(pubKey)
+	if err != nil {
+		return nil, err
+	}
+
+	if isCompressed {
+		pubKeyRaw := publicKey.Bytes()
+		return pubKeyRaw[:sizeFp], nil
+	}
+
+	pubKeyRaw := publicKey.RawBytes()
+	return pubKeyRaw[:], nil
+
 }
 
 func (s *BN254Scheme) Sign(privKey, message []byte) ([]byte, error) {

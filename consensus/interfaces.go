@@ -22,5 +22,4 @@ type storageInterface interface {
 	GetLastCommitteeRoot(ctx context.Context, chainID uint32, isFinalized bool) (*govtypes.CommitteeRoot, error)
 	GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error)
 	UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error
-	AddNode(ctx context.Context, node *networktypes.ClientNode) error
 }
