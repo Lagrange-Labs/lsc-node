@@ -67,17 +67,17 @@ func (m *Manager) RunClient(clientCfg *network.ClientConfig) {
 func (m *Manager) RunClients() {
 	// client1
 	clientCfg1 := m.cfg.Client
-	clientCfg1.BLSPrivateKey = "0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f654a"
+	clientCfg1.BLSPrivateKey = "0x00000000000000000000000000000000000000000000000000000000499602d5"
 	clientCfg1.ECDSAPrivateKey = "0x220ecb0a36b61b15a3af292c4520a528395edc51c8d41db30c74382a4af4328d"
 	m.RunClient(&clientCfg1)
 	// client2
 	clientCfg2 := m.cfg.Client
-	clientCfg2.BLSPrivateKey = "0x475e7dc95f40ba8e5af29adb745ae3ac5d3404575b0f853c73ed1efa46943fc2"
+	clientCfg2.BLSPrivateKey = "0x00000000000000000000000000000000000000000000000000000000499602d6"
 	clientCfg2.ECDSAPrivateKey = "0x25f536330df3a72fa381bfb5ea5552b2731523f08580e7a0e2e69618a9643faa"
 	m.RunClient(&clientCfg2)
 	// client3
 	clientCfg3 := m.cfg.Client
-	clientCfg3.BLSPrivateKey = "0x59ec5a675fa5a9805d791c58c97a3dcc0bc8def2029bd53aa33dc035f2b81404"
+	clientCfg3.BLSPrivateKey = "0x00000000000000000000000000000000000000000000000000000000499602d7"
 	clientCfg3.ECDSAPrivateKey = "0xc262364335471942e02e79d760d1f5c5ad7a34463303851cacdd15d72e68b228"
 	m.RunClient(&clientCfg3)
 }
