@@ -154,28 +154,33 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 	}
 
 	// find the invalid signature
-	for _, commit := range rs.commitSignatures {
+	for operator, commit := range rs.commitSignatures {
 		commitHash := commit.Signature.Hash()
 		if !bytes.Equal(commitHash, sigHash) {
 			logger.Errorf("wrong commit message: %v, original: %v", utils.Bytes2Hex(commitHash), utils.Bytes2Hex(sigHash))
-			rs.evidences = append(rs.evidences, commit.Signature)
+			rs.addEvidence(operator, commit.Signature)
 			continue
 		}
 		verified, err := rs.blsScheme.VerifySignature(commit.PubKey, commitHash, utils.Hex2Bytes(commit.Signature.BlsSignature))
 		if err != nil {
 			logger.Errorf("failed to verify the signature: %v", err)
-			rs.evidences = append(rs.evidences, commit.Signature)
+			rs.addEvidence(operator, commit.Signature)
 			continue
 		}
 		if !verified {
 			logger.Errorf("invalid signature: %v", commit)
-			rs.evidences = append(rs.evidences, commit.Signature)
+			rs.addEvidence(operator, commit.Signature)
 		}
 	}
 
 	logger.Errorf("invalid aggregated signature: %v", rs.proposalBlock)
 
 	return ErrInvalidAggregativeSignature
+}
+
+func (rs *RoundState) addEvidence(operator string, signature *sequencertypes.BlsSignature) {
+	rs.evidences = append(rs.evidences, signature)
+	delete(rs.commitSignatures, operator)
 }
 
 // GetEvidences returns the evidences.
