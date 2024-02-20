@@ -28,14 +28,15 @@ type State struct {
 	rwMutex         *sync.RWMutex
 	blsScheme       crypto.BLSScheme
 
-	proposerPrivKey []byte
-	proposerPubKey  string // hex string
-	storage         storageInterface
-	roundLimit      time.Duration
-	roundInterval   time.Duration
-	batchSize       uint32
-	chainID         uint32
-	lastCommittee   *govtypes.CommitteeRoot
+	proposerPrivKey  []byte
+	proposerPubKey   string // hex string
+	storage          storageInterface
+	roundLimit       time.Duration
+	roundInterval    time.Duration
+	batchSize        uint32
+	chainID          uint32
+	lastCommittee    *govtypes.CommitteeRoot
+	blockedOperators map[string]struct{}
 
 	chStop chan struct{}
 }
@@ -62,16 +63,17 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 	chStop := make(chan struct{})
 
 	return &State{
-		blsScheme:       blsScheme,
-		proposerPrivKey: privKey,
-		proposerPubKey:  utils.Bytes2Hex(pubKey),
-		storage:         storage,
-		roundLimit:      time.Duration(cfg.RoundLimit),
-		roundInterval:   time.Duration(cfg.RoundInterval),
-		chainID:         chainID,
-		batchSize:       cfg.BatchSize,
-		chStop:          chStop,
-		rwMutex:         &sync.RWMutex{},
+		blsScheme:        blsScheme,
+		proposerPrivKey:  privKey,
+		proposerPubKey:   utils.Bytes2Hex(pubKey),
+		storage:          storage,
+		roundLimit:       time.Duration(cfg.RoundLimit),
+		roundInterval:    time.Duration(cfg.RoundInterval),
+		chainID:          chainID,
+		batchSize:        cfg.BatchSize,
+		chStop:           chStop,
+		rwMutex:          &sync.RWMutex{},
+		blockedOperators: make(map[string]struct{}),
 	}
 }
 
@@ -143,6 +145,11 @@ func (s *State) OnStart() {
 					logger.Errorf("failed to add the evidences: %v", err)
 					continue
 				}
+
+				// block the operators
+				for _, evidence := range evidences {
+					s.blockedOperators[evidence.Operator] = struct{}{}
+				}
 			}
 		}
 
@@ -208,6 +215,11 @@ func (s *State) OnStop() {
 func (s *State) AddCommit(commit *sequencertypes.BlsSignature, pubKey []byte, stakeAddr string) error {
 	s.rwMutex.Lock()
 	defer s.rwMutex.Unlock()
+
+	// check if the operator is blocked
+	if _, ok := s.blockedOperators[stakeAddr]; ok {
+		return fmt.Errorf("the operator %s is blocked", stakeAddr)
+	}
 
 	if s.validators.GetVotingPower(stakeAddr) == 0 {
 		return fmt.Errorf("the stake address %s is not registered", stakeAddr)
