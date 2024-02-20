@@ -13,6 +13,7 @@ var _ storageInterface = (storetypes.Storage)(nil)
 
 type storageInterface interface {
 	AddNode(ctx context.Context, node *types.ClientNode) error
+	UpdateNode(ctx context.Context, node *types.ClientNode) error
 	GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*types.ClientNode, error)
 	GetBlock(ctx context.Context, chainID uint32, blockNumber uint64) (*sequencertypes.Block, error)
 }

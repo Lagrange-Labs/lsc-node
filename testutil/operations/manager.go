@@ -3,6 +3,7 @@ package operations
 import (
 	"github.com/Lagrange-Labs/lagrange-node/config"
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/governance"
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
@@ -98,7 +99,8 @@ func (m *Manager) RunSequencer(isGov bool) {
 	if !isGov {
 		return
 	}
-	m.gov, err = governance.NewGovernance(&m.cfg.Governance, m.sequencer.GetChainID(), m.Storage)
+
+	m.gov, err = governance.NewGovernance(&m.cfg.Governance, crypto.BN254, m.sequencer.GetChainID(), m.Storage)
 	if err != nil {
 		panic(err)
 	}

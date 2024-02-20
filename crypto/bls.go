@@ -16,6 +16,7 @@ type BLSScheme interface {
 	Sign(privKey, message []byte) ([]byte, error)
 	GenerateRandomKey() ([]byte, error)
 	GetPublicKey(privKey []byte, isCompressed bool) ([]byte, error)
+	ConvertPublicKey(pubKey []byte, isCompressed bool) ([]byte, error)
 }
 
 // NewBLSScheme returns a new BLS scheme implementation.

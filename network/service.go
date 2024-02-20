@@ -1,6 +1,7 @@
 package network
 
 import (
+	"bytes"
 	context "context"
 	"fmt"
 	"strings"
@@ -67,14 +68,41 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	if err != nil {
 		return nil, err
 	}
-	if err := s.storage.AddNode(ctx,
-		&types.ClientNode{
-			StakeAddress: req.StakeAddress,
-			PublicKey:    utils.Hex2Bytes(req.PublicKey),
-			IPAddress:    ip,
-			ChainID:      s.chainID,
-		}); err != nil {
-		return nil, err
+	// Check if the node is already registered
+	node, err := s.storage.GetNodeByStakeAddr(ctx, req.StakeAddress, s.chainID)
+	if err != nil {
+		if err == storetypes.ErrNodeNotFound {
+			if err := s.storage.AddNode(ctx,
+				&types.ClientNode{
+					StakeAddress: req.StakeAddress,
+					PublicKey:    utils.Hex2Bytes(req.PublicKey),
+					IPAddress:    ip,
+					ChainID:      s.chainID,
+				}); err != nil {
+				return nil, err
+			}
+		} else {
+			return nil, err
+		}
+	} else if node != nil {
+		if node.Status == types.NodeRegistered {
+			rawPubKey, err := s.blsScheme.ConvertPublicKey(utils.Hex2Bytes(req.PublicKey), false)
+			if err != nil {
+				return nil, err
+			}
+			if !bytes.Equal(node.PublicKey, rawPubKey) {
+				return &types.JoinNetworkResponse{
+					Result:  false,
+					Message: "The public key is not matched",
+				}, nil
+			}
+		}
+		if node.IPAddress != ip {
+			node.IPAddress = ip
+			if err := s.storage.UpdateNode(ctx, node); err != nil {
+				return nil, err
+			}
+		}
 	}
 
 	logger.Infof("New node %v joined the network\n", req)

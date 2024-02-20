@@ -11,7 +11,6 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
@@ -48,16 +47,6 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 	pubKey, err := blsScheme.GetPublicKey(privKey, true)
 	if err != nil {
 		logger.Fatalf("failed to get the public key: %v", err)
-	}
-
-	if err := storage.AddNode(context.Background(),
-		&networktypes.ClientNode{
-			StakeAddress: cfg.OperatorAddress,
-			PublicKey:    pubKey,
-			ChainID:      chainID,
-		},
-	); err != nil {
-		logger.Fatalf("failed to add the proposer node: %v", err)
 	}
 
 	chStop := make(chan struct{})
