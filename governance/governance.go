@@ -48,28 +48,35 @@ type Governance struct {
 
 // NewGovernance creates a new Governance instance.
 func NewGovernance(cfg *types.Config, chainID uint32, storage storageInterface) (*Governance, error) {
+	logger.Infof("Creating governance with config: %+v", cfg)
+
 	client, err := ethclient.Dial(cfg.EthereumURL)
 	if err != nil {
+		logger.Errorf("failed to connect to ethereum: %v", err)
 		return nil, err
 	}
 
 	committeeSC, err := committee.NewCommittee(common.HexToAddress(cfg.CommitteeSCAddress), client)
 	if err != nil {
+		logger.Errorf("failed to create committee contract: %v", err)
 		return nil, err
 	}
 
 	auth, err := utils.GetSigner(context.Background(), client, cfg.PrivateKey)
 	if err != nil {
+		logger.Errorf("failed to get signer: %v", err)
 		return nil, err
 	}
 
 	updatedEpochNumber, err := committeeSC.UpdatedEpoch(nil, chainID)
 	if err != nil {
+		logger.Errorf("failed to get updated epoch number: %d err: %v", chainID, err)
 		return nil, err
 	}
 
 	lastEpochNumber, err := storage.GetLastCommitteeEpochNumber(context.Background(), chainID)
 	if err != nil {
+		logger.Errorf("failed to get last committee epoch number: %v", err)
 		return nil, err
 	}
 
