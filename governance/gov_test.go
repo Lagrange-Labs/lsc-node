@@ -7,6 +7,7 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/config"
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/governance/types"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/store"
@@ -54,7 +55,7 @@ func createTestGovernance(t *testing.T) (storetypes.Storage, *Governance, *ethcl
 	require.NoError(t, err)
 	chainID, err := client.ChainID(context.Background())
 	require.NoError(t, err)
-	gov, err := NewGovernance(&govCfg, uint32(chainID.Int64()), storage)
+	gov, err := NewGovernance(&govCfg, crypto.BN254, uint32(chainID.Int64()), storage)
 	require.NoError(t, err)
 	return storage, gov, client, auth
 }
@@ -64,7 +65,7 @@ func TestUpdateNodeStatus(t *testing.T) {
 	storage, gov, _, auth := createTestGovernance(t)
 	// join the network
 	clientNode := networktypes.ClientNode{
-		PublicKey:    utils.Hex2Bytes("0x123"),
+		PublicKey:    utils.Hex2Bytes("0xcdae9aed87b0ff66b31048db9e82093c0288c1c20f197501ba1fb53b60aba57c"),
 		IPAddress:    "127.0.0.1",
 		StakeAddress: auth.From.Hex(),
 		ChainID:      gov.chainID,
