@@ -13,6 +13,7 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/config"
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/governance"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network"
@@ -161,7 +162,8 @@ func runSequencer(ctx *cli.Context) error {
 		return fmt.Errorf("failed to create sequencer: %w", err)
 	}
 
-	governance, err := governance.NewGovernance(&cfg.Governance, sequencer.GetChainID(), storage)
+	logger.Infof("Starting governance with config: %v", cfg.Governance)
+	governance, err := governance.NewGovernance(&cfg.Governance, crypto.BLSCurve(cfg.Consensus.BLSCurve), sequencer.GetChainID(), storage)
 	if err != nil {
 		return fmt.Errorf("failed to create governance: %w", err)
 	}

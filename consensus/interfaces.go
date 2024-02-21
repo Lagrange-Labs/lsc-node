@@ -21,5 +21,4 @@ type storageInterface interface {
 	AddEvidences(ctx context.Context, evidences []*types.Evidence) error
 	GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*govtypes.CommitteeRoot, error)
 	GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error)
-	AddNode(ctx context.Context, node *networktypes.ClientNode) error
 }

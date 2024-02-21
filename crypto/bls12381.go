@@ -122,3 +122,14 @@ func (s *BLS12381Scheme) GetPublicKey(privKey []byte, isCompressed bool) ([]byte
 	pubKey := new(blst.P1Affine).Uncompress(pubRaw[:])
 	return pubKey.Serialize(), nil
 }
+
+func (s *BLS12381Scheme) ConvertPublicKey(pubKey []byte, isCompressed bool) ([]byte, error) {
+	if isCompressed {
+		pubKey = new(blst.P1Affine).Deserialize(pubKey).Compress()
+
+	} else {
+		pubKey = new(blst.P1Affine).Uncompress(pubKey).Serialize()
+	}
+
+	return pubKey, nil
+}
