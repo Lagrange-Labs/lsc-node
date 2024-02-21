@@ -7,10 +7,10 @@ import (
 )
 
 // NewClient creates a new rpc client.
-func NewClient(chain, rpcURL, ethURL, batchStorage string) (types.RpcClient, error) {
+func NewClient(chain, rpcURL, ethURL, newRpcURL string) (types.RpcClient, error) {
 	switch chain {
 	case "mantle":
-		return mantle.NewClient(rpcURL, ethURL, batchStorage)
+		return mantle.NewClient(rpcURL, ethURL, newRpcURL)
 	case "arbitrum":
 		return evmclient.NewClient(rpcURL)
 	case "optimism":
