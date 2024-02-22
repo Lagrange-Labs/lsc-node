@@ -7,7 +7,7 @@ GRPCPort = "9090"
 
 [Client]
 GrpcURL = "127.0.0.1:9090"
-Chain = "mantle"
+Chain = "arbitrum"
 RPCEndpoint = "http://localhost:8545"
 EthereumURL = "http://localhost:8545"
 CommitteeSCAddress = "0xF2740f6A6333c7B405aD7EfC68c74adAd83cC30D"
@@ -21,10 +21,10 @@ BackendType = "mongodb"
 DBPath = "mongodb://127.0.0.1:27017"
 
 [Sequencer]
-Chain = "mantle"
+Chain = "arbitrum"
 RPCURL = "http://localhost:8545"
 EthURL = "http://localhost:8545"
-BatchStorageAddr = "0xbB9dDB1020F82F93e45DA0e2CFbd27756DA36956"
+NewRPCURL = "http://localhost:8545"
 FromBlockNumber = 5
 
 [Governance]

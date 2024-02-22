@@ -2,21 +2,25 @@ package mantle
 
 import (
 	"os"
+	"strings"
 	"testing"
 
 	"github.com/stretchr/testify/require"
 )
 
-const GOERLI_BATCHSTORSGE_ADDR = "0xe5d639b1283352f32477a95b5d4109bcf9d4acf3"
-const LOCAL_BATCHSTORSGE_ADDR = "0xbB9dDB1020F82F93e45DA0e2CFbd27756DA36956"
-
-func TestEndpoints(t *testing.T) {
+func TestEndpointsRemote(t *testing.T) {
 	ethURL := os.Getenv("ETH_RPC")
 	if len(ethURL) == 0 {
 		t.Skip()
 	}
-	c, err := NewClient("http://localhost:8545", ethURL, GOERLI_BATCHSTORSGE_ADDR)
+	rpcURL := os.Getenv("MANTLE_RPC_URL")
+	if len(rpcURL) == 0 {
+		t.Skip()
+	}
+	l2URL := strings.Replace(rpcURL, "9545", "8545", 1)
+	c, err := NewClient(l2URL, ethURL, rpcURL)
 	require.NoError(t, err)
+
 	id, err := c.GetChainID()
 	require.NoError(t, err)
 	t.Logf("id: %d", id)
@@ -28,13 +32,4 @@ func TestEndpoints(t *testing.T) {
 	num, err := c.GetL2FinalizedBlockNumber()
 	require.NoError(t, err)
 	require.Greater(t, num, uint64(0))
-}
-
-func TestFinalizedL2BlockNumberMock(t *testing.T) {
-	c, err := NewClient("http://localhost:8545", "http://localhost:8545", LOCAL_BATCHSTORSGE_ADDR)
-	require.NoError(t, err)
-
-	// pre-merge chain does not support this
-	_, err = c.GetL2FinalizedBlockNumber()
-	require.NoError(t, err)
 }
