@@ -1,11 +1,13 @@
 package governance
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"math/big"
 	"time"
 
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
@@ -26,8 +28,8 @@ type CommitteeParams struct {
 
 // Governance is the module which is responsible for the staking and slashing.
 type Governance struct {
-	stakingInterval time.Duration
-
+	stakingInterval    time.Duration
+	blsScheme          crypto.BLSScheme
 	chainID            uint32
 	updatedEpochNumber uint64
 	currentEpochNumber uint64
@@ -47,7 +49,7 @@ type Governance struct {
 }
 
 // NewGovernance creates a new Governance instance.
-func NewGovernance(cfg *types.Config, chainID uint32, storage storageInterface) (*Governance, error) {
+func NewGovernance(cfg *types.Config, blsCurve crypto.BLSCurve, chainID uint32, storage storageInterface) (*Governance, error) {
 	logger.Infof("Creating governance with config: %+v", cfg)
 
 	client, err := ethclient.Dial(cfg.EthereumURL)
@@ -89,6 +91,7 @@ func NewGovernance(cfg *types.Config, chainID uint32, storage storageInterface) 
 	return &Governance{
 		stakingInterval:    time.Duration(cfg.StakingCheckInterval),
 		committeeSC:        committeeSC,
+		blsScheme:          crypto.NewBLSScheme(blsCurve),
 		chainID:            chainID,
 		storage:            storage,
 		etherClient:        client,
@@ -156,11 +159,39 @@ func (g *Governance) updateNodeStatuses() error {
 		logger.Infof("updating nodes %v", nodes)
 	}
 	for _, node := range nodes {
+		blsPubKey, err := g.committeeSC.GetBlsPubKey(nil, common.HexToAddress(node.StakeAddress))
+		if err != nil {
+			logger.Warnf("failed to get bls public key %s: %v", node.StakeAddress, err)
+			continue
+		}
+		if len(blsPubKey) != 2 {
+			logger.Warnf("invalid bls public key %s: %v", node.StakeAddress, blsPubKey)
+			continue
+		}
+		if blsPubKey[0].Cmp(big.NewInt(0)) == 0 && blsPubKey[1].Cmp(big.NewInt(0)) == 0 {
+			logger.Warnf("the given node %s is not registered in the committee", node.StakeAddress)
+			continue
+		}
+		pubKey := make([]byte, 0)
+		pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[0].Bytes(), 32)...)
+		pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[1].Bytes(), 32)...)
+
+		compressedPubKey, err := g.blsScheme.ConvertPublicKey(pubKey, true)
+		if err != nil {
+			logger.Warnf("failed to convert public key %s: %v", node.StakeAddress, err)
+			continue
+		}
+		if !bytes.Equal(compressedPubKey, node.PublicKey) {
+			logger.Warnf("the node %s public key %x mismatch %x != %x", node.StakeAddress, pubKey, compressedPubKey, node.PublicKey)
+			continue
+		}
+
 		votingPower, err := g.committeeSC.GetOperatorVotingPower(nil, common.HexToAddress(node.StakeAddress), g.chainID)
 		if err != nil {
 			logger.Warnf("failed to get operator voting power %s: %v", node.StakeAddress, err)
 			continue
 		}
+
 		logger.Infof("node found %v", node)
 		node.VotingPower = votingPower.Uint64()
 		if node.VotingPower == 0 {
@@ -298,8 +329,8 @@ func (g *Governance) fetchCommitteeRoot(blockNumber, epochNumber uint64) (*types
 				return nil, err
 			}
 			pubKey := make([]byte, 0)
-			pubKey = append(pubKey, blsPubKey[0].Bytes()...)
-			pubKey = append(pubKey, blsPubKey[1].Bytes()...)
+			pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[0].Bytes(), 32)...)
+			pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[1].Bytes(), 32)...)
 			operators = append(operators, networktypes.ClientNode{
 				StakeAddress: addr.String(),
 				VotingPower:  votingPower.Uint64(),

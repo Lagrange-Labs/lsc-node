@@ -28,7 +28,7 @@ func (suite *ClientTestSuite) SetupTest() {
 		GrpcURL:         "127.0.0.1:9090",
 		Chain:           "arbitrum",
 		EthereumURL:     "http://localhost:8545",
-		BLSPrivateKey:   "0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f654a",
+		BLSPrivateKey:   "0x00000000000000000000000000000000000000000000000000000000499602d7",
 		ECDSAPrivateKey: "0xb126ae5e3d88007081b76024477b854ca4f808d48be1e22fe763822bc0c17cb3",
 		PullInterval:    utils.TimeDuration(2 * time.Second),
 		BLSCurve:        "BN254",
@@ -61,7 +61,7 @@ func (suite *ClientTestSuite) Test_Client_Start() {
 		for i := 0; i < 20; i++ {
 			time.Sleep(1 * time.Second)
 			node, err = suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress, suite.client.GetChainID())
-			if err == types.ErrNodeNotFound {
+			if err == types.ErrNodeNotFound || node.Status == networktypes.NodeJoined {
 				continue
 			}
 			require.NoError(t, err)
