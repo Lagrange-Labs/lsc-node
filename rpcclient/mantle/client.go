@@ -3,11 +3,9 @@ package mantle
 import (
 	"context"
 	"fmt"
-	"strings"
 	"time"
 
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
-	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/rpc"
 )
@@ -17,23 +15,6 @@ type Client struct {
 
 	ethClient *ethclient.Client
 	rpcClient *rpc.Client
-}
-
-var (
-	getL2BlockNumberABI abi.ABI
-	abiInput            []byte
-)
-
-func init() {
-	var err error
-	getL2BlockNumberABI, err = abi.JSON(strings.NewReader(`[{"inputs":[],"name":"getL2StoredBlockNumber","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}]`))
-	if err != nil {
-		panic(err)
-	}
-	abiInput, err = getL2BlockNumberABI.Pack("getL2StoredBlockNumber")
-	if err != nil {
-		panic(err)
-	}
 }
 
 // NewClient creates a new Client instance.
