@@ -86,11 +86,8 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 		}
 	} else if node != nil {
 		if node.Status == types.NodeRegistered {
-			rawPubKey, err := s.blsScheme.ConvertPublicKey(utils.Hex2Bytes(req.PublicKey), false)
-			if err != nil {
-				return nil, err
-			}
-			if !bytes.Equal(node.PublicKey, rawPubKey) {
+			if !bytes.Equal(node.PublicKey, utils.Hex2Bytes(req.PublicKey)) {
+				logger.Warnf("The public key is not matched: %v, %v", node.PublicKey, utils.Hex2Bytes(req.PublicKey))
 				return &types.JoinNetworkResponse{
 					Result:  false,
 					Message: "The public key is not matched",
