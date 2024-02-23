@@ -116,7 +116,7 @@ func (g *Governance) Stop() {
 }
 
 func (g *Governance) updateNodeStatuses() error {
-	nodeStatuses := []networktypes.NodeStatus{networktypes.NodeJoined}
+	nodeStatuses := []networktypes.NodeStatus{networktypes.NodeJoined, networktypes.NodeUnstaked}
 
 	nodes, err := g.storage.GetNodesByStatuses(g.ctx, nodeStatuses, g.chainID)
 	if err != nil {
