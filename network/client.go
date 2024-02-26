@@ -218,10 +218,6 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 		c.nextCommitteeRoot = ""
 	}
 
-	wg := sync.WaitGroup{}
-	wg.Add(len(res.Batch))
-	chError := make(chan error, len(res.Batch))
-
 	// verify the committee root
 	if len(c.nextCommitteeRoot) > 0 && res.Batch[0].CurrentCommittee() != c.nextCommitteeRoot {
 		return nil, fmt.Errorf("the block committee root %s is not equal to the previous batch's next committee root %s", res.Batch[0].CurrentCommittee(), c.nextCommitteeRoot)
@@ -242,6 +238,10 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 		}
 	}
 	c.nextCommitteeRoot = res.Batch[len(res.Batch)-1].NextCommittee()
+
+	wg := sync.WaitGroup{}
+	wg.Add(len(res.Batch))
+	chError := make(chan error, len(res.Batch))
 
 	for _, block := range res.Batch {
 		go func(block *sequencertypes.Block) {
