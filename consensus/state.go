@@ -278,9 +278,14 @@ func (s *State) startRound(blockNumber uint64) error {
 		return fmt.Errorf("the last committee epoch number is 0")
 	}
 
-	committee := s.lastCommittee
-	if committee == nil || epochNumber > committee.EpochNumber {
-		// update the last committee
+	var committee govtypes.CommitteeRoot
+	if s.lastCommittee != nil {
+		committee = *s.lastCommittee
+	}
+
+	if s.lastCommittee == nil || epochNumber > s.lastCommittee.EpochNumber {
+		logger.Infof("the committee root rotation is detected: %v -> %d", s.lastCommittee, epochNumber)
+		// update the last committee root
 		lastCommittee, err := s.storage.GetLastCommitteeRoot(context.Background(), s.chainID, false)
 		if err != nil {
 			return fmt.Errorf("failed to get the last committee root: %v", err)
@@ -291,14 +296,14 @@ func (s *State) startRound(blockNumber uint64) error {
 		if lastCommittee.TotalVotingPower == 0 {
 			return fmt.Errorf("the last committee root has 0 voting power")
 		}
-		s.lastCommittee = lastCommittee
-		if committee == nil {
+		if s.lastCommittee == nil {
 			lastCommittee.IsFinalized = true
-			committee = lastCommittee
+			committee = *lastCommittee
 			if err := s.storage.UpdateCommitteeRoot(context.Background(), lastCommittee); err != nil {
 				return fmt.Errorf("failed to update the last committee root: %v", err)
 			}
 		}
+		s.lastCommittee = lastCommittee
 	}
 
 	logger.Infof("the registered nodes are loaded: %v", committee.Operators)
