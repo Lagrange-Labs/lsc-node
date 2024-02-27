@@ -22,7 +22,6 @@ const (
 	NetworkService_JoinNetwork_FullMethodName = "/network.v1.NetworkService/JoinNetwork"
 	NetworkService_GetBatch_FullMethodName    = "/network.v1.NetworkService/GetBatch"
 	NetworkService_CommitBatch_FullMethodName = "/network.v1.NetworkService/CommitBatch"
-	NetworkService_GetBlock_FullMethodName    = "/network.v1.NetworkService/GetBlock"
 )
 
 // NetworkServiceClient is the client API for NetworkService service.
@@ -35,8 +34,6 @@ type NetworkServiceClient interface {
 	GetBatch(ctx context.Context, in *GetBatchRequest, opts ...grpc.CallOption) (*GetBatchResponse, error)
 	// CommitBatch is the rpc endpoint for committing the given block batch with signature at the client node
 	CommitBatch(ctx context.Context, in *CommitBatchRequest, opts ...grpc.CallOption) (NetworkService_CommitBatchClient, error)
-	// GetBlock is the rpc endpoint for getting the given block
-	GetBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (*GetBlockResponse, error)
 }
 
 type networkServiceClient struct {
@@ -97,15 +94,6 @@ func (x *networkServiceCommitBatchClient) Recv() (*CommitBatchResponse, error) {
 	return m, nil
 }
 
-func (c *networkServiceClient) GetBlock(ctx context.Context, in *GetBlockRequest, opts ...grpc.CallOption) (*GetBlockResponse, error) {
-	out := new(GetBlockResponse)
-	err := c.cc.Invoke(ctx, NetworkService_GetBlock_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
-}
-
 // NetworkServiceServer is the server API for NetworkService service.
 // All implementations must embed UnimplementedNetworkServiceServer
 // for forward compatibility
@@ -116,8 +104,6 @@ type NetworkServiceServer interface {
 	GetBatch(context.Context, *GetBatchRequest) (*GetBatchResponse, error)
 	// CommitBatch is the rpc endpoint for committing the given block batch with signature at the client node
 	CommitBatch(*CommitBatchRequest, NetworkService_CommitBatchServer) error
-	// GetBlock is the rpc endpoint for getting the given block
-	GetBlock(context.Context, *GetBlockRequest) (*GetBlockResponse, error)
 	mustEmbedUnimplementedNetworkServiceServer()
 }
 
@@ -133,9 +119,6 @@ func (UnimplementedNetworkServiceServer) GetBatch(context.Context, *GetBatchRequ
 }
 func (UnimplementedNetworkServiceServer) CommitBatch(*CommitBatchRequest, NetworkService_CommitBatchServer) error {
 	return status.Errorf(codes.Unimplemented, "method CommitBatch not implemented")
-}
-func (UnimplementedNetworkServiceServer) GetBlock(context.Context, *GetBlockRequest) (*GetBlockResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method GetBlock not implemented")
 }
 func (UnimplementedNetworkServiceServer) mustEmbedUnimplementedNetworkServiceServer() {}
 
@@ -207,24 +190,6 @@ func (x *networkServiceCommitBatchServer) Send(m *CommitBatchResponse) error {
 	return x.ServerStream.SendMsg(m)
 }
 
-func _NetworkService_GetBlock_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(GetBlockRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NetworkServiceServer).GetBlock(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NetworkService_GetBlock_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NetworkServiceServer).GetBlock(ctx, req.(*GetBlockRequest))
-	}
-	return interceptor(ctx, in, info, handler)
-}
-
 // NetworkService_ServiceDesc is the grpc.ServiceDesc for NetworkService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -239,10 +204,6 @@ var NetworkService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBatch",
 			Handler:    _NetworkService_GetBatch_Handler,
-		},
-		{
-			MethodName: "GetBlock",
-			Handler:    _NetworkService_GetBlock_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{

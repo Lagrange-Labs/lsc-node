@@ -110,23 +110,6 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	}, nil
 }
 
-// GetBlock is a method to get the block.
-func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequest) (*types.GetBlockResponse, error) {
-	block, err := s.storage.GetBlock(ctx, s.chainID, req.BlockNumber)
-	if err != nil {
-		if err == storetypes.ErrBlockNotFound {
-			return &types.GetBlockResponse{
-				Block: nil,
-			}, nil
-		}
-		return nil, err
-	}
-
-	return &types.GetBlockResponse{
-		Block: block,
-	}, nil
-}
-
 // GetBatch is a method to get the proposed batch.
 func (s *sequencerService) GetBatch(ctx context.Context, req *types.GetBatchRequest) (*types.GetBatchResponse, error) {
 	logger.Infof("GetBatch request from %v, %d", req.StakeAddress, req.BlockNumber)
