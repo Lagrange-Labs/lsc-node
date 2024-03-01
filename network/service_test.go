@@ -91,7 +91,11 @@ func TestJoinNetwork(t *testing.T) {
 				require.Error(t, err)
 			} else {
 				require.NoError(t, err)
-				require.Equal(t, tc.valid, res.Result)
+				if tc.valid {
+					valide, err := ValidateToken(res.Token, tc.stakeAdr)
+					require.NoError(t, err)
+					require.True(t, valide)
+				}
 			}
 		})
 	}

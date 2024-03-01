@@ -14,6 +14,8 @@ service NetworkService {
     rpc GetBatch(GetBatchRequest) returns (GetBatchResponse);
     // CommitBatch is the rpc endpoint for committing the given block batch with signature at the client node
     rpc CommitBatch(CommitBatchRequest) returns (stream CommitBatchResponse);
+    // GetBlock is the rpc endpoint for getting the given block
+    rpc GetBlock(GetBlockRequest) returns (GetBlockResponse);
 }
 
 // JoinNetworkRequest is the request to join the network
@@ -51,4 +53,16 @@ message CommitBatchRequest {
 // CommitBatchResponse is the response for uploading the signature for the given block batch
 message CommitBatchResponse {
     bool result = 1;
+}
+
+// GetBlockRequest is the request to get the given block
+message GetBlockRequest {
+    uint64 block_number = 1;
+    string stake_address = 2;
+    string token = 3;
+}
+
+// GetBlockResponse is the response for getting the given block
+message GetBlockResponse {
+    sequencer.v1.Block block = 1;
 }
