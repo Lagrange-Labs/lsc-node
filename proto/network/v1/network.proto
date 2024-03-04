@@ -18,16 +18,6 @@ service NetworkService {
     rpc GetBlock(GetBlockRequest) returns (GetBlockResponse);
 }
 
-// GetBlockRequest is the request to get the given block
-message GetBlockRequest {
-    uint64 block_number = 1;
-}
-
-// GetBlockResponse is the response for getting the given block
-message GetBlockResponse {
-    sequencer.v1.Block block = 1;
-}
-
 // JoinNetworkRequest is the request to join the network
 message JoinNetworkRequest {
     string public_key = 1;
@@ -37,7 +27,7 @@ message JoinNetworkRequest {
 
 // JoinNetworkResponse is the response for joining the network
 message JoinNetworkResponse {
-    bool result = 1;
+    string token = 1;
     string message = 2;
 }
 
@@ -45,6 +35,7 @@ message JoinNetworkResponse {
 message GetBatchRequest {
     uint64 block_number = 1;
     string stake_address = 2;
+    string token = 3;
 }
 
 // GetBlockResponse is the response for getting the given block batch
@@ -56,9 +47,22 @@ message GetBatchResponse {
 message CommitBatchRequest {
     repeated sequencer.v1.BlsSignature bls_signatures = 1;
     string stake_address = 2;
+    string token = 3;
 }
 
 // CommitBatchResponse is the response for uploading the signature for the given block batch
 message CommitBatchResponse {
     bool result = 1;
+}
+
+// GetBlockRequest is the request to get the given block
+message GetBlockRequest {
+    uint64 block_number = 1;
+    string stake_address = 2;
+    string token = 3;
+}
+
+// GetBlockResponse is the response for getting the given block
+message GetBlockResponse {
+    sequencer.v1.Block block = 1;
 }

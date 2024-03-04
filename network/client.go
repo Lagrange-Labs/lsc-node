@@ -47,6 +47,7 @@ type Client struct {
 	blsPrivateKey   []byte
 	blsPublicKey    string
 	ecdsaPrivateKey *ecdsa.PrivateKey
+	jwToken         string
 	stakeAddress    string
 	lastBlockNumber uint64
 	pullInterval    time.Duration
@@ -207,15 +208,18 @@ func (c *Client) TryJoinNetwork() error {
 		logger.Errorf("failed to join the network: %v", err)
 		return err
 	}
-	if !res.Result {
-		return fmt.Errorf("failed to join the network: %s", res.Message)
+	if len(res.Token) == 0 {
+		logger.Errorf("failed to get the token")
+		return fmt.Errorf("failed to get the token")
 	}
+
+	c.jwToken = res.Token
 	return nil
 }
 
 // TryGetBlocks tries to get the block batch from the network.
 func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
-	res, err := c.GetBatch(context.Background(), &types.GetBatchRequest{BlockNumber: c.lastBlockNumber, StakeAddress: c.stakeAddress})
+	res, err := c.GetBatch(context.Background(), &types.GetBatchRequest{BlockNumber: c.lastBlockNumber, StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		return nil, err
 	}
@@ -306,7 +310,7 @@ func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommi
 func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
 	// initialize the previous batch info
 	if len(c.prevBatchInfo.NextCommitteeRoot) == 0 {
-		previousBlock, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: batch[0].BlockNumber() - 1})
+		previousBlock, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: batch[0].BlockNumber() - 1, StakeAddress: c.stakeAddress, Token: c.jwToken})
 		if err != nil {
 			return fmt.Errorf("failed to get the previous block: %v", err)
 		}
@@ -427,6 +431,7 @@ func (c *Client) TryCommitBlocks(blocks []*sequencertypes.Block) error {
 	req := &types.CommitBatchRequest{
 		BlsSignatures: blsSignatures,
 		StakeAddress:  c.stakeAddress,
+		Token:         c.jwToken,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)

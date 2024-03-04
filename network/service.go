@@ -59,7 +59,6 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	verified, err := s.blsScheme.VerifySignature(utils.Hex2Bytes(req.PublicKey), msg, utils.Hex2Bytes(sigMessage))
 	if err != nil || !verified {
 		return &types.JoinNetworkResponse{
-			Result:  false,
 			Message: fmt.Sprintf("BLS signature verification failed: %v", err),
 		}, nil
 	}
@@ -89,7 +88,6 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 			if !bytes.Equal(node.PublicKey, utils.Hex2Bytes(req.PublicKey)) {
 				logger.Warnf("The public key is not matched: %v, %v", node.PublicKey, utils.Hex2Bytes(req.PublicKey))
 				return &types.JoinNetworkResponse{
-					Result:  false,
 					Message: "The public key is not matched",
 				}, nil
 			}
@@ -102,33 +100,26 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 		}
 	}
 
-	logger.Infof("New node %v joined the network\n", req)
-
-	return &types.JoinNetworkResponse{
-		Result:  true,
-		Message: "Joined successfully",
-	}, nil
-}
-
-// GetBlock is a method to get the block.
-func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequest) (*types.GetBlockResponse, error) {
-	block, err := s.storage.GetBlock(ctx, s.chainID, req.BlockNumber)
+	token, err := GenerateToken(req.StakeAddress)
 	if err != nil {
-		if err == storetypes.ErrBlockNotFound {
-			return &types.GetBlockResponse{
-				Block: nil,
-			}, nil
-		}
 		return nil, err
 	}
 
-	return &types.GetBlockResponse{
-		Block: block,
+	logger.Infof("New node %v joined the network\n", req)
+	return &types.JoinNetworkResponse{
+		Token:   token,
+		Message: "Joined successfully",
 	}, nil
 }
 
 // GetBatch is a method to get the proposed batch.
 func (s *sequencerService) GetBatch(ctx context.Context, req *types.GetBatchRequest) (*types.GetBatchResponse, error) {
+	valid, err := ValidateToken(req.Token, req.StakeAddress)
+	if err != nil || !valid {
+		logger.Warnf("Failed to validate the token: %v", err)
+		return nil, err
+	}
+
 	logger.Infof("GetBatch request from %v, %d", req.StakeAddress, req.BlockNumber)
 	// verify the registered node
 	ip, err := getIPAddress(ctx)
@@ -152,8 +143,34 @@ func (s *sequencerService) GetBatch(ctx context.Context, req *types.GetBatchRequ
 	}, nil
 }
 
+// GetBlock is a method to get the proposed block.
+func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequest) (*types.GetBlockResponse, error) {
+	valid, err := ValidateToken(req.Token, req.StakeAddress)
+	if err != nil || !valid {
+		logger.Warnf("Failed to validate the token: %v", err)
+		return nil, err
+	}
+
+	logger.Infof("GetBlock request from %v, %d", req.StakeAddress, req.BlockNumber)
+
+	block, err := s.storage.GetBlock(ctx, s.chainID, req.BlockNumber)
+	if err != nil {
+		return nil, err
+	}
+
+	return &types.GetBlockResponse{
+		Block: block,
+	}, nil
+}
+
 // CommitBatch is a method to commit the proposed batch.
 func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream types.NetworkService_CommitBatchServer) error {
+	valid, err := ValidateToken(req.Token, req.StakeAddress)
+	if err != nil || !valid {
+		logger.Warnf("Failed to validate the token: %v", err)
+		return err
+	}
+
 	logger.Infof("CommitBatch request from %v, %d", req.StakeAddress, req.BlsSignatures[0].BlockNumber())
 	// verify the registered node
 	ip, err := getIPAddress(stream.Context())
