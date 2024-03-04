@@ -2,37 +2,36 @@ package evmclient
 
 import (
 	"context"
-	"encoding/json"
-	"io"
 	"math"
 	"math/big"
-	"net/http"
-	"strconv"
-	"strings"
+	"time"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	"github.com/ethereum/go-ethereum"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/common/hexutil"
+	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rpc"
+
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 )
 
 type Client struct {
 	ethClient *ethclient.Client
-	rpcURL    string
+	rpcClient *rpc.Client
 }
 
 var _ types.RpcClient = (*Client)(nil)
 
 // NewClient creates a new EvmClient instance.
 func NewClient(rpcURL string) (*Client, error) {
-	client, err := ethclient.Dial(rpcURL)
+	rpcClient, err := rpc.Dial(rpcURL)
 	if err != nil {
 		return nil, err
 	}
 
 	return &Client{
-		ethClient: client,
-		rpcURL:    rpcURL,
+		rpcClient: rpcClient,
+		ethClient: ethclient.NewClient(rpcClient),
 	}, nil
 }
 
@@ -47,12 +46,21 @@ func (c *Client) GetCurrentBlockNumber() (uint64, error) {
 
 // GetBlockHashByNumber returns the block hash by the given block number.
 func (c *Client) GetBlockHashByNumber(blockNumber uint64) (string, error) {
-	header, err := c.ethClient.HeaderByNumber(context.Background(), big.NewInt(int64(blockNumber)))
-	if err == ethereum.NotFound {
+	result := &struct {
+		Hash common.Hash `json:"hash"`
+	}{}
+
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
+
+	err := c.rpcClient.CallContext(ctx, &result, "eth_getBlockByNumber", hexutil.EncodeBig(big.NewInt(int64(blockNumber))), false)
+	if err == nil && result == nil {
 		return "", types.ErrBlockNotFound
+	} else if err != nil {
+		return "", err
 	}
 
-	return header.Hash().Hex(), err
+	return result.Hash.Hex(), nil
 }
 
 // GetChainID returns the chain ID.
@@ -66,44 +74,16 @@ func (c *Client) GetChainID() (uint32, error) {
 
 // GetL2FinalizedBlockNumber returns the L2 finalized block number.
 func (c *Client) GetL2FinalizedBlockNumber() (uint64, error) {
-	payload := strings.NewReader("{\"id\":1,\"jsonrpc\":\"2.0\",\"method\":\"eth_getBlockByNumber\",\"params\":[\"finalized\",false]}")
+	var result *ethtypes.Header
 
-	req, _ := http.NewRequest("POST", c.rpcURL, payload)
+	ctx, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	defer cancel()
 
-	req.Header.Add("accept", "application/json")
-	req.Header.Add("content-type", "application/json")
-
-	res, err := http.DefaultClient.Do(req)
-	if err != nil {
-		return 0, err
-	}
-	defer res.Body.Close()
-	body, err := io.ReadAll(res.Body)
-	if err != nil {
-		return 0, err
-	}
-
-	var result = struct {
-		Result struct {
-			Number string `json:"number"`
-		} `json:"result"`
-		Error struct {
-			Code    int    `json:"code"`
-			Message string `json:"message"`
-		} `json:"error"`
-	}{}
-	if err := json.Unmarshal(body, &result); err != nil {
-		logger.Errorf("failed to unmarshal json: %v", string(body))
-		return 0, err
-	}
-	if result.Error.Code != 0 {
-		// TODO: handle error
-		// API does not support the finalized block number
+	err := c.rpcClient.CallContext(ctx, &result, "eth_getBlockByNumber", "finalized", false)
+	if err != nil || result == nil || result.Number == nil {
+		// TODO: finalized block API is not supported
 		return math.MaxUint64, nil
 	}
-	blockNumber, err := strconv.ParseUint(result.Result.Number, 0, 64)
-	if err != nil {
-		return 0, err
-	}
-	return blockNumber, nil
+
+	return result.Number.Uint64(), nil
 }
