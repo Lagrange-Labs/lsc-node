@@ -3,6 +3,7 @@ package network
 import (
 	"bytes"
 	context "context"
+	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -23,7 +24,9 @@ import (
 
 var (
 	// ErrWrongBlockNumber is returned when the block number is not matched.
-	ErrWrongBlockNumber = fmt.Errorf("the block number is not matched")
+	ErrWrongBlockNumber = errors.New("the block number is not matched")
+	// ErrInvalidToken is returned when the token is invalid.
+	ErrInvalidToken = errors.New("the token is invalid")
 )
 
 type sequencerService struct {
@@ -117,7 +120,7 @@ func (s *sequencerService) GetBatch(ctx context.Context, req *types.GetBatchRequ
 	valid, err := ValidateToken(req.Token, req.StakeAddress)
 	if err != nil || !valid {
 		logger.Warnf("Failed to validate the token: %v", err)
-		return nil, err
+		return nil, ErrInvalidToken
 	}
 
 	logger.Infof("GetBatch request from %v, %d", req.StakeAddress, req.BlockNumber)
@@ -148,7 +151,7 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 	valid, err := ValidateToken(req.Token, req.StakeAddress)
 	if err != nil || !valid {
 		logger.Warnf("Failed to validate the token: %v", err)
-		return nil, err
+		return nil, ErrInvalidToken
 	}
 
 	logger.Infof("GetBlock request from %v, %d", req.StakeAddress, req.BlockNumber)
@@ -168,7 +171,7 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 	valid, err := ValidateToken(req.Token, req.StakeAddress)
 	if err != nil || !valid {
 		logger.Warnf("Failed to validate the token: %v", err)
-		return err
+		return ErrInvalidToken
 	}
 
 	logger.Infof("CommitBatch request from %v, %d", req.StakeAddress, req.BlsSignatures[0].BlockNumber())
