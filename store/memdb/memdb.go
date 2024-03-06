@@ -122,12 +122,6 @@ func (d *MemDB) UpdateBlock(ctx context.Context, block *sequencertypes.Block) er
 	return nil
 }
 
-// UpdateNode updates the node status in the database.
-func (d *MemDB) UpdateNode(ctx context.Context, node *networktypes.ClientNode) error {
-	d.nodes[utils.Bytes2Hex(node.PublicKey)] = *node
-	return nil
-}
-
 // GetNodesByStatuses returns the nodes with the given statuses.
 func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error) {
 	res := make([]networktypes.ClientNode, 0)

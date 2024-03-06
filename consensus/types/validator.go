@@ -13,32 +13,27 @@ type Validator struct {
 
 // ValidatorSet defines a set of validators.
 type ValidatorSet struct {
-	validators []*Validator
-
-	votingPowerMap       map[string]uint64
+	validators           map[string]*Validator
 	totalVotingPower     uint64
 	committeeVotingPower uint64
 }
 
 // NewValidatorSet creates a new validator set.
 func NewValidatorSet(nodes []networktypes.ClientNode, committeeVotingPower uint64) *ValidatorSet {
-	validators := make([]*Validator, len(nodes))
-	votingPowerMap := make(map[string]uint64)
+	validators := make(map[string]*Validator)
 	totalVotingPower := uint64(0)
 
-	for i, node := range nodes {
-		validators[i] = &Validator{
+	for _, node := range nodes {
+		validators[node.StakeAddress] = &Validator{
 			BlsPubKey:    node.PublicKey,
 			StakeAddress: node.StakeAddress,
 			VotingPower:  node.VotingPower,
 		}
-		votingPowerMap[node.StakeAddress] = node.VotingPower
 		totalVotingPower += node.VotingPower
 	}
 
 	return &ValidatorSet{
 		validators:           validators,
-		votingPowerMap:       votingPowerMap,
 		totalVotingPower:     totalVotingPower,
 		committeeVotingPower: committeeVotingPower,
 	}
@@ -51,7 +46,12 @@ func (vs *ValidatorSet) GetValidatorCount() int {
 
 // GetVotingPower returns the voting power of a validator.
 func (vs *ValidatorSet) GetVotingPower(stakeAddr string) uint64 {
-	return vs.votingPowerMap[stakeAddr]
+	return vs.validators[stakeAddr].VotingPower
+}
+
+// GetPublicKey returns the public key of a validator.
+func (vs *ValidatorSet) GetPublicKey(stakeAddr string) []byte {
+	return vs.validators[stakeAddr].BlsPubKey
 }
 
 // GetTotalVotingPower returns the total committee voting power.

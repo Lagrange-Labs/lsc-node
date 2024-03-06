@@ -7,7 +7,6 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
-	"github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/testutil/operations"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 
@@ -49,25 +48,13 @@ func (suite *ClientTestSuite) TearDownSuite() {
 
 func (suite *ClientTestSuite) Test_Client_Start() {
 	suite.T().Run("Test_Join_Network", func(t *testing.T) {
+		suite.manager.RunSequencer(true)
 		suite.client.TryJoinNetwork()
 
 		stakeAddress := suite.client.GetStakeAddress()
 		node, err := suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress, suite.client.GetChainID())
 		require.NoError(t, err)
 		require.Equal(t, networktypes.NodeJoined, node.Status)
-
-		suite.manager.RunSequencer(true)
-
-		for i := 0; i < 20; i++ {
-			time.Sleep(1 * time.Second)
-			node, err = suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress, suite.client.GetChainID())
-			if err == types.ErrNodeNotFound || node.Status == networktypes.NodeJoined {
-				continue
-			}
-			require.NoError(t, err)
-			require.Equal(t, networktypes.NodeRegistered, node.Status)
-			break
-		}
 	})
 }
 
