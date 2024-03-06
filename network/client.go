@@ -3,6 +3,7 @@ package network
 import (
 	"context"
 	"crypto/ecdsa"
+	"errors"
 	"fmt"
 	"math/big"
 	"strings"
@@ -157,12 +158,7 @@ func (c *Client) GetChainID() uint32 {
 
 // Start starts the connection loop.
 func (c *Client) Start() {
-	err := c.TryJoinNetwork()
-	if err != nil {
-		panic(fmt.Errorf("failed to join the network: %v", err))
-	}
-
-	logger.Infof("joined the network: %v\n", c.stakeAddress)
+	c.TryJoinNetwork()
 
 	for {
 		select {
@@ -171,11 +167,19 @@ func (c *Client) Start() {
 		case <-time.After(c.pullInterval):
 			blocks, err := c.TryGetBlocks()
 			if err != nil {
+				if errors.Is(err, ErrInvalidToken) {
+					c.TryJoinNetwork()
+					continue
+				}
 				logger.Errorf("failed to get the current block: %v\n", err)
 				continue
 			}
 
 			if err := c.TryCommitBlocks(blocks); err != nil {
+				if errors.Is(err, ErrInvalidToken) {
+					c.TryJoinNetwork()
+					continue
+				}
 				logger.Errorf("failed to commit the block: %v\n", err)
 				continue
 			}
@@ -187,30 +191,38 @@ func (c *Client) Start() {
 }
 
 // TryJoinNetwork tries to join the network.
-func (c *Client) TryJoinNetwork() error {
+func (c *Client) TryJoinNetwork() {
+	for {
+		if err := c.joinNetwork(); err != nil {
+			logger.Errorf("failed to join the network: %v", err)
+			time.Sleep(5 * time.Second)
+			continue
+		}
+		logger.Infof("joined the network with the new token: %s\n", c.jwToken)
+		break
+	}
+}
+
+func (c *Client) joinNetwork() error {
 	req := &types.JoinNetworkRequest{
 		PublicKey:    c.blsPublicKey,
 		StakeAddress: c.stakeAddress,
 	}
 	reqMsg, err := proto.Marshal(req)
 	if err != nil {
-		logger.Errorf("failed to marshal the request: %v", err)
-		return err
+		return fmt.Errorf("failed to marshal the request: %v", err)
 	}
 	sig, err := c.blsScheme.Sign(c.blsPrivateKey, reqMsg)
 	if err != nil {
-		logger.Errorf("failed to sign the request: %v", err)
-		return err
+		return fmt.Errorf("failed to sign the request: %v", err)
 	}
 	req.Signature = utils.Bytes2Hex(sig)
 	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
 	if err != nil {
-		logger.Errorf("failed to join the network: %v", err)
-		return err
+		return fmt.Errorf("failed to join the network: %v", err)
 	}
 	if len(res.Token) == 0 {
-		logger.Errorf("failed to get the token")
-		return fmt.Errorf("failed to get the token")
+		return fmt.Errorf("the token is empty")
 	}
 
 	c.jwToken = res.Token
@@ -221,6 +233,9 @@ func (c *Client) TryJoinNetwork() error {
 func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 	res, err := c.GetBatch(context.Background(), &types.GetBatchRequest{BlockNumber: c.lastBlockNumber, StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
+		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
+			return nil, ErrInvalidToken
+		}
 		return nil, err
 	}
 
@@ -311,10 +326,11 @@ func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
 	// initialize the previous batch info
 	if len(c.prevBatchInfo.NextCommitteeRoot) == 0 {
 		previousBlock, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: batch[0].BlockNumber() - 1, StakeAddress: c.stakeAddress, Token: c.jwToken})
-		if err != nil {
+		if err != nil && !strings.Contains(err.Error(), "block not found") {
+			// TODO: handle the block not found error
 			return fmt.Errorf("failed to get the previous block: %v", err)
 		}
-		if previousBlock.Block == nil {
+		if previousBlock == nil || previousBlock.Block == nil {
 			c.prevBatchInfo = PreviousBatchInfo{
 				NextCommitteeRoot: batch[0].CurrentCommittee(),
 				L1BlockNumber:     batch[0].L1BlockNumber(),
@@ -439,6 +455,9 @@ func (c *Client) TryCommitBlocks(blocks []*sequencertypes.Block) error {
 
 	stream, err := c.CommitBatch(ctx, req)
 	if err != nil {
+		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
+			return ErrInvalidToken
+		}
 		return fmt.Errorf("failed to upload signature: %v", err)
 	}
 
