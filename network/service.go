@@ -1,7 +1,6 @@
 package network
 
 import (
-	"bytes"
 	context "context"
 	"errors"
 	"fmt"
@@ -18,7 +17,6 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
-	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -59,10 +57,21 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	if err != nil {
 		return nil, err
 	}
-	verified, err := s.blsScheme.VerifySignature(utils.Hex2Bytes(req.PublicKey), msg, utils.Hex2Bytes(sigMessage))
+	pubKey := utils.Hex2Bytes(req.PublicKey)
+	verified, err := s.blsScheme.VerifySignature(pubKey, msg, utils.Hex2Bytes(sigMessage))
 	if err != nil || !verified {
 		return &types.JoinNetworkResponse{
 			Message: fmt.Sprintf("BLS signature verification failed: %v", err),
+		}, nil
+	}
+	// Check if the operator is a committee member
+	rawPubKey, err := s.blsScheme.ConvertPublicKey(pubKey, false)
+	if err != nil {
+		return nil, err
+	}
+	if !s.consensus.CheckCommitteeMember(req.StakeAddress, rawPubKey) {
+		return &types.JoinNetworkResponse{
+			Message: "The operator is not a committee member",
 		}, nil
 	}
 	// Register node
@@ -70,37 +79,16 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *types.JoinNetwo
 	if err != nil {
 		return nil, err
 	}
-	// Check if the node is already registered
-	node, err := s.storage.GetNodeByStakeAddr(ctx, req.StakeAddress, s.chainID)
-	if err != nil {
-		if err == storetypes.ErrNodeNotFound {
-			if err := s.storage.AddNode(ctx,
-				&types.ClientNode{
-					StakeAddress: req.StakeAddress,
-					PublicKey:    utils.Hex2Bytes(req.PublicKey),
-					IPAddress:    ip,
-					ChainID:      s.chainID,
-				}); err != nil {
-				return nil, err
-			}
-		} else {
-			return nil, err
-		}
-	} else if node != nil {
-		if node.Status == types.NodeRegistered {
-			if !bytes.Equal(node.PublicKey, utils.Hex2Bytes(req.PublicKey)) {
-				logger.Warnf("The public key is not matched: %v, %v", node.PublicKey, utils.Hex2Bytes(req.PublicKey))
-				return &types.JoinNetworkResponse{
-					Message: "The public key is not matched",
-				}, nil
-			}
-		}
-		if node.IPAddress != ip {
-			node.IPAddress = ip
-			if err := s.storage.UpdateNode(ctx, node); err != nil {
-				return nil, err
-			}
-		}
+	if err := s.storage.AddNode(ctx,
+		&types.ClientNode{
+			StakeAddress: req.StakeAddress,
+			PublicKey:    utils.Hex2Bytes(req.PublicKey),
+			IPAddress:    ip,
+			ChainID:      s.chainID,
+			JoinedAt:     time.Now().UnixMilli(),
+			Status:       types.NodeJoined,
+		}); err != nil {
+		return nil, err
 	}
 
 	token, err := GenerateToken(req.StakeAddress)
@@ -124,21 +112,6 @@ func (s *sequencerService) GetBatch(ctx context.Context, req *types.GetBatchRequ
 	}
 
 	logger.Infof("GetBatch request from %v, %d", req.StakeAddress, req.BlockNumber)
-	// verify the registered node
-	ip, err := getIPAddress(ctx)
-	if err != nil {
-		logger.Warnf("Failed to get IP address: %v", err)
-		return nil, err
-	}
-	node, err := s.storage.GetNodeByStakeAddr(ctx, req.StakeAddress, s.chainID)
-	if err != nil {
-		logger.Warnf("Failed to get the node: %v err: %v", req.StakeAddress, err)
-		return nil, err
-	}
-	if node.IPAddress != ip {
-		logger.Warnf("The IP address is not matched: %v, %v\n", node.IPAddress, ip)
-	}
-
 	blocks := s.consensus.GetOpenRoundBlocks(req.BlockNumber)
 
 	return &types.GetBatchResponse{
@@ -155,7 +128,6 @@ func (s *sequencerService) GetBlock(ctx context.Context, req *types.GetBlockRequ
 	}
 
 	logger.Infof("GetBlock request from %v, %d", req.StakeAddress, req.BlockNumber)
-
 	block, err := s.storage.GetBlock(ctx, s.chainID, req.BlockNumber)
 	if err != nil {
 		return nil, err
@@ -175,24 +147,6 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 	}
 
 	logger.Infof("CommitBatch request from %v, %d", req.StakeAddress, req.BlsSignatures[0].BlockNumber())
-	// verify the registered node
-	ip, err := getIPAddress(stream.Context())
-	if err != nil {
-		logger.Warnf("Failed to get IP address: %v", err)
-		return err
-	}
-	node, err := s.storage.GetNodeByStakeAddr(context.Background(), req.StakeAddress, s.chainID)
-	if err != nil {
-		logger.Warnf("Failed to get the node: %v err: %v", req.StakeAddress, err)
-		return err
-	}
-	if node.IPAddress != ip {
-		logger.Warnf("The IP address is not matched: %v, %v", node.IPAddress, ip)
-	}
-	if node.Status != types.NodeRegistered {
-		logger.Warnf("The node is not registered: %v", node.Status)
-		return fmt.Errorf("the node is not registered: %v", node.Status)
-	}
 
 	wg := sync.WaitGroup{}
 	wg.Add(len(req.BlsSignatures))
@@ -213,14 +167,14 @@ func (s *sequencerService) CommitBatch(req *types.CommitBatchRequest, stream typ
 				chError <- fmt.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)
 				return
 			}
-			if addr != common.HexToAddress(node.StakeAddress) {
-				logger.Errorf("the stake address is not matched in ECDSA signature: %v, %v", addr, node.StakeAddress)
-				chError <- fmt.Errorf("the stake address is not matched in ECDSA signature: %v, %v", addr, node.StakeAddress)
+			if addr != common.HexToAddress(req.StakeAddress) {
+				logger.Errorf("the stake address is not matched in ECDSA signature: %v, %v", addr, req.StakeAddress)
+				chError <- fmt.Errorf("the stake address is not matched in ECDSA signature: %v, %v", addr, req.StakeAddress)
 				return
 			}
 
 			// upload the commit to the consensus layer
-			err = s.consensus.AddCommit(signature, node.PublicKey, node.StakeAddress)
+			err = s.consensus.AddCommit(signature, req.StakeAddress)
 			if err != nil {
 				chError <- err
 			}

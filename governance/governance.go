@@ -1,7 +1,6 @@
 package governance
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"math/big"
@@ -110,20 +109,6 @@ func NewGovernance(cfg *types.Config, blsCurve crypto.BLSCurve, chainID uint32, 
 
 // Start starts the governance process.
 func (g *Governance) Start() {
-	go func() {
-		for {
-			select {
-			case <-g.ctx.Done():
-				return
-			default:
-			}
-			if err := g.updateNodeStatuses(); err != nil {
-				logger.Errorf("failed to update node status: %w", err)
-			}
-			time.Sleep(time.Second * 1)
-		}
-	}()
-
 	if err := g.updateCommittee(); err != nil {
 		logger.Errorf("failed to update committee root: %w", err)
 	}
@@ -146,66 +131,6 @@ func (g *Governance) Start() {
 // Stop stops the governance process.
 func (g *Governance) Stop() {
 	g.cancel()
-}
-
-func (g *Governance) updateNodeStatuses() error {
-	nodeStatuses := []networktypes.NodeStatus{networktypes.NodeJoined, networktypes.NodeUnstaked}
-
-	nodes, err := g.storage.GetNodesByStatuses(g.ctx, nodeStatuses, g.chainID)
-	if err != nil {
-		return err
-	}
-	if len(nodes) > 0 {
-		logger.Infof("updating nodes %v", nodes)
-	}
-	for _, node := range nodes {
-		blsPubKey, err := g.committeeSC.GetBlsPubKey(nil, common.HexToAddress(node.StakeAddress))
-		if err != nil {
-			logger.Warnf("failed to get bls public key %s: %v", node.StakeAddress, err)
-			continue
-		}
-		if len(blsPubKey) != 2 {
-			logger.Warnf("invalid bls public key %s: %v", node.StakeAddress, blsPubKey)
-			continue
-		}
-		if blsPubKey[0].Cmp(big.NewInt(0)) == 0 && blsPubKey[1].Cmp(big.NewInt(0)) == 0 {
-			logger.Warnf("the given node %s is not registered in the committee", node.StakeAddress)
-			continue
-		}
-		pubKey := make([]byte, 0)
-		pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[0].Bytes(), 32)...)
-		pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[1].Bytes(), 32)...)
-
-		compressedPubKey, err := g.blsScheme.ConvertPublicKey(pubKey, true)
-		if err != nil {
-			logger.Warnf("failed to convert public key %s: %v", node.StakeAddress, err)
-			continue
-		}
-		if !bytes.Equal(compressedPubKey, node.PublicKey) {
-			logger.Warnf("the node %s public key %x mismatch %x != %x", node.StakeAddress, pubKey, compressedPubKey, node.PublicKey)
-			continue
-		}
-
-		votingPower, err := g.committeeSC.GetOperatorVotingPower(nil, common.HexToAddress(node.StakeAddress), g.chainID)
-		if err != nil {
-			logger.Warnf("failed to get operator voting power %s: %v", node.StakeAddress, err)
-			continue
-		}
-
-		logger.Infof("node found %v", node)
-		node.VotingPower = votingPower.Uint64()
-		if node.VotingPower == 0 {
-			logger.Infof("node %s has 0 voting power", node.StakeAddress)
-			node.Status = networktypes.NodeUnstaked
-		} else {
-			node.Status = networktypes.NodeRegistered
-		}
-		if err := g.storage.UpdateNode(g.ctx, &node); err != nil {
-			return err
-		}
-	}
-
-	return nil
 }
 
 func (g *Governance) updateCommittee() error {

@@ -38,29 +38,7 @@ func NewMongoDB(uri string) (*MongoDB, error) {
 // AddNode adds a joined client node to the network.
 func (db *MongoDB) AddNode(ctx context.Context, node *networktypes.ClientNode) error {
 	collection := db.client.Database("state").Collection("nodes")
-	tNode := networktypes.ClientNode{}
-	err := collection.FindOne(ctx, bson.M{"stake_address": node.StakeAddress, "chain_id": node.ChainID}).Decode(&tNode)
-	if err == nil && tNode.Status == networktypes.NodeRegistered {
-		return nil
-	}
-	if err != nil && err != mongo.ErrNoDocuments {
-		return err
-	}
-
-	if tNode.Status == networktypes.NodeStaked {
-		node.Status = networktypes.NodeRegistered
-		node.VotingPower = tNode.VotingPower
-	} else {
-		node.Status = networktypes.NodeJoined
-	}
-	_, err = collection.UpdateOne(ctx, bson.M{"stake_address": node.StakeAddress, "chain_id": node.ChainID}, bson.M{"$set": node}, options.Update().SetUpsert(true))
-	return err
-}
-
-// UpdateNode updates the node status in the database.
-func (db *MongoDB) UpdateNode(ctx context.Context, node *networktypes.ClientNode) error {
-	collection := db.client.Database("state").Collection("nodes")
-	_, err := collection.UpdateOne(ctx, bson.M{"stake_address": node.StakeAddress, "chain_id": node.ChainID}, bson.M{"$set": node})
+	_, err := collection.UpdateOne(ctx, bson.M{"stake_address": node.StakeAddress, "chain_id": node.ChainID}, bson.M{"$set": node}, options.Update().SetUpsert(true))
 	return err
 }
 

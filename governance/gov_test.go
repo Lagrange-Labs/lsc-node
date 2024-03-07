@@ -9,7 +9,6 @@ import (
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/governance/types"
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
@@ -58,30 +57,6 @@ func createTestGovernance(t *testing.T) (storetypes.Storage, *Governance, *ethcl
 	gov, err := NewGovernance(&govCfg, crypto.BN254, uint32(chainID.Int64()), storage)
 	require.NoError(t, err)
 	return storage, gov, client, auth
-}
-
-func TestUpdateNodeStatus(t *testing.T) {
-	// create the test governance and register the operator
-	storage, gov, _, auth := createTestGovernance(t)
-	// join the network
-	clientNode := networktypes.ClientNode{
-		PublicKey:    utils.Hex2Bytes("0xcdae9aed87b0ff66b31048db9e82093c0288c1c20f197501ba1fb53b60aba57c"),
-		IPAddress:    "127.0.0.1",
-		StakeAddress: auth.From.Hex(),
-		ChainID:      gov.chainID,
-	}
-	require.NoError(t, storage.AddNode(context.Background(), &clientNode))
-	// update the node status
-	time.Sleep(time.Second * 5)
-	require.NoError(t, gov.updateNodeStatuses())
-	// check the node status
-	node, err := storage.GetNodeByStakeAddr(context.Background(), clientNode.StakeAddress, clientNode.ChainID)
-	require.NoError(t, err)
-	require.Equal(t, auth.From.Hex(), node.StakeAddress)
-	require.Equal(t, networktypes.NodeRegistered, node.Status)
-	// update the node status
-	clientNode.Status = networktypes.NodeSlashed
-	require.NoError(t, storage.UpdateNode(context.Background(), &clientNode))
 }
 
 func TestUploadEvidence(t *testing.T) {

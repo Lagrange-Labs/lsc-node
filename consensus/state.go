@@ -1,6 +1,7 @@
 package consensus
 
 import (
+	"bytes"
 	"context"
 	"fmt"
 	"sort"
@@ -201,9 +202,13 @@ func (s *State) OnStop() {
 }
 
 // AddCommit adds the commit to the round.
-func (s *State) AddCommit(commit *sequencertypes.BlsSignature, pubKey []byte, stakeAddr string) error {
+func (s *State) AddCommit(commit *sequencertypes.BlsSignature, stakeAddr string) error {
 	s.rwMutex.Lock()
 	defer s.rwMutex.Unlock()
+
+	if s.validators == nil {
+		return fmt.Errorf("the validator set is not initialized")
+	}
 
 	// check if the operator is blocked
 	if _, ok := s.blockedOperators[stakeAddr]; ok {
@@ -218,8 +223,16 @@ func (s *State) AddCommit(commit *sequencertypes.BlsSignature, pubKey []byte, st
 	if !ok {
 		return fmt.Errorf("the round for the block %d is not found", commit.BlockNumber())
 	}
-	round.AddCommit(commit, pubKey, stakeAddr)
+	round.AddCommit(commit, s.validators.GetPublicKey(stakeAddr), stakeAddr)
 	return nil
+}
+
+// CheckCommitteeMember checks if the operator is a committee member.
+func (s *State) CheckCommitteeMember(stakeAddr string, pubKey []byte) bool {
+	if s.validators == nil {
+		return false
+	}
+	return bytes.Equal(s.validators.GetPublicKey(stakeAddr), pubKey)
 }
 
 // GetOpenRoundBlocks returns the blocks that are not finalized yet.

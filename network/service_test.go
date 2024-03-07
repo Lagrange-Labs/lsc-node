@@ -5,14 +5,38 @@ import (
 	"net"
 	"testing"
 
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/network/types"
-	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
+
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
+	"github.com/Lagrange-Labs/lagrange-node/network/types"
+	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
+
+type mockConsensus struct{}
+
+func (m *mockConsensus) GetOpenRoundBlocks(blockNumber uint64) []*sequencertypes.Block {
+	return nil
+}
+
+func (m *mockConsensus) AddCommit(commit *sequencertypes.BlsSignature, stakeAddr string) error {
+	return nil
+}
+
+func (m *mockConsensus) CheckCommitteeMember(stakeAddr string, pubKey []byte) bool {
+	return true
+}
+
+func (m *mockConsensus) IsFinalized(blockNumber uint64) bool {
+	return true
+}
+
+func (m *mockConsensus) GetBLSScheme() crypto.BLSScheme {
+	return nil
+}
 
 func newTestService() (*sequencerService, error) {
 	storage, err := memdb.NewMemDB()
@@ -26,7 +50,7 @@ func newTestService() (*sequencerService, error) {
 
 	return &sequencerService{
 		storage:   storage,
-		consensus: nil, // TODO mock consensus
+		consensus: &mockConsensus{},
 		blsScheme: crypto.NewBLSScheme(crypto.BN254),
 	}, nil
 }

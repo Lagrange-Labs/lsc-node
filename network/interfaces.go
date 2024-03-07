@@ -13,14 +13,14 @@ var _ storageInterface = (storetypes.Storage)(nil)
 
 type storageInterface interface {
 	AddNode(ctx context.Context, node *types.ClientNode) error
-	UpdateNode(ctx context.Context, node *types.ClientNode) error
 	GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*types.ClientNode, error)
 	GetBlock(ctx context.Context, chainID uint32, blockNumber uint64) (*sequencertypes.Block, error)
 }
 
 type consensusInterface interface {
 	GetOpenRoundBlocks(blockNumber uint64) []*sequencertypes.Block
-	AddCommit(commit *sequencertypes.BlsSignature, pubKey []byte, stakeAddr string) error
+	AddCommit(commit *sequencertypes.BlsSignature, stakeAddr string) error
+	CheckCommitteeMember(stakeAddr string, pubKey []byte) bool
 	IsFinalized(blockNumber uint64) bool
 	GetBLSScheme() crypto.BLSScheme
 }

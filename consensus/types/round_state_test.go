@@ -10,7 +10,7 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, *ValidatorSet) {
+func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []networktypes.ClientNode) {
 	blsScheme := crypto.NewBLSScheme(blsCurve)
 
 	chainHeader := &sequencertypes.ChainHeader{
@@ -50,29 +50,27 @@ func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, *Val
 		nodes = append(nodes, node)
 	}
 
-	vs := NewValidatorSet(nodes, uint64(len(nodes)))
-
 	rs := NewEmptyRoundState(blsScheme)
 	rs.UpdateRoundState(pBlock)
 
-	return rs, secKeys, vs
+	return rs, secKeys, nodes
 }
 
 func TestCheckVotingPower(t *testing.T) {
-	rs, _, vs := createTestRoundState(crypto.BN254)
-
+	rs, _, validators := createTestRoundState(crypto.BN254)
+	vs := NewValidatorSet(validators, uint64(len(validators)))
 	// Test 1: not enough case
 	for i := 0; i < 6; i++ {
-		rs.AddCommit(&sequencertypes.BlsSignature{}, vs.validators[i].BlsPubKey, vs.validators[i].StakeAddress)
+		rs.AddCommit(&sequencertypes.BlsSignature{}, validators[i].PublicKey, validators[i].StakeAddress)
 	}
 	require.False(t, rs.CheckEnoughVotingPower(vs))
 	// Test 2: enough case
-	rs.AddCommit(&sequencertypes.BlsSignature{}, vs.validators[6].BlsPubKey, vs.validators[6].StakeAddress)
+	rs.AddCommit(&sequencertypes.BlsSignature{}, validators[6].PublicKey, validators[6].StakeAddress)
 	require.True(t, rs.CheckEnoughVotingPower(vs))
 }
 
 func TestCheckAggregatedSignature(t *testing.T) {
-	rs, secKeys, vs := createTestRoundState(crypto.BN254)
+	rs, secKeys, validators := createTestRoundState(crypto.BN254)
 	blsScheme := crypto.NewBLSScheme(crypto.BN254)
 
 	blsSignature := rs.GetCurrentBlock().BlsSignature()
@@ -85,18 +83,18 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		require.NoError(t, err)
 		blsSign.BlsSignature = utils.Bytes2Hex(signature)
 
-		verified, err := blsScheme.VerifySignature(vs.validators[i].BlsPubKey, sigHash, signature)
+		verified, err := blsScheme.VerifySignature(validators[i].PublicKey, sigHash, signature)
 		require.NoError(t, err)
-		require.True(t, verified)
+		require.True(t, verified, i)
 
-		rs.AddCommit(blsSign, vs.validators[i].BlsPubKey, vs.validators[i].StakeAddress)
+		rs.AddCommit(blsSign, validators[i].PublicKey, validators[i].StakeAddress)
 	}
 	err := rs.CheckAggregatedSignature()
 	require.NoError(t, err)
 
 	// Test 2: invalid case
 	wrongSignature := ""
-	rs, secKeys, vs = createTestRoundState(crypto.BLS12381)
+	rs, secKeys, validators = createTestRoundState(crypto.BLS12381)
 	blsScheme = crypto.NewBLSScheme(crypto.BLS12381)
 	blsSignature = rs.GetCurrentBlock().BlsSignature()
 	sigHash = blsSignature.Hash()
@@ -117,11 +115,11 @@ func TestCheckAggregatedSignature(t *testing.T) {
 			blsSign.BlsSignature = wrongSignature // wrong signature
 		}
 
-		verified, err := blsScheme.VerifySignature(vs.validators[i].BlsPubKey, sigHash, signature)
+		verified, err := blsScheme.VerifySignature(validators[i].PublicKey, sigHash, signature)
 		require.NoError(t, err)
 		require.True(t, verified)
 
-		rs.AddCommit(&blsSign, vs.validators[i].BlsPubKey, vs.validators[i].StakeAddress)
+		rs.AddCommit(&blsSign, validators[i].PublicKey, validators[i].StakeAddress)
 	}
 	err = rs.CheckAggregatedSignature()
 	require.Error(t, err)

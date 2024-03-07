@@ -24,6 +24,8 @@ type ClientNode struct {
 	VotingPower uint64 `json:"voting_power" bson:"voting_power"`
 	// ChainID is the chain id of the node.
 	ChainID uint32 `json:"chain_id" bson:"chain_id"`
+	// JoinedAt is the time when the node joined the network.
+	JoinedAt int64 `json:"joined_at" bson:"joined_at"`
 	// Status is the status of the node.
 	Status NodeStatus `json:"status" bson:"status"`
 }

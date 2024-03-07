@@ -24,8 +24,6 @@ type Storage interface {
 	GetBlocks(ctx context.Context, chainID uint32, fromBlockNumber uint64, count uint32) ([]*sequencertypes.Block, error)
 	// AddBlock adds a new block to the database.
 	AddBlock(ctx context.Context, block *sequencertypes.Block) error
-	// UpdateNode updates the node status in the database.
-	UpdateNode(ctx context.Context, node *networktypes.ClientNode) error
 	// GetLastBlockNumber returns the last block number that was submitted to the network.
 	GetLastBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
 	// GetNodesByStatuses returns the nodes with the given statuses.
