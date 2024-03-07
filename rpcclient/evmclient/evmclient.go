@@ -65,12 +65,14 @@ func (c *Client) GetBlockHashByNumber(blockNumber uint64) (common.Hash, error) {
 		return common.Hash{}, fmt.Errorf("failed to get the raw header error: %w", err)
 	}
 
-	var header ethtypes.Header
-	if err := json.Unmarshal(rawHeader, &header); err != nil {
+	result := &struct {
+		Hash common.Hash `json:"hash"`
+	}{}
+	if err := json.Unmarshal(rawHeader, &result); err != nil {
 		return common.Hash{}, fmt.Errorf("failed to unmarshal block header error: %w rawHeader: %s", err, rawHeader)
 	}
 
-	return header.Hash(), err
+	return result.Hash, nil
 }
 
 // GetChainID returns the chain ID.
