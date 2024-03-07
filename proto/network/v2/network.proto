@@ -1,0 +1,56 @@
+syntax = "proto3";
+
+package network.v2;
+
+import "sequencer/v2/batch.proto";
+
+option go_package = "github.com/Lagrange-Labs/lagrange-node/network/types/v2";
+
+// NetworkService is the service for the attestation network
+service NetworkService {
+    // JoinNetwork is the rpc endpoint for joining the network
+    rpc JoinNetwork(JoinNetworkRequest) returns (JoinNetworkResponse);
+    // GetBatch is the rpc endpoint for getting the given block batch
+    rpc GetBatch(GetBatchRequest) returns (GetBatchResponse);
+    // CommitBatch is the rpc endpoint for committing the given block batch with signature at the client node
+    rpc CommitBatch(CommitBatchRequest) returns (stream CommitBatchResponse);
+}
+
+// JoinNetworkRequest is the request to join the network
+message JoinNetworkRequest {
+    string public_key = 1;
+    string stake_address = 2;
+    string signature = 3;
+}
+
+// JoinNetworkResponse is the response for joining the network
+message JoinNetworkResponse {
+    string token = 1;
+    string message = 2;
+}
+
+// GetBatchRequest is the request to get the given block batch
+message GetBatchRequest {
+    uint64 batch_number = 1;
+    string stake_address = 2;
+    string token = 3;
+}
+
+// GetBlockResponse is the response for getting the given block batch
+message GetBatchResponse {
+    repeated sequencer.v2.Batch batch = 1;
+    uint64 from_block_number = 2;
+    uint64 to_block_number = 3;
+}
+
+// CommitBatchRequest is the request to commit the signature
+message CommitBatchRequest {
+    repeated sequencer.v2.BlsSignature bls_signature = 1;
+    string stake_address = 2;
+    string token = 3;
+}
+
+// CommitBatchResponse is the response for uploading the signature for the given block batch
+message CommitBatchResponse {
+    bool result = 1;
+}
