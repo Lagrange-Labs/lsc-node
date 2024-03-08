@@ -9,6 +9,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
@@ -21,6 +22,7 @@ var _ types.Storage = (*MemDB)(nil)
 type MemDB struct {
 	nodes          map[string]networktypes.ClientNode
 	blocks         []*sequencertypes.Block
+	batches        []*sequencerv2types.Batch
 	evidences      []*contypes.Evidence
 	committeeRoots []*govtypes.CommitteeRoot
 }
@@ -120,6 +122,56 @@ func (d *MemDB) UpdateBlock(ctx context.Context, block *sequencertypes.Block) er
 	}
 
 	return nil
+}
+
+// AddBatch adds a new batch to the database.
+func (d *MemDB) AddBatch(ctx context.Context, batch *sequencerv2types.Batch) error {
+	d.batches = append(d.batches, batch)
+	return nil
+}
+
+// UpdateBatch updates the batch in the database.
+func (d *MemDB) UpdateBatch(ctx context.Context, batch *sequencerv2types.Batch) error {
+	for i := 0; i < len(d.batches); i++ {
+		if d.batches[i].BatchNumber() == batch.BatchNumber() && d.batches[i].ChainID() == batch.ChainID() {
+			d.batches[i] = batch
+		}
+	}
+
+	return nil
+}
+
+// GetLastFinalizedBatchNumber returns the last finalized batch number for the given chainID.
+func (d *MemDB) GetLastFinalizedBatchNumber(ctx context.Context, chainID uint32) (uint64, error) {
+	for i := len(d.batches) - 1; i >= 0; i-- {
+		if d.batches[i].ChainID() == chainID && len(d.batches[i].AggSignature) > 0 {
+			return d.batches[i].BatchNumber(), nil
+		}
+	}
+
+	return 0, nil
+}
+
+// GetLastBatchNumber returns the last batch number that was stored to the db.
+func (d *MemDB) GetLastBatchNumber(ctx context.Context, chainID uint32) (uint64, error) {
+	for i := len(d.batches) - 1; i >= 0; i-- {
+		if d.batches[i].ChainID() == chainID {
+			return d.batches[i].BatchNumber(), nil
+		}
+	}
+
+	return 0, nil
+}
+
+// GetBatch returns the batch for the given batch number.
+func (d *MemDB) GetBatch(ctx context.Context, chainID uint32, batchNumber uint64) (*sequencerv2types.Batch, error) {
+	for i := 0; i < len(d.batches); i++ {
+		if d.batches[i].BatchNumber() == batchNumber && d.batches[i].ChainID() == chainID {
+			return d.batches[i], nil
+		}
+	}
+
+	return nil, nil
 }
 
 // GetNodesByStatuses returns the nodes with the given statuses.
