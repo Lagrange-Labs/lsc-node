@@ -1,0 +1,49 @@
+syntax = "proto3";
+
+package sequencer.v2;
+
+option go_package = "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2";
+
+// BlockHeader is the block header structure
+message BlockHeader {
+    uint64 block_number = 1;
+    string block_hash = 2;
+}
+
+// BatchHeader is the header for the given batch of the specific chain
+message BatchHeader {
+    uint64 batch_number = 1;
+    string batch_hash = 2;
+    uint32 chain_id = 3;
+    repeated BlockHeader l2_blocks = 4;
+    uint64 l1_block_number = 5;
+    string l1_tx_hash = 6;
+}
+
+// CommitteeHeader is the header for the given committee
+message CommitteeHeader {
+    string current_committee = 1;
+    string next_committee = 2;
+    uint64 total_voting_power = 3;
+}
+
+// Batch is the batch body structure
+message Batch {
+    BatchHeader batch_header = 1;
+    CommitteeHeader committee_header = 2;
+    string proposer_pub_key = 3;
+    string proposer_signature = 4;
+    repeated string pub_keys = 5;
+    string agg_signature = 6;
+    // meta data
+    string sequenced_time = 7;
+    string finalized_time = 8;
+}
+
+// BlsSignature is the BLS signature of the given batch
+message BlsSignature {
+    BatchHeader chain_header = 1;
+    CommitteeHeader committee_header = 2;
+    string bls_signature = 3;
+    string ecdsa_signature = 4;
+}
