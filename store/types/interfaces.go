@@ -7,11 +7,14 @@ import (
 	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 )
 
 type Storage interface {
 	// AddNode adds a new node to the database.
 	AddNode(ctx context.Context, node *networktypes.ClientNode) error
+	// GetNodesByStatuses returns the nodes with the given statuses.
+	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error)
 	// GetNodeByStakeAddr returns the node for the given stake address.
 	GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*networktypes.ClientNode, error)
 	// GetLastFinalizedBlock returns the last finalized block for the given chainID.
@@ -24,12 +27,20 @@ type Storage interface {
 	GetBlocks(ctx context.Context, chainID uint32, fromBlockNumber uint64, count uint32) ([]*sequencertypes.Block, error)
 	// AddBlock adds a new block to the database.
 	AddBlock(ctx context.Context, block *sequencertypes.Block) error
-	// GetLastBlockNumber returns the last block number that was submitted to the network.
-	GetLastBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
-	// GetNodesByStatuses returns the nodes with the given statuses.
-	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error)
 	// UpdateBlock updates the block in the database.
 	UpdateBlock(ctx context.Context, block *sequencertypes.Block) error
+	// GetLastBlockNumber returns the last block number that was stored to the db.
+	GetLastBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
+	// GetLastFinalizedBatchNumber returns the last finalized batch number for the given chainID.
+	GetLastFinalizedBatchNumber(ctx context.Context, chainID uint32) (uint64, error)
+	// GetLastBatchNumber returns the last batch number that was stored to the db.
+	GetLastBatchNumber(ctx context.Context, chainID uint32) (uint64, error)
+	// GetBatch returns the batch for the given batch number.
+	GetBatch(ctx context.Context, chainID uint32, batchNumber uint64) (*sequencerv2types.Batch, error)
+	// AddBatch adds a new batch to the database.
+	AddBatch(ctx context.Context, batch *sequencerv2types.Batch) error
+	// UpdateBatch updates the batch in the database.
+	UpdateBatch(ctx context.Context, batch *sequencerv2types.Batch) error
 	// AddEvidences adds new evidences to the database.
 	AddEvidences(ctx context.Context, evidences []*contypes.Evidence) error
 	// GetEvidences returns the pending evidences for the given block number range.

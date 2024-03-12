@@ -6,6 +6,7 @@ import (
 	"strings"
 
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )
@@ -47,6 +48,26 @@ func ConvertProtobufToMongo(obj interface{}) (bson.M, error) {
 			}
 
 			m[fieldName] = inner
+		} else if fieldValue.Kind() == reflect.Slice {
+			a := bson.A{}
+			for j := 0; j < fieldValue.Len(); j++ {
+				ele := fieldValue.Index(j)
+				if ele.Kind() == reflect.Ptr {
+					ele = ele.Elem()
+				}
+				if ele.Kind() == reflect.Struct {
+					inner, err := ConvertProtobufToMongo(fieldValue.Index(j).Interface())
+					if err != nil {
+						return nil, err
+					}
+
+					a = append(a, inner)
+				} else {
+					a = append(a, fieldValue.Index(j).Interface())
+				}
+			}
+
+			m[fieldName] = a
 		} else {
 			m[fieldName] = fieldValue.Interface()
 		}
@@ -89,4 +110,47 @@ func ConvertMongoToBlock(m bson.M) *sequencertypes.Block {
 	block.FinalizedTime = m["finalized_time"].(string)
 
 	return block
+}
+
+// ConvertMongoToBatch converts a mongo object to a protobuf batch object.
+func ConvertMongoToBatch(m bson.M) *sequencerv2types.Batch {
+	batch := &sequencerv2types.Batch{}
+	if batchHeader, ok := m["batch_header"]; ok {
+		mBatchHeader := batchHeader.(bson.M)
+		batch.BatchHeader = &sequencerv2types.BatchHeader{}
+		batch.BatchHeader.BatchNumber = uint64(mBatchHeader["batch_number"].(int64))
+		batch.BatchHeader.BatchHash = mBatchHeader["batch_hash"].(string)
+		batch.BatchHeader.L1BlockNumber = uint64(mBatchHeader["l1_block_number"].(int64))
+		batch.BatchHeader.L1TxHash = mBatchHeader["l1_tx_hash"].(string)
+		batch.BatchHeader.ChainId = uint32(mBatchHeader["chain_id"].(int64))
+		batch.BatchHeader.L2Blocks = make([]*sequencerv2types.BlockHeader, 0)
+		for _, l2Block := range mBatchHeader["l2_blocks"].(primitive.A) {
+			mL2Block := l2Block.(bson.M)
+			batch.BatchHeader.L2Blocks = append(batch.BatchHeader.L2Blocks, &sequencerv2types.BlockHeader{
+				BlockNumber: uint64(mL2Block["block_number"].(int64)),
+				BlockHash:   mL2Block["block_hash"].(string),
+			})
+		}
+	}
+
+	if committeeHeader, ok := m["committee_header"]; ok {
+		mCommitteeHeader := committeeHeader.(bson.M)
+		batch.CommitteeHeader = &sequencerv2types.CommitteeHeader{}
+		batch.CommitteeHeader.CurrentCommittee = mCommitteeHeader["current_committee"].(string)
+		batch.CommitteeHeader.NextCommittee = mCommitteeHeader["next_committee"].(string)
+		batch.CommitteeHeader.TotalVotingPower = uint64(mCommitteeHeader["total_voting_power"].(int64))
+	}
+
+	batch.AggSignature = m["agg_signature"].(string)
+	if len(batch.AggSignature) > 0 {
+		batch.PubKeys = make([]string, 0)
+		for _, pubKey := range m["pub_keys"].(primitive.A) {
+			batch.PubKeys = append(batch.PubKeys, pubKey.(string))
+		}
+	}
+
+	batch.SequencedTime = m["sequenced_time"].(string)
+	batch.FinalizedTime = m["finalized_time"].(string)
+
+	return batch
 }

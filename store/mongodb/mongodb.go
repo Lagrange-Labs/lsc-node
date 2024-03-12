@@ -13,6 +13,7 @@ import (
 	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/store/types"
 )
 
@@ -59,8 +60,9 @@ func (db *MongoDB) UpdateBlock(ctx context.Context, block *sequencertypes.Block)
 	if err != nil {
 		return fmt.Errorf("failed to convert block to mongo: %w", err)
 	}
+
 	collection := db.client.Database("state").Collection("blocks")
-	_, err = collection.UpdateOne(ctx, bson.M{"chain_header.block_number": block.BlockNumber()}, bson.M{"$set": mBlock})
+	_, err = collection.UpdateOne(ctx, bson.M{"chain_header.block_number": block.BlockNumber(), "chain_header.chain_id": block.ChainHeader.ChainId}, bson.M{"$set": mBlock})
 	return err
 }
 
@@ -149,6 +151,68 @@ func (db *MongoDB) GetLastBlockNumber(ctx context.Context, chainID uint32) (uint
 	}
 	chainHeader := block["chain_header"].(bson.M)
 	return uint64(chainHeader["block_number"].(int64)), nil
+}
+
+// AddBatch adds a new batch to the database.
+func (db *MongoDB) AddBatch(ctx context.Context, batch *sequencerv2types.Batch) error {
+	mBatch, err := ConvertProtobufToMongo(batch)
+	if err != nil {
+		return fmt.Errorf("failed to convert batch to mongo: %w", err)
+	}
+
+	collection := db.client.Database("state").Collection("batches")
+	_, err = collection.InsertOne(ctx, mBatch)
+	return err
+}
+
+// UpdateBatch updates the batch in the database.
+func (db *MongoDB) UpdateBatch(ctx context.Context, batch *sequencerv2types.Batch) error {
+	mBatch, err := ConvertProtobufToMongo(batch)
+	if err != nil {
+		return fmt.Errorf("failed to convert batch to mongo: %w", err)
+	}
+
+	collection := db.client.Database("state").Collection("batches")
+	_, err = collection.UpdateOne(ctx, bson.M{"batch_header.batch_number": batch.BatchNumber(), "batch_header.chain_id": batch.ChainID()}, bson.M{"$set": mBatch})
+	return err
+}
+
+// GetLastFinalizedBatchNumber returns the last finalized batch number for the given chainID.
+func (db *MongoDB) GetLastFinalizedBatchNumber(ctx context.Context, chainID uint32) (uint64, error) {
+	collection := db.client.Database("state").Collection("batches")
+	sortOptions := options.FindOne().SetSort(bson.D{{"batch_header.batch_number", -1}}).SetProjection(bson.D{{"batch_header.batch_number", 1}}) //nolint:govet
+	batch := bson.M{}
+	err := collection.FindOne(ctx, bson.M{"pub_keys": bson.M{"$ne": nil}, "batch_header.chain_id": chainID}, sortOptions).Decode(&batch)
+	if err == mongo.ErrNoDocuments {
+		return 0, nil
+	}
+	return uint64(batch["batch_header"].(bson.M)["batch_number"].(int64)), err
+}
+
+// GetLastBatchNumber returns the last batch number that was stored to the db.
+func (db *MongoDB) GetLastBatchNumber(ctx context.Context, chainID uint32) (uint64, error) {
+	collection := db.client.Database("state").Collection("batches")
+	sortOptions := options.FindOne().SetSort(bson.D{{"batch_header.batch_number", -1}}).SetProjection(bson.D{{"batch_header.batch_number", 1}}) //nolint:govet
+	batch := bson.M{}
+	err := collection.FindOne(ctx, bson.M{"batch_header.chain_id": chainID}, sortOptions).Decode(&batch)
+	if err == mongo.ErrNoDocuments {
+		return 0, nil
+	}
+	return uint64(batch["batch_header"].(bson.M)["batch_number"].(int64)), err
+}
+
+// GetBatch returns the batch for the given batch number and chainID.
+func (db *MongoDB) GetBatch(ctx context.Context, chainID uint32, batchNumber uint64) (*sequencerv2types.Batch, error) {
+	collection := db.client.Database("state").Collection("batches")
+	batch := bson.M{}
+	err := collection.FindOne(ctx, bson.M{"batch_header.batch_number": batchNumber, "batch_header.chain_id": chainID}).Decode(&batch)
+	if err == mongo.ErrNoDocuments {
+		return nil, types.ErrBatchNotFound
+	}
+	if err != nil {
+		return nil, err
+	}
+	return ConvertMongoToBatch(batch), nil
 }
 
 // GetLastEvidenceBlockNumber returns the last block number of the submitted evidence.
