@@ -1,20 +1,34 @@
 package optimism
 
 import (
-	"compress/zlib"
 	"fmt"
 	"io"
+	"math/big"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
 	"github.com/ethereum-optimism/optimism/op-service/eth"
-	"github.com/ethereum/go-ethereum/rlp"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/core/types"
+
+	"github.com/Lagrange-Labs/lagrange-node/logger"
 )
 
+// L2BlockBatch represents an L2 block batch.
+type L2BlockBatch struct {
+	// ParentHash is the parent hash of the first block.
+	ParentHash common.Hash
+	// ParentHashCheck is the first 20 bytes of parent hash of the first block for the check.
+	ParentHashCheck []byte
+	// TxHash is the transaction hash of the first transaction.
+	TxHash common.Hash
+	// BlockCount is the number of L2 blocks in the batch.
+	BlockCount int
+}
+
 // handleFrames returns BatchData items from the given frames.
-func handleFrames(blockNumber uint64, frames []derive.Frame) ([]derive.SingularBatch, error) {
+func handleFrames(blockNumber uint64, chainID *big.Int, frames []derive.Frame) ([]L2BlockBatch, error) {
 	var (
-		batches         []derive.SingularBatch
+		batches         []L2BlockBatch
 		framesByChannel = make(map[derive.ChannelID][]derive.Frame)
 	)
 
@@ -36,29 +50,60 @@ func handleFrames(blockNumber uint64, frames []derive.Frame) ([]derive.SingularB
 			}
 		}
 		if ch.IsReady() {
-			zr, err := zlib.NewReader(ch.Reader())
+			br, err := derive.BatchReader(ch.Reader())
 			if err != nil {
 				logger.Errorf("Failed to create zlib reader: %v", err)
 				return nil, err
 			}
-			rlpReader := rlp.NewStream(zr, derive.MaxRLPBytesPerChannel)
-			for {
-				v, err := rlpReader.Bytes()
+			for batchData, err := br(); err != io.EOF; batchData, err = br() {
 				if err != nil {
-					if err == io.EOF {
-						break
-					}
-				}
-				var batch derive.SingularBatch
-				if uint8(v[0]) != derive.SingularBatchType {
-					logger.Errorf("Invalid batch type: %v", uint8(v[0]))
-					return nil, fmt.Errorf("Invalid batch type: %v", uint8(v[0]))
-				}
-				if err := rlp.DecodeBytes(v[1:], &batch); err != nil {
-					logger.Errorf("Failed to decode batch: %v", err)
+					logger.Errorf("Failed to read batch data: %v", err)
 					return nil, err
 				}
-				batches = append(batches, batch)
+				batchType := batchData.GetBatchType()
+				switch batchType {
+				case derive.SingularBatchType:
+					batch, err := derive.GetSingularBatch(batchData)
+					if err != nil {
+						logger.Errorf("Failed to get singular batch: %v", err)
+						return nil, err
+					}
+					batches = append(batches, L2BlockBatch{
+						ParentHash: batch.ParentHash,
+						BlockCount: 1,
+					})
+				case derive.SpanBatchType:
+					batch, err := derive.DeriveSpanBatch(batchData, 1, 1, chainID)
+					if err != nil {
+						logger.Errorf("Failed to derive span batch: %v", err)
+						return nil, err
+					}
+					var txHash common.Hash
+					for _, b := range batch.Batches {
+						isTx := false
+						for _, txData := range b.Transactions {
+							var tx types.Transaction
+							if err := tx.UnmarshalBinary(txData); err != nil {
+								logger.Errorf("Failed to unmarshal transaction: %v", err)
+								return nil, err
+							}
+							txHash = tx.Hash()
+							isTx = true
+							break
+						}
+						if isTx {
+							break
+						}
+					}
+					batches = append(batches, L2BlockBatch{
+						ParentHashCheck: batch.ParentCheck[:],
+						TxHash:          txHash,
+						BlockCount:      len(batch.Batches),
+					})
+				default:
+					logger.Errorf("Unsupported batch type: %+v", batchData)
+					return nil, fmt.Errorf("Unsupported batch type: %+v", batchData)
+				}
 			}
 		}
 	}

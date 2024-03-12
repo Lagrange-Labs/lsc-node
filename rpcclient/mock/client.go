@@ -9,6 +9,7 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 )
 
 var _ types.RpcClient = (*Client)(nil)
@@ -52,3 +53,9 @@ func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64, l1TxHash common.Ha
 func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 	return c.GetCurrentBlockNumber()
 }
+
+// SetBeginBlockNumber sets the begin L1 & L2 block number.
+func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {}
+
+// GetBatchHeaderByNumber returns the batch header for the given L2 block number.
+func (c *Client) GetBatchHeaderByNumber(l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error)

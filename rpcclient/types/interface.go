@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 )
 
 var (
@@ -20,6 +22,10 @@ type RpcClient interface {
 	GetFinalizedBlockNumber() (uint64, error)
 	// GetChainID returns the chain ID.
 	GetChainID() (uint32, error)
+	// SetBeginBlockNumber sets the begin L1 & L2 block number.
+	SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64)
+	// GetBatchHeaderByNumber returns the batch header for the given L2 block number.
+	GetBatchHeaderByNumber(l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error)
 }
 
 // L2 Block Header
