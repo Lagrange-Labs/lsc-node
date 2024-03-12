@@ -113,4 +113,6 @@ func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64, l1TxHash common.Ha
 func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {}
 
 // GetBatchHeaderByNumber returns the batch header for the given L2 block number.
-func (c *Client) GetBatchHeaderByNumber(l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error)
+func (c *Client) GetBatchHeaderByNumber(l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
+	return nil, nil
+}
