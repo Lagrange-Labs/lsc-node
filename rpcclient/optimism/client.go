@@ -4,6 +4,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
@@ -44,19 +45,19 @@ func NewClient(cfg *Config) (*Client, error) {
 
 // GetBlockHeaderByNumber returns the L2 block header for the given L2 block number.
 func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64, l1TxHash common.Hash) (*types.L2BlockHeader, error) {
-	header, err := c.fetcher.getL2BlockHeader(l2BlockNumber)
-	if err != nil {
-		if err == types.ErrBlockNotFound {
-			// from the sequencer
-			if l1TxHash == (common.Hash{}) {
-				return nil, types.ErrBlockNotFound
-			}
-			// from the client
-			return c.fetcher.getL2BlockHeaderByTxHash(l2BlockNumber, l1TxHash)
-		}
-		logger.Errorf("failed to get L2 block header: %v", err)
-		return nil, err
-	}
+	return nil, nil
+}
 
-	return header, nil
+// GetBatchHeaderByNumber returns the batch header for the given L2 block number.
+func (c *Client) GetBatchHeaderByNumber(l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
+	return c.fetcher.getL2BatchData(l2BlockNumber)
+}
+
+// SetBeginBlockNumber sets the begin L1 & L2 block number.
+func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {
+	go func() {
+		if err := c.fetcher.Fetch(l1BlockNumber); err != nil {
+			logger.Errorf("failed to fetch L2 block headers: %v", err)
+		}
+	}()
 }

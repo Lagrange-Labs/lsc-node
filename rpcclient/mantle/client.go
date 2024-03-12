@@ -6,13 +6,15 @@ import (
 	"math/big"
 	"strings"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 )
 
 var _ types.RpcClient = (*Client)(nil)
@@ -105,4 +107,12 @@ func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64, l1TxHash common.Ha
 		L1BlockNumber: l2BlockNumber,
 		L2BlockHash:   hash,
 	}, err
+}
+
+// SetBeginBlockNumber sets the begin L1 & L2 block number.
+func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {}
+
+// GetBatchHeaderByNumber returns the batch header for the given L2 block number.
+func (c *Client) GetBatchHeaderByNumber(l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
+	return nil, nil
 }
