@@ -42,7 +42,7 @@ message Batch {
 
 // BlsSignature is the BLS signature of the given batch
 message BlsSignature {
-    BatchHeader chain_header = 1;
+    BatchHeader batch_header = 1;
     CommitteeHeader committee_header = 2;
     string bls_signature = 3;
     string ecdsa_signature = 4;

@@ -7,10 +7,11 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
-	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
+
+	"github.com/Lagrange-Labs/lagrange-node/logger"
+	networkv2types "github.com/Lagrange-Labs/lagrange-node/network/types/v2"
 )
 
 func RunServer(cfg *ServerConfig, storage storageInterface, consensus consensusInterface, chainID uint32) error {
@@ -59,14 +60,14 @@ func (s *healthChecker) Watch(req *grpc_health_v1.HealthCheckRequest, server grp
 	})
 }
 
-func runGRPCServer(ctx context.Context, svc types.NetworkServiceServer, port string) error {
+func runGRPCServer(ctx context.Context, svc networkv2types.NetworkServiceServer, port string) error {
 	listen, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return err
 	}
 
 	server := grpc.NewServer()
-	types.RegisterNetworkServiceServer(server, svc)
+	networkv2types.RegisterNetworkServiceServer(server, svc)
 
 	healthService := newHealthChecker()
 	grpc_health_v1.RegisterHealthServer(server, healthService)

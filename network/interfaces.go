@@ -6,6 +6,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 )
 
@@ -18,9 +19,9 @@ type storageInterface interface {
 }
 
 type consensusInterface interface {
-	GetOpenRoundBlocks(blockNumber uint64) []*sequencertypes.Block
-	AddCommit(commit *sequencertypes.BlsSignature, stakeAddr string) error
+	GetOpenBatch(batchNumber uint64) *sequencerv2types.Batch
+	AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr string) error
 	CheckCommitteeMember(stakeAddr string, pubKey []byte) bool
-	IsFinalized(blockNumber uint64) bool
+	IsFinalized(batchNumber uint64) bool
 	GetBLSScheme() crypto.BLSScheme
 }

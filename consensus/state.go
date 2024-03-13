@@ -13,6 +13,7 @@ import (
 	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
@@ -199,6 +200,18 @@ func (s *State) OnStop() {
 	logger.Infof("OnStop() called")
 	s.chStop <- struct{}{}
 	close(s.chStop)
+}
+
+// TODO: implement the following methods
+func (s *State) GetOpenBatch(batchNumber uint64) *sequencerv2types.Batch {
+	return &sequencerv2types.Batch{
+		BatchHeader: &sequencerv2types.BatchHeader{},
+	}
+}
+
+// TODO: implement the following methods
+func (s *State) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr string) error {
+	return nil
 }
 
 // AddCommit adds the commit to the round.
