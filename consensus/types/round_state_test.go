@@ -5,7 +5,7 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/stretchr/testify/require"
 )
@@ -13,28 +13,34 @@ import (
 func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []networktypes.ClientNode) {
 	blsScheme := crypto.NewBLSScheme(blsCurve)
 
-	chainHeader := &sequencertypes.ChainHeader{
-		ChainId:       1,
-		BlockNumber:   1,
-		BlockHash:     utils.RandomHex(32),
-		L1BlockNumber: 1,
-		L1TxHash:      utils.RandomHex(32),
-	}
 	proposerSecKey, _ := blsScheme.GenerateRandomKey()
 	proposerPubKey, _ := blsScheme.GetPublicKey(proposerSecKey, true)
-	pBlock := &sequencertypes.Block{
-		BlockHeader: &sequencertypes.BlockHeader{
-			ProposerPubKey:   utils.Bytes2Hex(proposerPubKey),
+	pBatch := &sequencerv2types.Batch{
+		BatchHeader: &sequencerv2types.BatchHeader{
+			ChainId:       1,
+			BatchNumber:   1,
+			BatchHash:     utils.RandomHex(32),
+			L1BlockNumber: 1,
+			L1TxHash:      utils.RandomHex(32),
+			L2Blocks: []*sequencerv2types.BlockHeader{
+				{
+					BlockNumber: 1,
+					BlockHash:   utils.RandomHex(32),
+				},
+			},
+		},
+		CommitteeHeader: &sequencerv2types.CommitteeHeader{
+
 			TotalVotingPower: 10,
 			CurrentCommittee: utils.RandomHex(32),
 			NextCommittee:    utils.RandomHex(32),
 		},
-		ChainHeader: chainHeader,
+		ProposerPubKey: utils.Bytes2Hex(proposerPubKey),
 	}
 
-	blsSigHash := pBlock.BlsSignature().Hash()
+	blsSigHash := pBatch.BlsSignature().Hash()
 	proposerSigMsg, _ := blsScheme.Sign(proposerSecKey, blsSigHash)
-	pBlock.BlockHeader.ProposerSignature = utils.Bytes2Hex(proposerSigMsg)
+	pBatch.ProposerSignature = utils.Bytes2Hex(proposerSigMsg)
 
 	secKeys := make([][]byte, 0)
 	nodes := []networktypes.ClientNode{}
@@ -51,7 +57,7 @@ func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []ne
 	}
 
 	rs := NewEmptyRoundState(blsScheme)
-	rs.UpdateRoundState(pBlock)
+	rs.UpdateRoundState(pBatch)
 
 	return rs, secKeys, nodes
 }
@@ -61,11 +67,11 @@ func TestCheckVotingPower(t *testing.T) {
 	vs := NewValidatorSet(validators, uint64(len(validators)))
 	// Test 1: not enough case
 	for i := 0; i < 6; i++ {
-		rs.AddCommit(&sequencertypes.BlsSignature{}, validators[i].PublicKey, validators[i].StakeAddress)
+		rs.AddCommit(&sequencerv2types.BlsSignature{}, validators[i].PublicKey, validators[i].StakeAddress)
 	}
 	require.False(t, rs.CheckEnoughVotingPower(vs))
 	// Test 2: enough case
-	rs.AddCommit(&sequencertypes.BlsSignature{}, validators[6].PublicKey, validators[6].StakeAddress)
+	rs.AddCommit(&sequencerv2types.BlsSignature{}, validators[6].PublicKey, validators[6].StakeAddress)
 	require.True(t, rs.CheckEnoughVotingPower(vs))
 }
 
@@ -73,7 +79,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 	rs, secKeys, validators := createTestRoundState(crypto.BN254)
 	blsScheme := crypto.NewBLSScheme(crypto.BN254)
 
-	blsSignature := rs.GetCurrentBlock().BlsSignature()
+	blsSignature := rs.GetCurrentBatch().BlsSignature()
 	sigHash := blsSignature.Hash()
 
 	// Test 1: valid case
@@ -96,13 +102,13 @@ func TestCheckAggregatedSignature(t *testing.T) {
 	wrongSignature := ""
 	rs, secKeys, validators = createTestRoundState(crypto.BLS12381)
 	blsScheme = crypto.NewBLSScheme(crypto.BLS12381)
-	blsSignature = rs.GetCurrentBlock().BlsSignature()
+	blsSignature = rs.GetCurrentBatch().BlsSignature()
 	sigHash = blsSignature.Hash()
 
 	for i := 0; i < len(secKeys); i++ {
-		blsSign := *blsSignature //nolint:govet
+		blsSign := blsSignature.Clone()
 		if i == 8 {
-			blsSign.NextCommittee = "0x111" // wrong contents
+			blsSign.CommitteeHeader.NextCommittee = "0x111" // wrong contents
 		}
 		signature, err := blsScheme.Sign(secKeys[i], sigHash)
 		require.NoError(t, err)
@@ -119,7 +125,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, verified)
 
-		rs.AddCommit(&blsSign, validators[i].PublicKey, validators[i].StakeAddress)
+		rs.AddCommit(blsSign, validators[i].PublicKey, validators[i].StakeAddress)
 	}
 	err = rs.CheckAggregatedSignature()
 	require.Error(t, err)

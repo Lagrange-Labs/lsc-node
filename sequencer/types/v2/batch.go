@@ -1,5 +1,7 @@
 package v2
 
+import "github.com/Lagrange-Labs/lagrange-node/utils"
+
 // BatchNumber returns the batch number of the batch.
 func (b *Batch) BatchNumber() uint64 {
 	return b.BatchHeader.BatchNumber
@@ -44,6 +46,21 @@ func (b *Batch) BlsSignature() *BlsSignature {
 	}
 }
 
+// CurrentCommittee returns the current committee root of the batch.
+func (b *Batch) CurrentCommittee() string {
+	return b.CommitteeHeader.CurrentCommittee
+}
+
+// NextCommittee returns the next committee root of the batch.
+func (b *Batch) NextCommittee() string {
+	return b.CommitteeHeader.NextCommittee
+}
+
+// TotalVotingPower returns the total voting power of the batch.
+func (b *Batch) TotalVotingPower() uint64 {
+	return b.CommitteeHeader.TotalVotingPower
+}
+
 // FromBlockNumber returns the block number of the first block in the batch header.
 func (bh *BatchHeader) FromBlockNumber() uint64 {
 	if len(bh.L2Blocks) == 0 {
@@ -64,20 +81,74 @@ func (bh *BatchHeader) ToBlockNumber() uint64 {
 
 // Hash returns the hash of the batch header.
 func (bh *BatchHeader) Hash() []byte {
-	return nil // TODO: implement
+	// TODO: implement
+	h := make([]byte, 0)
+	h = append(h, utils.Hex2Bytes(bh.BatchHash)...)
+	h = append(h, utils.Hex2Bytes(bh.L1TxHash)...)
+	h = append(h, utils.Uint64ToBytes(bh.L1BlockNumber)...)
+	for _, block := range bh.L2Blocks {
+		h = append(h, utils.Uint64ToBytes(block.BlockNumber)...)
+		h = append(h, utils.Hex2Bytes(block.BlockHash)...)
+	}
+	return utils.Hash([]byte(bh.L1TxHash))
 }
 
-// GetBatchNumber returns the batch number of the bls signature.
-func (b *BlsSignature) GetBatchNumber() uint64 {
+// BatchNumber returns the batch number of the bls signature.
+func (b *BlsSignature) BatchNumber() uint64 {
 	return b.BatchHeader.BatchNumber
 }
 
 // Hash returns the hash of the bls signature.
 func (b *BlsSignature) Hash() []byte {
-	return nil // TODO: implement
+	// TODO: implement
+	h := make([]byte, 0)
+	h = append(h, b.BatchHeader.Hash()...)
+	h = append(h, utils.Hex2Bytes(b.CommitteeHeader.CurrentCommittee)...)
+	h = append(h, utils.Hex2Bytes(b.CommitteeHeader.NextCommittee)...)
+	h = append(h, utils.Uint64ToBytes(b.CommitteeHeader.TotalVotingPower)...)
+	return utils.Hash(h)
 }
 
 // CommitHash returns the hash of the commit bls signature.
 func (b *BlsSignature) CommitHash() []byte {
-	return nil // TODO: implement
+	// TODO: implement
+	h := make([]byte, 0)
+	h = append(h, b.Hash()...)
+	h = append(h, utils.Hex2Bytes(b.BlsSignature)...)
+	return utils.Hash(h)
+}
+
+// CurrentCommittee returns the current committee root of the bls signature.
+func (b *BlsSignature) CurrentCommittee() string {
+	return b.CommitteeHeader.CurrentCommittee
+}
+
+// NextCommittee returns the next committee root of the bls signature.
+func (b *BlsSignature) NextCommittee() string {
+	return b.CommitteeHeader.NextCommittee
+}
+
+// TotalVotingPower returns the total voting power of the bls signature.
+func (b *BlsSignature) TotalVotingPower() uint64 {
+	return b.CommitteeHeader.TotalVotingPower
+}
+
+// Clone returns a clone of the bls signature.
+// NOTE: Only used for testing.
+func (b *BlsSignature) Clone() *BlsSignature {
+	return &BlsSignature{
+		BatchHeader: &BatchHeader{
+			BatchNumber:   b.BatchHeader.BatchNumber,
+			BatchHash:     b.BatchHeader.BatchHash,
+			L1BlockNumber: b.BatchHeader.L1BlockNumber,
+			L1TxHash:      b.BatchHeader.L1TxHash,
+			ChainId:       b.BatchHeader.ChainId,
+			L2Blocks:      b.BatchHeader.L2Blocks,
+		},
+		CommitteeHeader: &CommitteeHeader{
+			CurrentCommittee: b.CommitteeHeader.CurrentCommittee,
+			NextCommittee:    b.CommitteeHeader.NextCommittee,
+			TotalVotingPower: b.CommitteeHeader.TotalVotingPower,
+		},
+	}
 }

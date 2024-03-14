@@ -6,11 +6,13 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 )
 
+// TODO: refactor the evidence to use the new sequencer types
 // Evidence defines an evidence.
 type Evidence struct {
 	Operator             string   `json:"operator" bson:"operator"`
@@ -49,8 +51,8 @@ func GetCommitRequestHash(sig *sequencertypes.BlsSignature) []byte {
 }
 
 // GetEvidence returns the evidence from the commit block request.
-func GetEvidence(sig *sequencertypes.BlsSignature) (*Evidence, error) {
-	hash := GetCommitRequestHash(sig)
+func GetEvidence(sig *sequencerv2types.BlsSignature) (*Evidence, error) {
+	hash := sig.CommitHash()
 	signature := common.FromHex(sig.EcdsaSignature)
 	pubKey, err := crypto.SigToPub(hash, signature)
 	if err != nil {
@@ -64,13 +66,13 @@ func GetEvidence(sig *sequencertypes.BlsSignature) (*Evidence, error) {
 	addr := crypto.PubkeyToAddress(*pubKey).Hex()
 	return &Evidence{
 		Operator:             addr,
-		BlockHash:            common.HexToHash(sig.ChainHeader.BlockHash),
-		CurrentCommitteeRoot: common.HexToHash(sig.CurrentCommittee),
-		NextCommitteeRoot:    common.HexToHash(sig.NextCommittee),
-		BlockNumber:          sig.BlockNumber(),
+		BlockHash:            common.HexToHash(sig.BatchHeader.BatchHash),
+		CurrentCommitteeRoot: common.HexToHash(sig.CurrentCommittee()),
+		NextCommitteeRoot:    common.HexToHash(sig.NextCommittee()),
+		BlockNumber:          sig.BatchNumber(),
 		BlockSignature:       common.FromHex(sig.BlsSignature),
 		CommitSignature:      signature,
-		ChainID:              sig.ChainHeader.ChainId,
+		ChainID:              sig.BatchHeader.ChainId,
 	}, nil
 }
 

@@ -124,7 +124,7 @@ func (s *sequencerService) CommitBatch(req *networkv2types.CommitBatchRequest, s
 	}
 
 	signature := req.BlsSignature
-	batchNumber := signature.GetBatchNumber()
+	batchNumber := signature.BatchNumber()
 	logger.Infof("CommitBatch request from %v, %d", req.StakeAddress, batchNumber)
 
 	// verify the peer signature
