@@ -83,12 +83,12 @@ func (bh *BatchHeader) ToBlockNumber() uint64 {
 func (bh *BatchHeader) Hash() []byte {
 	// TODO: implement
 	h := make([]byte, 0)
-	h = append(h, utils.Hex2Bytes(bh.BatchHash)...)
-	h = append(h, utils.Hex2Bytes(bh.L1TxHash)...)
-	h = append(h, utils.Uint64ToBytes(bh.L1BlockNumber)...)
+	h = append(h, utils.Hex2Bytes(bh.BatchHash)...)         //nolint
+	h = append(h, utils.Hex2Bytes(bh.L1TxHash)...)          //nolint
+	h = append(h, utils.Uint64ToBytes(bh.L1BlockNumber)...) //nolint
 	for _, block := range bh.L2Blocks {
-		h = append(h, utils.Uint64ToBytes(block.BlockNumber)...)
-		h = append(h, utils.Hex2Bytes(block.BlockHash)...)
+		h = append(h, utils.Uint64ToBytes(block.BlockNumber)...) //nolint
+		h = append(h, utils.Hex2Bytes(block.BlockHash)...)       //nolint
 	}
 	return utils.Hash([]byte(bh.L1TxHash))
 }

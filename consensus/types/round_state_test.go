@@ -67,11 +67,11 @@ func TestCheckVotingPower(t *testing.T) {
 	vs := NewValidatorSet(validators, uint64(len(validators)))
 	// Test 1: not enough case
 	for i := 0; i < 6; i++ {
-		rs.AddCommit(&sequencerv2types.BlsSignature{}, validators[i].PublicKey, validators[i].StakeAddress)
+		require.NoError(t, rs.AddCommit(&sequencerv2types.BlsSignature{}, validators[i].PublicKey, validators[i].StakeAddress))
 	}
 	require.False(t, rs.CheckEnoughVotingPower(vs))
 	// Test 2: enough case
-	rs.AddCommit(&sequencerv2types.BlsSignature{}, validators[6].PublicKey, validators[6].StakeAddress)
+	require.NoError(t, rs.AddCommit(&sequencerv2types.BlsSignature{}, validators[6].PublicKey, validators[6].StakeAddress))
 	require.True(t, rs.CheckEnoughVotingPower(vs))
 }
 
@@ -93,7 +93,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, verified, i)
 
-		rs.AddCommit(blsSign, validators[i].PublicKey, validators[i].StakeAddress)
+		require.NoError(t, rs.AddCommit(blsSign, validators[i].PublicKey, validators[i].StakeAddress))
 	}
 	err := rs.CheckAggregatedSignature()
 	require.NoError(t, err)
@@ -125,7 +125,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		require.NoError(t, err)
 		require.True(t, verified)
 
-		rs.AddCommit(blsSign, validators[i].PublicKey, validators[i].StakeAddress)
+		require.NoError(t, rs.AddCommit(blsSign, validators[i].PublicKey, validators[i].StakeAddress))
 	}
 	err = rs.CheckAggregatedSignature()
 	require.Error(t, err)
