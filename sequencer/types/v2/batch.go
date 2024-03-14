@@ -35,3 +35,49 @@ func (b *Batch) BlockHash(blockNumber uint64) string {
 
 	return ""
 }
+
+// BlsSignature returns the BLS signature of the batch.
+func (b *Batch) BlsSignature() *BlsSignature {
+	return &BlsSignature{
+		BatchHeader:     b.BatchHeader,
+		CommitteeHeader: b.CommitteeHeader,
+	}
+}
+
+// FromBlockNumber returns the block number of the first block in the batch header.
+func (bh *BatchHeader) FromBlockNumber() uint64 {
+	if len(bh.L2Blocks) == 0 {
+		return 0
+	}
+
+	return bh.L2Blocks[0].BlockNumber
+}
+
+// ToBlockNumber returns the block number of the last block in the batch header.
+func (bh *BatchHeader) ToBlockNumber() uint64 {
+	if len(bh.L2Blocks) == 0 {
+		return 0
+	}
+
+	return bh.L2Blocks[len(bh.L2Blocks)-1].BlockNumber
+}
+
+// Hash returns the hash of the batch header.
+func (bh *BatchHeader) Hash() []byte {
+	return nil // TODO: implement
+}
+
+// GetBatchNumber returns the batch number of the bls signature.
+func (b *BlsSignature) GetBatchNumber() uint64 {
+	return b.BatchHeader.BatchNumber
+}
+
+// Hash returns the hash of the bls signature.
+func (b *BlsSignature) Hash() []byte {
+	return nil // TODO: implement
+}
+
+// CommitHash returns the hash of the commit bls signature.
+func (b *BlsSignature) CommitHash() []byte {
+	return nil // TODO: implement
+}

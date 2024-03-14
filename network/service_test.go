@@ -11,18 +11,21 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	networkv2types "github.com/Lagrange-Labs/lagrange-node/network/types/v2"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 type mockConsensus struct{}
 
-func (m *mockConsensus) GetOpenRoundBlocks(blockNumber uint64) []*sequencertypes.Block {
-	return nil
+func (m *mockConsensus) GetOpenBatch(batchNumber uint64) *sequencerv2types.Batch {
+	return &sequencerv2types.Batch{
+		BatchHeader: &sequencerv2types.BatchHeader{},
+	}
 }
 
-func (m *mockConsensus) AddCommit(commit *sequencertypes.BlsSignature, stakeAddr string) error {
+func (m *mockConsensus) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr string) error {
 	return nil
 }
 
@@ -30,7 +33,7 @@ func (m *mockConsensus) CheckCommitteeMember(stakeAddr string, pubKey []byte) bo
 	return true
 }
 
-func (m *mockConsensus) IsFinalized(blockNumber uint64) bool {
+func (m *mockConsensus) IsFinalized(batchkNumber uint64) bool {
 	return true
 }
 
@@ -95,8 +98,8 @@ func TestJoinNetwork(t *testing.T) {
 		valid     bool
 		wantErr   bool
 	}{
-		{"invalid signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "8afdc78675918678650ad4cf045701e3535eb8b46e8b5425a99f2100a92ea06b", "", false, false},
-		{"wrong signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "8afdc78675918678650ad4cf045701e3535eb8b46e8b5425a99f2100a92ea06b", "a2e3cf2037699b3856c72af280ab8501878495dd81595128df23ba3de0e52fd9126c02b9262b871074f5a34495cd1a1c13cf3d27881ce9a8846463b7d30024c37861e0fa20418c186628f9b6565a116017f988f2d9ae058480fae910a4659bf0", false, false},
+		{"invalid signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "8afdc78675918678650ad4cf045701e3535eb8b46e8b5425a99f2100a92ea06b", "", false, true},
+		{"wrong signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "8afdc78675918678650ad4cf045701e3535eb8b46e8b5425a99f2100a92ea06b", "a2e3cf2037699b3856c72af280ab8501878495dd81595128df23ba3de0e52fd9126c02b9262b871074f5a34495cd1a1c13cf3d27881ce9a8846463b7d30024c37861e0fa20418c186628f9b6565a116017f988f2d9ae058480fae910a4659bf0", false, true},
 		{"invalid peer ctx", ctx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "8afdc78675918678650ad4cf045701e3535eb8b46e8b5425a99f2100a92ea06b", "9ce1d4e95d3191ef1e171838e5b451b849c3c4b3946fa6e87ed610f9160960300357bb907872325a9384e7625d3686f5580dd81218b44fe0d25dfdc48f6bee97", false, true},
 		{"valid signature", peerCtx, "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0", "8afdc78675918678650ad4cf045701e3535eb8b46e8b5425a99f2100a92ea06b", "9ce1d4e95d3191ef1e171838e5b451b849c3c4b3946fa6e87ed610f9160960300357bb907872325a9384e7625d3686f5580dd81218b44fe0d25dfdc48f6bee97", true, false},
 	}
@@ -106,7 +109,7 @@ func TestJoinNetwork(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			res, err := service.JoinNetwork(tc.ctx, &types.JoinNetworkRequest{
+			res, err := service.JoinNetwork(tc.ctx, &networkv2types.JoinNetworkRequest{
 				StakeAddress: tc.stakeAdr,
 				PublicKey:    tc.pubKey,
 				Signature:    tc.signature,
@@ -116,9 +119,9 @@ func TestJoinNetwork(t *testing.T) {
 			} else {
 				require.NoError(t, err)
 				if tc.valid {
-					valide, err := ValidateToken(res.Token, tc.stakeAdr)
+					valid, err := ValidateToken(res.Token, tc.stakeAdr)
 					require.NoError(t, err)
-					require.True(t, valide)
+					require.True(t, valid)
 				}
 			}
 		})

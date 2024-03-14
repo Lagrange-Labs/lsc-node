@@ -1,13 +1,13 @@
 package network
 
 import (
+	"bytes"
 	"context"
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"math/big"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -19,14 +19,13 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/proto"
 
-	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
-	"github.com/Lagrange-Labs/lagrange-node/network/types"
+	networkv2types "github.com/Lagrange-Labs/lagrange-node/network/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -39,7 +38,7 @@ type PreviousBatchInfo struct {
 
 // Client is a gRPC client to join the network
 type Client struct {
-	types.NetworkServiceClient
+	networkv2types.NetworkServiceClient
 	rpcClient   rpctypes.RpcClient
 	committeeSC *committee.Committee
 	blsScheme   crypto.BLSScheme
@@ -52,7 +51,6 @@ type Client struct {
 	stakeAddress    string
 	lastBlockNumber uint64
 	pullInterval    time.Duration
-	prevBatchInfo   PreviousBatchInfo
 	committeeCache  *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
 
 	ctx        context.Context
@@ -128,7 +126,7 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	}
 
 	return &Client{
-		NetworkServiceClient: types.NewNetworkServiceClient(conn),
+		NetworkServiceClient: networkv2types.NewNetworkServiceClient(conn),
 		blsScheme:            blsScheme,
 		blsPrivateKey:        blsPriv,
 		blsPublicKey:         utils.Bytes2Hex(pubkey),
@@ -165,7 +163,7 @@ func (c *Client) Start() {
 		case <-c.ctx.Done():
 			return
 		case <-time.After(c.pullInterval):
-			blocks, err := c.TryGetBlocks()
+			batch, err := c.TryGetBatch()
 			if err != nil {
 				if errors.Is(err, ErrInvalidToken) {
 					c.TryJoinNetwork()
@@ -175,7 +173,7 @@ func (c *Client) Start() {
 				continue
 			}
 
-			if err := c.TryCommitBlocks(blocks); err != nil {
+			if err := c.TryCommitBatch(batch); err != nil {
 				if errors.Is(err, ErrInvalidToken) {
 					c.TryJoinNetwork()
 					continue
@@ -184,7 +182,7 @@ func (c *Client) Start() {
 				continue
 			}
 
-			c.lastBlockNumber = blocks[len(blocks)-1].BlockNumber() + 1
+			c.lastBlockNumber = batch.BatchHeader.ToBlockNumber() + 1
 			logger.Infof("uploaded the signature up to block %d\n", c.lastBlockNumber-1)
 		}
 	}
@@ -204,7 +202,7 @@ func (c *Client) TryJoinNetwork() {
 }
 
 func (c *Client) joinNetwork() error {
-	req := &types.JoinNetworkRequest{
+	req := &networkv2types.JoinNetworkRequest{
 		PublicKey:    c.blsPublicKey,
 		StakeAddress: c.stakeAddress,
 	}
@@ -229,9 +227,10 @@ func (c *Client) joinNetwork() error {
 	return nil
 }
 
-// TryGetBlocks tries to get the block batch from the network.
-func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
-	res, err := c.GetBatch(context.Background(), &types.GetBatchRequest{BlockNumber: c.lastBlockNumber, StakeAddress: c.stakeAddress, Token: c.jwToken})
+// TryGetBatch tries to get the batch from the network.
+func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
+	res, err := c.GetBatch(context.Background(), &networkv2types.GetBatchRequest{
+		BatchNumber: c.lastBlockNumber, StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
 			return nil, ErrInvalidToken
@@ -239,76 +238,52 @@ func (c *Client) TryGetBlocks() ([]*sequencertypes.Block, error) {
 		return nil, err
 	}
 
-	if len(res.Batch) == 0 {
+	if res.Batch == nil {
 		return nil, ErrBlockNotReady
 	}
-
-	logger.Infof("got the batch the block number from %d to %d\n", res.Batch[0].BlockNumber(), res.Batch[len(res.Batch)-1].BlockNumber())
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(res.Batch))
-	chError := make(chan error, len(res.Batch))
-
-	blockHeaders := make(map[uint64]*rpctypes.L2BlockHeader)
-	for _, block := range res.Batch {
-		blockHeader, err := c.rpcClient.GetBlockHeaderByNumber(block.BlockNumber(), block.L1TxHash())
-		if err != nil {
-			return nil, fmt.Errorf("failed to get the block header by number: %v", err)
-		}
-		blockHeaders[block.BlockNumber()] = blockHeader
-	}
+	batch := res.Batch
+	logger.Infof("got the batch the block number from %d to %d\n", res.FromBlockNumber, res.ToBlockNumber)
 
 	// verify the L1 block number
-	for i, block := range res.Batch {
-		l1BlockNumber := blockHeaders[block.BlockNumber()].L1BlockNumber
-		if l1BlockNumber != block.L1BlockNumber() {
-			return nil, fmt.Errorf("the L1 block number %d is not equal to the rpc L1 block number %d", block.L1BlockNumber(), l1BlockNumber)
-		}
-		if i > 0 && block.BlockNumber() != res.Batch[i-1].BlockNumber()+1 {
-			return nil, fmt.Errorf("the batch blocks order is not sorted at index: %d the current block number: %d the previous block number: %d", i, block.BlockNumber(), res.Batch[i-1].BlockNumber())
-		}
+	batchHeader, err := c.rpcClient.GetBatchHeaderByNumber(res.FromBlockNumber)
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the batch header by number: %v", err)
 	}
-
-	if err := c.verifyCommitteeRoot(res.Batch); err != nil {
+	if batch.L1BlockNumber() != batchHeader.L1BlockNumber {
+		return nil, fmt.Errorf("the batch L1 block number %d is not equal to the rpc L1 block number %d", res.Batch.L1BlockNumber(), batchHeader.L1BlockNumber)
+	}
+	if res.FromBlockNumber != batchHeader.FromBlockNumber() {
+		return nil, fmt.Errorf("the batch from block number %d is not equal to the rpc from block number %d", res.FromBlockNumber, batchHeader.FromBlockNumber())
+	}
+	if res.ToBlockNumber != batchHeader.ToBlockNumber() {
+		return nil, fmt.Errorf("the batch to block number %d is not equal to the rpc to block number %d", res.ToBlockNumber, batchHeader.ToBlockNumber())
+	}
+	// verify the committee root
+	if err := c.verifyCommitteeRoot(batch); err != nil {
 		return nil, fmt.Errorf("failed to verify the committee root: %v", err)
 	}
 
-	for _, block := range res.Batch {
-		go func(block *sequencertypes.Block) {
-			defer wg.Done()
-			// verify the proposer signature
-			if len(block.ProposerPubKey()) == 0 {
-				chError <- fmt.Errorf("the block %d proposer key is empty", block.BlockNumber())
-				return
-			}
-			blsSigHash := block.BlsSignature().Hash()
-			// verify the proposer signature
-			verified, err := c.blsScheme.VerifySignature(common.FromHex(block.ProposerPubKey()), blsSigHash, common.FromHex(block.ProposerSignature()))
-			if err != nil || !verified {
-				chError <- fmt.Errorf("failed to verify the proposer signature: %v", err)
-				return
-			}
-			// verify if the block hash is correct
-			blockHash := block.BlockHash()
-			rBlockHash := blockHeaders[block.BlockNumber()].L2BlockHash.Hex()
-			if blockHash != rBlockHash {
-				chError <- fmt.Errorf("the block hash %s is not equal to the rpc block hash %s", blockHash, rBlockHash)
-				return
-			}
-		}(block)
+	// verify the proposer signature
+	if len(batch.ProposerPubKey) == 0 {
+		return nil, fmt.Errorf("the block %d proposer key is empty", batch.BatchNumber())
 	}
-	wg.Wait()
-
-	close(chError)
-	for err := range chError {
-		logger.Errorf("failed to verify the block: %v", err)
-		return nil, err
+	blsSigHash := batch.BlsSignature().Hash()
+	// verify the proposer signature
+	verified, err := c.blsScheme.VerifySignature(common.FromHex(batch.ProposerPubKey), blsSigHash, common.FromHex(batch.ProposerSignature))
+	if err != nil || !verified {
+		return nil, fmt.Errorf("failed to verify the proposer signature: %v", err)
+	}
+	// verify if the batch hash is correct
+	batchHash := batch.BatchHash()
+	bhHash := batchHeader.Hash()
+	if !bytes.Equal(common.FromHex(batchHash), bhHash) {
+		return nil, fmt.Errorf("the batch hash %s is not equal to the batch header hash %s", batchHash, utils.Bytes2Hex(bhHash))
 	}
 
-	return res.Batch, nil
+	return batch, nil
 }
 
-func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommitteeCommitteeData, error) {
+func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommitteeCommitteeData, error) { //nolint
 	if committeeData, ok := c.committeeCache.Get(blockNumber); ok {
 		return committeeData, nil
 	}
@@ -322,132 +297,105 @@ func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommi
 	return &committeeData.CurrentCommittee, nil
 }
 
-func (c *Client) verifyCommitteeRoot(batch []*sequencertypes.Block) error {
+// TODO: verify the committee root
+func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 	// initialize the previous batch info
-	if len(c.prevBatchInfo.NextCommitteeRoot) == 0 {
-		previousBlock, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: batch[0].BlockNumber() - 1, StakeAddress: c.stakeAddress, Token: c.jwToken})
-		if err != nil && !strings.Contains(err.Error(), "block not found") {
-			// TODO: handle the block not found error
-			return fmt.Errorf("failed to get the previous block: %v", err)
-		}
-		if previousBlock == nil || previousBlock.Block == nil {
-			c.prevBatchInfo = PreviousBatchInfo{
-				NextCommitteeRoot: batch[0].CurrentCommittee(),
-				L1BlockNumber:     batch[0].L1BlockNumber(),
-			}
-		} else {
-			blockHeader, err := c.rpcClient.GetBlockHeaderByNumber(previousBlock.Block.BlockNumber(), previousBlock.Block.L1TxHash())
-			if err != nil {
-				return fmt.Errorf("failed to get the block header by number: %v", err)
-			}
-			if previousBlock.Block.L1BlockNumber() != blockHeader.L1BlockNumber {
-				return fmt.Errorf("the previous block L1 block number %d is not equal to the rpc L1 block number %d", previousBlock.Block.L1BlockNumber(), blockHeader.L1BlockNumber)
-			}
+	// if len(c.prevBatchInfo.NextCommitteeRoot) == 0 {
+	// 	previousBlock, err := c.GetBlock(context.Background(), &types.GetBlockRequest{BlockNumber: batch[0].BlockNumber() - 1, StakeAddress: c.stakeAddress, Token: c.jwToken})
+	// 	if err != nil && !strings.Contains(err.Error(), "block not found") {
+	// 		// TODO: handle the block not found error
+	// 		return fmt.Errorf("failed to get the previous block: %v", err)
+	// 	}
+	// 	if previousBlock == nil || previousBlock.Block == nil {
+	// 		c.prevBatchInfo = PreviousBatchInfo{
+	// 			NextCommitteeRoot: batch[0].CurrentCommittee(),
+	// 			L1BlockNumber:     batch[0].L1BlockNumber(),
+	// 		}
+	// 	} else {
+	// 		blockHeader, err := c.rpcClient.GetBlockHeaderByNumber(previousBlock.Block.BlockNumber(), previousBlock.Block.L1TxHash())
+	// 		if err != nil {
+	// 			return fmt.Errorf("failed to get the block header by number: %v", err)
+	// 		}
+	// 		if previousBlock.Block.L1BlockNumber() != blockHeader.L1BlockNumber {
+	// 			return fmt.Errorf("the previous block L1 block number %d is not equal to the rpc L1 block number %d", previousBlock.Block.L1BlockNumber(), blockHeader.L1BlockNumber)
+	// 		}
 
-			previousCommitteeData, err := c.getCommitteeRoot(blockHeader.L1BlockNumber)
-			if err != nil {
-				return fmt.Errorf("failed to get the previous committee root: %v", err)
-			}
-			if previousBlock.Block.NextCommittee() != utils.Bytes2Hex(previousCommitteeData.Root[:]) {
-				return fmt.Errorf("the previous block next committee root %s is not equal to the epoch committee root %s", previousBlock.Block.NextCommittee(), utils.Bytes2Hex(previousCommitteeData.Root[:]))
-			}
+	// 		previousCommitteeData, err := c.getCommitteeRoot(blockHeader.L1BlockNumber)
+	// 		if err != nil {
+	// 			return fmt.Errorf("failed to get the previous committee root: %v", err)
+	// 		}
+	// 		if previousBlock.Block.NextCommittee() != utils.Bytes2Hex(previousCommitteeData.Root[:]) {
+	// 			return fmt.Errorf("the previous block next committee root %s is not equal to the epoch committee root %s", previousBlock.Block.NextCommittee(), utils.Bytes2Hex(previousCommitteeData.Root[:]))
+	// 		}
 
-			c.prevBatchInfo = PreviousBatchInfo{
-				NextCommitteeRoot: previousBlock.Block.NextCommittee(),
-				L1BlockNumber:     previousBlock.Block.L1BlockNumber(),
-			}
-		}
-	}
-	// verify the previous block's next committee root
-	if len(c.prevBatchInfo.NextCommitteeRoot) > 0 && batch[0].CurrentCommittee() != c.prevBatchInfo.NextCommitteeRoot {
-		return fmt.Errorf("the block committee root %s is not equal to the previous batch's next committee root %s", batch[0].CurrentCommittee(), c.prevBatchInfo.NextCommitteeRoot)
-	}
-	for i, block := range batch {
-		if i > 0 && block.CurrentCommittee() != batch[i-1].NextCommittee() {
-			return fmt.Errorf("the block %d committee root %s is not equal to the previous block's next committee root %s", i, block.CurrentCommittee(), batch[i-1].NextCommittee())
-		}
-	}
+	// 		c.prevBatchInfo = PreviousBatchInfo{
+	// 			NextCommitteeRoot: previousBlock.Block.NextCommittee(),
+	// 			L1BlockNumber:     previousBlock.Block.L1BlockNumber(),
+	// 		}
+	// 	}
+	// }
+	// // verify the previous block's next committee root
+	// if len(c.prevBatchInfo.NextCommitteeRoot) > 0 && batch[0].CurrentCommittee() != c.prevBatchInfo.NextCommitteeRoot {
+	// 	return fmt.Errorf("the block committee root %s is not equal to the previous batch's next committee root %s", batch[0].CurrentCommittee(), c.prevBatchInfo.NextCommitteeRoot)
+	// }
+	// for i, block := range batch {
+	// 	if i > 0 && block.CurrentCommittee() != batch[i-1].NextCommittee() {
+	// 		return fmt.Errorf("the block %d committee root %s is not equal to the previous block's next committee root %s", i, block.CurrentCommittee(), batch[i-1].NextCommittee())
+	// 	}
+	// }
 
-	lastBlock := batch[len(batch)-1]
-	previousBlockNumber := c.prevBatchInfo.L1BlockNumber
-	if len(batch) > 1 {
-		previousBlockNumber = batch[len(batch)-2].L1BlockNumber()
-	}
-	previousCommitteeData, err := c.getCommitteeRoot(previousBlockNumber)
-	if err != nil {
-		return fmt.Errorf("failed to get the previous committee root: %v", err)
-	}
-	for _, block := range batch {
-		if block.CurrentCommittee() != utils.Bytes2Hex(previousCommitteeData.Root[:]) {
-			return fmt.Errorf("the block %d committee root %s is not equal to the epoch committee root %s", block.BlockNumber(), block.CurrentCommittee(), utils.Bytes2Hex(previousCommitteeData.Root[:]))
-		}
-	}
-	// still can verify the next committee root even if the committee epoch rotates
-	committeeData, err := c.getCommitteeRoot(lastBlock.L1BlockNumber())
-	if err != nil {
-		return fmt.Errorf("failed to get the committee root: %v", err)
-	}
-	if lastBlock.NextCommittee() != utils.Bytes2Hex(committeeData.Root[:]) {
-		return fmt.Errorf("the last block %d next committee root %s is not equal to the epoch committee root %s", lastBlock.BlockNumber(), lastBlock.NextCommittee(), utils.Bytes2Hex(committeeData.Root[:]))
-	}
+	// lastBlock := batch[len(batch)-1]
+	// previousBlockNumber := c.prevBatchInfo.L1BlockNumber
+	// if len(batch) > 1 {
+	// 	previousBlockNumber = batch[len(batch)-2].L1BlockNumber()
+	// }
+	// previousCommitteeData, err := c.getCommitteeRoot(previousBlockNumber)
+	// if err != nil {
+	// 	return fmt.Errorf("failed to get the previous committee root: %v", err)
+	// }
+	// for _, block := range batch {
+	// 	if block.CurrentCommittee() != utils.Bytes2Hex(previousCommitteeData.Root[:]) {
+	// 		return fmt.Errorf("the block %d committee root %s is not equal to the epoch committee root %s", block.BlockNumber(), block.CurrentCommittee(), utils.Bytes2Hex(previousCommitteeData.Root[:]))
+	// 	}
+	// }
+	// // still can verify the next committee root even if the committee epoch rotates
+	// committeeData, err := c.getCommitteeRoot(lastBlock.L1BlockNumber())
+	// if err != nil {
+	// 	return fmt.Errorf("failed to get the committee root: %v", err)
+	// }
+	// if lastBlock.NextCommittee() != utils.Bytes2Hex(committeeData.Root[:]) {
+	// 	return fmt.Errorf("the last block %d next committee root %s is not equal to the epoch committee root %s", lastBlock.BlockNumber(), lastBlock.NextCommittee(), utils.Bytes2Hex(committeeData.Root[:]))
+	// }
 
-	c.prevBatchInfo = PreviousBatchInfo{
-		NextCommitteeRoot: lastBlock.NextCommittee(),
-		L1BlockNumber:     lastBlock.L1BlockNumber(),
-	}
+	// c.prevBatchInfo = PreviousBatchInfo{
+	// 	NextCommitteeRoot: lastBlock.NextCommittee(),
+	// 	L1BlockNumber:     lastBlock.L1BlockNumber(),
+	// }
 
 	return nil
 }
 
-// TryCommitBlocks tries to commit the signature to the network.
-func (c *Client) TryCommitBlocks(blocks []*sequencertypes.Block) error {
-
-	wg := sync.WaitGroup{}
-	wg.Add(len(blocks))
-	chError := make(chan error, len(blocks))
-
-	sigs := make(chan *sequencertypes.BlsSignature, len(blocks))
-	for _, block := range blocks {
-		go func(block *sequencertypes.Block) {
-			defer wg.Done()
-			blsSignature := block.BlsSignature()
-			blsSig, err := c.blsScheme.Sign(c.blsPrivateKey, blsSignature.Hash())
-			if err != nil {
-				chError <- fmt.Errorf("failed to sign the BLS signature: %v", err)
-				return
-			}
-			blsSignature.BlsSignature = utils.Bytes2Hex(blsSig)
-
-			// generate the ECDSA signature
-			msg := contypes.GetCommitRequestHash(blsSignature)
-			sig, err := ecrypto.Sign(msg, c.ecdsaPrivateKey)
-			if err != nil {
-				chError <- fmt.Errorf("failed to ecdsa sign the block: %v", err)
-				return
-			}
-			blsSignature.EcdsaSignature = common.Bytes2Hex(sig)
-			sigs <- blsSignature
-		}(block)
+// TryCommitBatch tries to commit the signature to the network.
+func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
+	blsSignature := batch.BlsSignature()
+	blsSig, err := c.blsScheme.Sign(c.blsPrivateKey, blsSignature.Hash())
+	if err != nil {
+		return fmt.Errorf("failed to sign the BLS signature: %v", err)
 	}
+	blsSignature.BlsSignature = utils.Bytes2Hex(blsSig)
 
-	wg.Wait()
-	close(chError)
-	close(sigs)
-	for err := range chError {
-		logger.Errorf("failed to sign the block: %v", err)
-		return err
+	// generate the ECDSA signature
+	msg := blsSignature.CommitHash()
+	sig, err := ecrypto.Sign(msg, c.ecdsaPrivateKey)
+	if err != nil {
+		return fmt.Errorf("failed to ecdsa sign the block: %v", err)
 	}
+	blsSignature.EcdsaSignature = common.Bytes2Hex(sig)
 
-	// upload the signature
-	blsSignatures := make([]*sequencertypes.BlsSignature, 0, len(blocks))
-	for blsSignature := range sigs {
-		blsSignatures = append(blsSignatures, blsSignature)
-	}
-
-	req := &types.CommitBatchRequest{
-		BlsSignatures: blsSignatures,
-		StakeAddress:  c.stakeAddress,
-		Token:         c.jwToken,
+	req := &networkv2types.CommitBatchRequest{
+		BlsSignature: blsSignature,
+		StakeAddress: c.stakeAddress,
+		Token:        c.jwToken,
 	}
 
 	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
