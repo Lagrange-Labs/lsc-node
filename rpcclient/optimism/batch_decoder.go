@@ -44,6 +44,10 @@ func handleFrames(blockNumber uint64, chainID *big.Int, frames []derive.Frame) (
 			return nil, fmt.Errorf("Invaild Frame: channel %v is ready", channelID)
 		}
 		for _, frame := range frames {
+			if ch.IsReady() {
+				logger.Errorf("Invaild Frame: channel %v is ready", channelID)
+				return nil, fmt.Errorf("Invaild Frame: channel %v is ready", channelID)
+			}
 			if err := ch.AddFrame(frame, blockRef); err != nil {
 				logger.Errorf("Failed to add frame: %v", err)
 				return nil, err
@@ -69,8 +73,9 @@ func handleFrames(blockNumber uint64, chainID *big.Int, frames []derive.Frame) (
 						return nil, err
 					}
 					batches = append(batches, L2BlockBatch{
-						ParentHash: batch.ParentHash,
-						BlockCount: 1,
+						ParentHash:      batch.ParentHash,
+						ParentHashCheck: batch.ParentHash[:20],
+						BlockCount:      1,
 					})
 				case derive.SpanBatchType:
 					batch, err := derive.DeriveSpanBatch(batchData, 1, 1, chainID)
