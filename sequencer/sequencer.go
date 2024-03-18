@@ -2,15 +2,15 @@ package sequencer
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
-
-	"github.com/ethereum/go-ethereum/common"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	"github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	v2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 )
 
 const (
@@ -45,22 +45,34 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 		logger.Errorf("failed to get chain ID: %v", err)
 		return nil, err
 	}
+	rpcClient.SetBeginBlockNumber(cfg.FromL1BlockNumber)
 
-	blockNumber, err := storage.GetLastBlockNumber(context.Background(), chainID)
+	lastBlockNumber := uint64(0)
+	batchNumber, err := storage.GetLastBatchNumber(context.Background(), chainID)
 	if err != nil {
-		logger.Errorf("failed to get last block number: %v", err)
-		return nil, err
+		if errors.Is(err, storetypes.ErrBatchNotFound) {
+			logger.Infof("no batch found")
+		} else {
+			logger.Errorf("failed to get last batch number: %v", err)
+			return nil, err
+		}
+	} else {
+		batch, err := storage.GetBatch(context.Background(), chainID, batchNumber)
+		if err != nil {
+			logger.Errorf("failed to get batch for batch number: %d error : %v", batchNumber, err)
+			return nil, err
+		}
+		lastBlockNumber = batch.BatchHeader.ToBlockNumber()
 	}
-
-	if cfg.FromBlockNumber > blockNumber {
-		blockNumber = cfg.FromBlockNumber
+	if cfg.FromL2BlockNumber > lastBlockNumber {
+		lastBlockNumber = cfg.FromL2BlockNumber - 1
 	}
 
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Sequencer{
 		storage:         storage,
 		rpcClient:       rpcClient,
-		lastBlockNumber: blockNumber,
+		lastBlockNumber: lastBlockNumber,
 		chainID:         uint32(chainID),
 		ctx:             ctx,
 		cancel:          cancel,
@@ -87,42 +99,27 @@ func (s *Sequencer) Start() error {
 		case <-s.ctx.Done():
 			return nil
 		default:
-			lastBlockNumber := s.lastBlockNumber
-			if s.lastBlockNumber > finalizedBlockNumber {
-				logger.Infof("sequencer synced to %d", finalizedBlockNumber)
-				time.Sleep(SyncInterval)
-				finalizedBlockNumber, err = s.rpcClient.GetFinalizedBlockNumber()
-				if err != nil {
-					logger.Errorf("failed to get finalized block number: %v", err)
-					return err
-				}
-				continue
-			}
-			blockHeader, err := s.rpcClient.GetBlockHeaderByNumber(lastBlockNumber, common.Hash{})
+			nextBlockNumber := s.lastBlockNumber + 1
+			batchHeader, err := s.rpcClient.GetBatchHeaderByNumber(nextBlockNumber)
 			if err != nil {
-				if err == rpctypes.ErrBlockNotFound {
-					logger.Infof("block %d not found", lastBlockNumber)
+				if errors.Is(err, rpctypes.ErrBatchNotFound) {
+					logger.Infof("block %d is not ready", nextBlockNumber)
 					time.Sleep(SyncInterval)
 					continue
 				}
-				logger.Errorf("failed to get block header: %v", err)
+				logger.Errorf("failed to get batch header: %v", err)
 				return err
 			}
 
-			if err := s.storage.AddBlock(context.Background(), &types.Block{
-				ChainHeader: &types.ChainHeader{
-					BlockNumber:   lastBlockNumber,
-					BlockHash:     blockHeader.L2BlockHash.Hex(),
-					ChainId:       s.chainID,
-					L1BlockNumber: blockHeader.L1BlockNumber,
-				},
+			if err := s.storage.AddBatch(context.Background(), &v2types.Batch{
+				BatchHeader:   batchHeader,
 				SequencedTime: fmt.Sprintf("%d", time.Now().UnixMicro()),
 			}); err != nil {
-				logger.Errorf("failed to add block: %v", err)
+				logger.Errorf("failed to add batch: %v", err)
 				return err
 			}
 
-			s.lastBlockNumber = lastBlockNumber + 1
+			s.lastBlockNumber = batchHeader.ToBlockNumber()
 			time.Sleep(1 * time.Millisecond)
 		}
 	}

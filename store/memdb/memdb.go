@@ -160,7 +160,7 @@ func (d *MemDB) GetLastBatchNumber(ctx context.Context, chainID uint32) (uint64,
 		}
 	}
 
-	return 0, nil
+	return 0, types.ErrBatchNotFound
 }
 
 // GetBatch returns the batch for the given batch number.
@@ -171,7 +171,7 @@ func (d *MemDB) GetBatch(ctx context.Context, chainID uint32, batchNumber uint64
 		}
 	}
 
-	return nil, nil
+	return nil, types.ErrBatchNotFound
 }
 
 // GetNodesByStatuses returns the nodes with the given statuses.

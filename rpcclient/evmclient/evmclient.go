@@ -3,6 +3,7 @@ package evmclient
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"math"
 	"math/big"
@@ -57,7 +58,7 @@ func (c *Client) GetCurrentBlockNumber() (uint64, error) {
 // GetBlockHashByNumber returns the block hash by the given block number.
 func (c *Client) GetBlockHashByNumber(blockNumber uint64) (common.Hash, error) {
 	rawHeader, err := c.GetRawHeaderByNumber(blockNumber)
-	if err == rpc.ErrNoResult {
+	if errors.Is(err, rpc.ErrNoResult) {
 		return common.Hash{}, types.ErrBlockNotFound
 	}
 	if err != nil {
@@ -106,6 +107,9 @@ func (c *Client) GetRawHeaderByNumber(blockNumber uint64) (json.RawMessage, erro
 	var rawHeader json.RawMessage
 	if err := c.rpcClient.CallContext(context.Background(), &rawHeader, "eth_getBlockByNumber",
 		hexutil.EncodeBig(big.NewInt(int64(blockNumber))), false); err != nil {
+		if errors.Is(err, rpc.ErrNoResult) {
+			return nil, types.ErrNoResult
+		}
 		return nil, err
 	}
 
@@ -114,7 +118,7 @@ func (c *Client) GetRawHeaderByNumber(blockNumber uint64) (json.RawMessage, erro
 		return nil, fmt.Errorf("failed to unmarshal block header error: %w rawHeader: %s", err, rawHeader)
 	}
 	if header == nil {
-		return nil, rpc.ErrNoResult
+		return nil, types.ErrNoResult
 	}
 
 	c.cache.Add(blockNumber, rawHeader)

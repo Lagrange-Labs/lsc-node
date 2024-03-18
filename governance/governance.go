@@ -138,13 +138,10 @@ func (g *Governance) updateCommittee() error {
 	g.isOpertorsSynced = false
 	// check if there are any missing committee roots
 	for epochNumber := g.currentEpochNumber + 1; epochNumber <= g.updatedEpochNumber+1; epochNumber++ {
-		epochEndBlockNumber := epochNumber*g.committeeParams.Duration + g.committeeParams.StartBlock - 1
-
-		committeeRoot, err := g.fetchCommitteeRoot(epochEndBlockNumber, epochNumber)
+		committeeRoot, err := g.fetchCommitteeRoot(epochNumber)
 		if err != nil {
 			return err
 		}
-		committeeRoot.EpochStartBlockNumber = epochEndBlockNumber - g.committeeParams.Duration + 1
 		if err := g.storage.UpdateCommitteeRoot(g.ctx, committeeRoot); err != nil {
 			return err
 		}
@@ -165,13 +162,10 @@ func (g *Governance) updateCommittee() error {
 
 	for epochNumber := g.updatedEpochNumber + 1; epochNumber <= currentEpochNumber.Uint64(); epochNumber++ {
 		if epochNumber > g.currentEpochNumber {
-			epochEndBlockNumber := epochNumber*g.committeeParams.Duration + g.committeeParams.StartBlock - 1
-
-			committeeRoot, err := g.fetchCommitteeRoot(epochEndBlockNumber, epochNumber)
+			committeeRoot, err := g.fetchCommitteeRoot(epochNumber)
 			if err != nil {
 				return err
 			}
-			committeeRoot.EpochStartBlockNumber = epochEndBlockNumber - g.committeeParams.Duration + 1
 			if err := g.storage.UpdateCommitteeRoot(context.Background(), committeeRoot); err != nil {
 				return err
 			}
@@ -217,20 +211,22 @@ func (g *Governance) updateCommittee() error {
 }
 
 // fetch the committee root from the smart contract
-func (g *Governance) fetchCommitteeRoot(blockNumber, epochNumber uint64) (*types.CommitteeRoot, error) {
-	committeeData, err := g.committeeSC.GetCommittee(nil, g.chainID, big.NewInt(int64(blockNumber)))
+func (g *Governance) fetchCommitteeRoot(epochNumber uint64) (*types.CommitteeRoot, error) {
+	epochEndBlockNumber := epochNumber*g.committeeParams.Duration + g.committeeParams.StartBlock - 1
+	committeeData, err := g.committeeSC.GetCommittee(nil, g.chainID, big.NewInt(int64(epochEndBlockNumber)))
 
 	if err != nil {
-		logger.Errorf("failed to get committee data for block number %d, epoch number %d: %w", blockNumber, epochNumber, err)
+		logger.Errorf("failed to get committee data for block number %d, epoch number %d: %w", epochEndBlockNumber, epochNumber, err)
 		return nil, err
 	}
 
 	committeeRoot := &types.CommitteeRoot{
-		ChainID:              g.chainID,
-		CurrentCommitteeRoot: utils.Bytes2Hex(committeeData.CurrentCommittee.Root[:]),
-		TotalVotingPower:     committeeData.CurrentCommittee.TotalVotingPower.Uint64(),
-		EpochEndBlockNumber:  blockNumber,
-		EpochNumber:          epochNumber,
+		ChainID:               g.chainID,
+		CurrentCommitteeRoot:  utils.Bytes2Hex(committeeData.CurrentCommittee.Root[:]),
+		TotalVotingPower:      committeeData.CurrentCommittee.TotalVotingPower.Uint64(),
+		EpochStartBlockNumber: epochEndBlockNumber - g.committeeParams.Duration + 1,
+		EpochEndBlockNumber:   epochEndBlockNumber,
+		EpochNumber:           epochNumber,
 	}
 
 	if committeeRoot.TotalVotingPower == 0 {
@@ -268,6 +264,8 @@ func (g *Governance) fetchCommitteeRoot(blockNumber, epochNumber uint64) (*types
 	}
 
 	committeeRoot.Operators = g.operators
+
+	logger.Infof("fetched committee root %+v", committeeRoot)
 
 	return committeeRoot, nil
 }
