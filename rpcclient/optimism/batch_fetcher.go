@@ -1,9 +1,7 @@
 package optimism
 
 import (
-	"bytes"
 	"context"
-	"fmt"
 	"math/big"
 	"sort"
 	"sync"
@@ -34,18 +32,31 @@ type BatchesRef struct {
 	Batches       []L2BlockBatch
 	L1BlockNumber uint64
 	L1TxHash      common.Hash
+	L2BlockCount  int
+}
+
+// FramesRef is a the list of frames with the L1 metadata.
+type FramesRef struct {
+	Frames        []derive.Frame
+	L1BlockNumber uint64
+	L1TxHash      common.Hash
+	TxIndex       int
 }
 
 // Fetcher is a synchronizer for the BatchInbox EOA.
 type Fetcher struct {
 	l1Client          *ethclient.Client
 	l2Client          *ethclient.Client
-	chainID           *big.Int
 	batchInboxAddress common.Address
 	batchSender       common.Address
 	signer            coretypes.Signer
 	batchCache        *utils.Cache
 	blockCache        *utils.Cache
+	// decoder
+	chFramesRef             chan *FramesRef
+	lastSyncedL2BlockNumber uint64
+	pendingBatchesRefs      []*BatchesRef
+	chainID                 *big.Int
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -81,6 +92,8 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		batchCache:        utils.NewCache(cacheLimit),
 		blockCache:        utils.NewCache(cacheLimit),
 
+		chFramesRef: make(chan *FramesRef, 64),
+
 		ctx:    ctx,
 		cancel: cancel,
 	}, nil
@@ -94,8 +107,14 @@ func (f *Fetcher) GetFetchedBlockNumber() uint64 {
 // Fetch fetches the block data from the Ethereum and analyzes the
 // transactions which are sent to the BatchInbox EOA.
 func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
+	go func() {
+		if err := f.handleFrames(); err != nil {
+			logger.Errorf("failed to handle frames: %v", err)
+		}
+		logger.Infof("decoder is stopped")
+	}()
+
 	lastSyncedL1BlockNumber := l1BeginBlockNumber
-	lastSyncedL2BlockNumber := uint64(0)
 
 	for {
 		select {
@@ -139,76 +158,19 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			if err := g.Wait(); err != nil {
 				return err
 			}
-			bachesRefs := make([]*BatchesRef, 0)
+			framesRefs := make([]*FramesRef, 0)
 			m.Range(func(_, ref interface{}) bool {
-				bachesRefs = append(bachesRefs, ref.(*BatchesRef))
+				framesRefs = append(framesRefs, ref.(*FramesRef))
 				return true
 			})
-			sort.Slice(bachesRefs, func(i, j int) bool {
-				return bachesRefs[i].L1BlockNumber < bachesRefs[j].L1BlockNumber
+			sort.Slice(framesRefs, func(i, j int) bool {
+				if framesRefs[i].L1BlockNumber == framesRefs[j].L1BlockNumber {
+					return framesRefs[i].TxIndex < framesRefs[j].TxIndex
+				}
+				return framesRefs[i].L1BlockNumber < framesRefs[j].L1BlockNumber
 			})
-			for _, batchesRef := range bachesRefs {
-				count := uint64(0)
-				for _, batch := range batchesRef.Batches {
-					count += uint64(batch.BlockCount)
-				}
-				// check the parent hash of the first block is correct
-				if lastSyncedL2BlockNumber > 0 {
-					parentHash, err := f.getL2BlockHash(lastSyncedL2BlockNumber)
-					if err != nil {
-						logger.Errorf("failed to get L2 block hash: %v", err)
-						return err
-					}
-					if bytes.Equal(batchesRef.Batches[0].ParentHashCheck, parentHash[:20]) {
-						logger.Infof("L2 batch is loaded from %d L1 BlockNumber:%d TxHash: %v", lastSyncedL2BlockNumber+1, batchesRef.L1BlockNumber, batchesRef.L1TxHash.Hex())
-						f.batchCache.Set(lastSyncedL2BlockNumber+1, batchesRef)
-						lastSyncedL2BlockNumber += count
-						continue
-					} else {
-						logger.Errorf("parent hash mismatch: %d %+v", lastSyncedL2BlockNumber, batchesRef)
-						return fmt.Errorf("parent hash mismatch")
-					}
-				}
-				// determine the last synced L2 block number
-				l2BlockNumber := uint64(0)
-				forwardCount := uint64(0)
-				for _, batch := range batchesRef.Batches {
-					forwardCount += uint64(batch.BlockCount)
-					if batch.ParentHash.Cmp((common.Hash{})) != 0 {
-						l2BlockNumber, err = f.getL2BlockNumberByHash(batch.ParentHash)
-						if err != nil {
-							logger.Errorf("failed to get L2 block number by block hash: %v", err)
-							return err
-						}
-						break
-					}
-					if batch.TxHash.Cmp((common.Hash{})) != 0 {
-						l2BlockNumber, err = f.getL2BlockNumberByTxHash(batch.TxHash)
-						if err != nil {
-							logger.Errorf("failed to get L2 block number by tx hash: %v", err)
-							return err
-						}
-						break
-					}
-				}
-				if l2BlockNumber == 0 {
-					logger.Errorf("no L2 block number found: %+v", batchesRef)
-					return fmt.Errorf("no L2 block number found")
-				}
-				for bn := l2BlockNumber - forwardCount; bn <= l2BlockNumber; bn++ {
-					blockHash, err := f.getL2BlockHash(bn)
-					if err != nil {
-						logger.Errorf("failed to get L2 block hash: %v", err)
-						return err
-					}
-					if bytes.Equal(batchesRef.Batches[0].ParentHashCheck, blockHash[:20]) {
-						lastSyncedL2BlockNumber = bn
-						break
-					}
-				}
-				logger.Infof("L2 batch is loaded from %d L1 BlockNumber:%d TxHash: %v", lastSyncedL2BlockNumber+1, batchesRef.L1BlockNumber, batchesRef.L1TxHash.Hex())
-				f.batchCache.Set(lastSyncedL2BlockNumber+1, batchesRef)
-				lastSyncedL2BlockNumber += count
+			for _, framesRef := range framesRefs {
+				f.chFramesRef <- framesRef
 			}
 			lastSyncedL1BlockNumber = nextBlockNumber
 		}
@@ -218,54 +180,37 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 // Stop stops the Fetcher.
 func (f *Fetcher) Stop() {
 	f.cancel()
+	close(f.chFramesRef)
 }
 
 // fetchBlock fetches the given block and analyzes the transactions
 // which are sent to the BatchInbox EOA.
-func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64) ([]*BatchesRef, error) {
+func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64) ([]*FramesRef, error) {
 	block, err := f.l1Client.BlockByNumber(ctx, big.NewInt(int64(blockNumber)))
 	if err != nil {
 		return nil, err
 	}
 
-	res := make([]*BatchesRef, 0)
-	for _, tx := range block.Transactions() {
+	res := make([]*FramesRef, 0)
+	for i, tx := range block.Transactions() {
 		if !f.validTransaction(tx) {
 			continue
 		}
-		batchesRef, err := f.decodeBatchTx(blockNumber, tx)
+		frames, err := derive.ParseFrames(tx.Data())
 		if err != nil {
+			logger.Errorf("failed to parse frames: %v", err)
 			return nil, err
 		}
-		res = append(res, batchesRef)
+		framesRef := &FramesRef{
+			Frames:        frames,
+			L1BlockNumber: blockNumber,
+			L1TxHash:      tx.Hash(),
+			TxIndex:       i,
+		}
+		res = append(res, framesRef)
 	}
 
 	return res, nil
-}
-
-// decodeBatchTx decodes the given transaction and stores the batch data into the cache.
-func (f *Fetcher) decodeBatchTx(blockNumber uint64, tx *coretypes.Transaction) (*BatchesRef, error) {
-	frames, err := derive.ParseFrames(tx.Data())
-	if err != nil {
-		logger.Errorf("failed to parse frames: %v", err)
-		return nil, err
-	}
-
-	batches, err := handleFrames(blockNumber, f.chainID, frames)
-	if err != nil {
-		return nil, err
-	}
-
-	if len(batches) == 0 {
-		logger.Warnf("no batch data found in the transaction: %v", tx.Hash().Hex())
-		return nil, fmt.Errorf("no batch data")
-	}
-
-	return &BatchesRef{
-		Batches:       batches,
-		L1BlockNumber: blockNumber,
-		L1TxHash:      tx.Hash(),
-	}, nil
 }
 
 // getL2BlockHash returns the L2 block hash for the given block number.
