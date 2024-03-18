@@ -2,6 +2,7 @@ package utils
 
 import (
 	"context"
+	"encoding/binary"
 	"fmt"
 	"reflect"
 	"strings"
@@ -63,6 +64,13 @@ func VerifySignature(pubKey, message, signature []byte) (bool, error) {
 		return false, err
 	}
 	return sig.VerifyByte(pub, message)
+}
+
+// Uint64ToBytes converts a uint64 to bytes.
+func Uint64ToBytes(num uint64) []byte {
+	b := make([]byte, 8)
+	binary.BigEndian.PutUint64(b, num)
+	return b
 }
 
 // Hex2Bytes converts a hex string to bytes.

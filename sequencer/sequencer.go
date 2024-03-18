@@ -93,6 +93,7 @@ func (s *Sequencer) Start() error {
 				time.Sleep(SyncInterval)
 				finalizedBlockNumber, err = s.rpcClient.GetFinalizedBlockNumber()
 				if err != nil {
+					logger.Errorf("failed to get finalized block number: %v", err)
 					return err
 				}
 				continue
@@ -104,10 +105,11 @@ func (s *Sequencer) Start() error {
 					time.Sleep(SyncInterval)
 					continue
 				}
+				logger.Errorf("failed to get block header: %v", err)
 				return err
 			}
 
-			if err := s.storage.AddBlock(s.ctx, &types.Block{
+			if err := s.storage.AddBlock(context.Background(), &types.Block{
 				ChainHeader: &types.ChainHeader{
 					BlockNumber:   lastBlockNumber,
 					BlockHash:     blockHeader.L2BlockHash.Hex(),
@@ -116,6 +118,7 @@ func (s *Sequencer) Start() error {
 				},
 				SequencedTime: fmt.Sprintf("%d", time.Now().UnixMicro()),
 			}); err != nil {
+				logger.Errorf("failed to add block: %v", err)
 				return err
 			}
 
