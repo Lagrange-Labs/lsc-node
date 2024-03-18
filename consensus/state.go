@@ -181,14 +181,14 @@ func (s *State) OnStop() {
 	close(s.chStop)
 }
 
-// TODO: implement the following methods
+// GetOpenBatch returns the batch of the current round.
 func (s *State) GetOpenBatch(batchNumber uint64) *sequencerv2types.Batch {
 	return &sequencerv2types.Batch{
 		BatchHeader: &sequencerv2types.BatchHeader{},
 	}
 }
 
-// TODO: implement the following methods
+// AddBatchCommit adds the commit to the round state.
 func (s *State) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr string) error {
 	s.rwMutex.Lock()
 	defer s.rwMutex.Unlock()

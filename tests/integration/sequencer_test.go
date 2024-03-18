@@ -38,14 +38,14 @@ func (suite *SequencerTestSuite) Test_Sequencer_Block_Generation() {
 			suite.T().Fatal("timeout")
 		default:
 		}
-		block, err := suite.manager.Storage.GetBlock(ctx, suite.manager.GetChainID(), 85)
+		batch, err := suite.manager.Storage.GetBatch(ctx, suite.manager.GetChainID(), 85)
 		if errors.Is(err, types.ErrBlockNotFound) {
 			time.Sleep(1 * time.Second)
 			continue
 		}
 		require.NoError(suite.T(), err)
-		require.NotNil(suite.T(), block)
-		require.NotNil(suite.T(), block.AggSignature)
+		require.NotNil(suite.T(), batch)
+		require.NotNil(suite.T(), batch.AggSignature)
 		break
 	}
 }
