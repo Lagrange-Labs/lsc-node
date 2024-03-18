@@ -89,7 +89,9 @@ func (f *Fetcher) handleFrames() error {
 					batchesRef.L2BlockCount += batch.BlockCount
 				}
 				delete(channels, frame.ID)
-				f.pushBatchesRef(batchesRef)
+				if err := f.pushBatchesRef(batchesRef); err != nil {
+					return err
+				}
 			}
 		}
 	}
