@@ -2,7 +2,6 @@ package optimism
 
 import (
 	"context"
-	"fmt"
 	"math/big"
 	"sort"
 	"sync"
