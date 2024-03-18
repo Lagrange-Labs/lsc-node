@@ -49,7 +49,7 @@ type Client struct {
 	ecdsaPrivateKey *ecdsa.PrivateKey
 	jwToken         string
 	stakeAddress    string
-	lastBlockNumber uint64
+	openBatchNumber uint64
 	pullInterval    time.Duration
 	committeeCache  *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
 
@@ -136,7 +136,6 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		rpcClient:            rpcClient,
 		committeeSC:          committeeSC,
 		chainID:              chainID,
-		lastBlockNumber:      1,
 		committeeCache:       lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
 
 		ctx:        ctx,
@@ -182,8 +181,8 @@ func (c *Client) Start() {
 				continue
 			}
 
-			c.lastBlockNumber = batch.BatchHeader.ToBlockNumber() + 1
-			logger.Infof("uploaded the signature up to block %d\n", c.lastBlockNumber-1)
+			c.openBatchNumber = batch.BatchNumber() + 1
+			logger.Infof("uploaded the signature up to block %d\n", batch.BatchHeader.ToBlockNumber())
 		}
 	}
 }
@@ -224,13 +223,16 @@ func (c *Client) joinNetwork() error {
 	}
 
 	c.jwToken = res.Token
+	c.openBatchNumber = res.OpenBatchNumber
+	c.rpcClient.SetBeginBlockNumber(res.L1BlockNumber)
+
 	return nil
 }
 
 // TryGetBatch tries to get the batch from the network.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	res, err := c.GetBatch(context.Background(), &networkv2types.GetBatchRequest{
-		BatchNumber: c.lastBlockNumber, StakeAddress: c.stakeAddress, Token: c.jwToken})
+		BatchNumber: c.openBatchNumber, StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
 			return nil, ErrInvalidToken

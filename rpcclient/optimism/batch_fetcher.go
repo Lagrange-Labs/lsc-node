@@ -17,6 +17,7 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -330,7 +331,7 @@ func (f *Fetcher) validTransaction(tx *coretypes.Transaction) bool {
 func (f *Fetcher) getL2BatchData(blockNumber uint64) (*sequencerv2types.BatchHeader, error) {
 	raw, ok := f.batchCache.Get(blockNumber)
 	if !ok {
-		return nil, fmt.Errorf("no batch data")
+		return nil, types.ErrBatchNotFound
 	}
 	batchesRef := raw.(*BatchesRef)
 	header := sequencerv2types.BatchHeader{
