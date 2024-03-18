@@ -257,7 +257,7 @@ func (d *MemDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes
 // GetCommitteeRoot returns the first committee root which EpochBlockNumber is greater than or equal to the given l1BlockNumber.
 func (d *MemDB) GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*govtypes.CommitteeRoot, error) {
 	for i := 0; i < len(d.committeeRoots); i++ {
-		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].EpochBlockNumber >= l1BlockNumber {
+		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].EpochEndBlockNumber >= l1BlockNumber && d.committeeRoots[i].EpochStartBlockNumber <= l1BlockNumber {
 			return d.committeeRoots[i], nil
 		}
 	}

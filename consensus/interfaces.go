@@ -7,12 +7,17 @@ import (
 	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 )
 
 var _ storageInterface = (storetypes.Storage)(nil)
 
 type storageInterface interface {
+	GetLastFinalizedBatchNumber(ctx context.Context, chainID uint32) (uint64, error)
+	GetBatch(ctx context.Context, chainID uint32, batchNumber uint64) (*sequencerv2types.Batch, error)
+	UpdateBatch(ctx context.Context, batch *sequencerv2types.Batch) error
+
 	GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*sequencertypes.Block, error)
 	GetBlock(ctx context.Context, chainID uint32, blockNumber uint64) (*sequencertypes.Block, error)
 	GetBlocks(ctx context.Context, chainID uint32, fromBlockNumber uint64, count uint32) ([]*sequencertypes.Block, error)

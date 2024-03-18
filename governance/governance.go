@@ -144,7 +144,7 @@ func (g *Governance) updateCommittee() error {
 		if err != nil {
 			return err
 		}
-
+		committeeRoot.EpochStartBlockNumber = epochEndBlockNumber - g.committeeParams.Duration + 1
 		if err := g.storage.UpdateCommitteeRoot(g.ctx, committeeRoot); err != nil {
 			return err
 		}
@@ -171,7 +171,7 @@ func (g *Governance) updateCommittee() error {
 			if err != nil {
 				return err
 			}
-
+			committeeRoot.EpochStartBlockNumber = epochEndBlockNumber - g.committeeParams.Duration + 1
 			if err := g.storage.UpdateCommitteeRoot(context.Background(), committeeRoot); err != nil {
 				return err
 			}
@@ -229,7 +229,7 @@ func (g *Governance) fetchCommitteeRoot(blockNumber, epochNumber uint64) (*types
 		ChainID:              g.chainID,
 		CurrentCommitteeRoot: utils.Bytes2Hex(committeeData.CurrentCommittee.Root[:]),
 		TotalVotingPower:     committeeData.CurrentCommittee.TotalVotingPower.Uint64(),
-		EpochBlockNumber:     blockNumber,
+		EpochEndBlockNumber:  blockNumber,
 		EpochNumber:          epochNumber,
 	}
 
