@@ -56,7 +56,7 @@ func (f *Fetcher) handleFrames() error {
 
 			if ch.Channel.IsReady() {
 				logger.Errorf("Invaild Frame: channel %v is ready", frame.ID)
-				return errors.New("Invaild Frame: channel is ready")
+				return errors.New("invaild Frame: channel is ready")
 			}
 
 			if err := ch.Channel.AddFrame(frame, blockRef); err != nil {
@@ -144,7 +144,7 @@ func (f *Fetcher) parseBatch(batchData *derive.BatchData) (*L2BlockBatch, error)
 		}, nil
 	default:
 		logger.Errorf("Unsupported batch type: %+v", batchData)
-		return nil, fmt.Errorf("Unsupported batch type: %+v", batchData)
+		return nil, fmt.Errorf("unsupported batch type: %+v", batchData)
 	}
 }
 
