@@ -121,6 +121,9 @@ func (g *Governance) Start() {
 		case <-g.ctx.Done():
 			return
 		case <-ticker.C:
+			if err := g.fetchOperatorInfos(); err != nil {
+				logger.Errorf("failed to fetch operator infos: %w", err)
+			}
 			if err := g.updateCommittee(); err != nil {
 				logger.Errorf("failed to update committee root: %w", err)
 			}
@@ -135,8 +138,8 @@ func (g *Governance) Stop() {
 
 func (g *Governance) updateCommittee() error {
 	logger.Infof("update committee is started, current epoch number %d, updated epoch number %d", g.currentEpochNumber, g.updatedEpochNumber)
-	g.isOpertorsSynced = false
 	// check if there are any missing committee roots
+	// NOTE: this is for only test scenario, it should not be happened in the live network
 	for epochNumber := g.currentEpochNumber + 1; epochNumber <= g.updatedEpochNumber+1; epochNumber++ {
 		committeeRoot, err := g.fetchCommitteeRoot(epochNumber)
 		if err != nil {
@@ -153,14 +156,9 @@ func (g *Governance) updateCommittee() error {
 	if err != nil {
 		return err
 	}
+	currentEpochNumber := (blockNumber-g.committeeParams.StartBlock)/g.committeeParams.Duration + 1
 
-	currentEpochNumber, err := g.committeeSC.GetEpochNumber(nil, g.chainID, big.NewInt(int64(blockNumber)))
-	if err != nil {
-		logger.Errorf("failed to get current epoch number: %w", err)
-		return err
-	}
-
-	for epochNumber := g.updatedEpochNumber + 1; epochNumber <= currentEpochNumber.Uint64(); epochNumber++ {
+	for epochNumber := g.updatedEpochNumber + 1; epochNumber <= currentEpochNumber; epochNumber++ {
 		if epochNumber > g.currentEpochNumber {
 			committeeRoot, err := g.fetchCommitteeRoot(epochNumber)
 			if err != nil {
@@ -169,7 +167,6 @@ func (g *Governance) updateCommittee() error {
 			if err := g.storage.UpdateCommitteeRoot(context.Background(), committeeRoot); err != nil {
 				return err
 			}
-
 			g.currentEpochNumber = epochNumber
 		}
 
@@ -198,19 +195,78 @@ func (g *Governance) updateCommittee() error {
 				logger.Errorf("transaction failed: %v", receipt)
 				return fmt.Errorf("transaction failed: %v", receipt)
 			}
-
 			g.updatedEpochNumber = epochNumber
 		}
 	}
 
-	if currentEpochNumber.Uint64() > g.currentEpochNumber {
+	if currentEpochNumber > g.currentEpochNumber {
 		return fmt.Errorf("missing committee roots")
 	}
 
 	return nil
 }
 
-// fetch the committee root from the smart contract
+// fetch the operator information details from the committee smart contract.
+func (g *Governance) fetchOperatorInfos() error {
+	// check if the given epoch is locked
+	isLocked, _, err := g.committeeSC.IsLocked(nil, g.chainID)
+	if err != nil {
+		logger.Errorf("failed to check if the given epoch is locked: %w", err)
+		return err
+	}
+	if !isLocked {
+		if g.isOpertorsSynced {
+			logger.Infof("the given epoch is not locked and the operators are already synced")
+		}
+		g.isOpertorsSynced = false
+		return nil
+	}
+
+	if g.isOpertorsSynced {
+		return nil
+	}
+	logger.Info("start fetching operator infos")
+
+	// get the leaf count
+	epochEndBlockNumber := (g.updatedEpochNumber+1)*g.committeeParams.Duration + g.committeeParams.StartBlock - 1
+	committeeData, err := g.committeeSC.GetCommittee(nil, g.chainID, big.NewInt(int64(epochEndBlockNumber)))
+	if err != nil {
+		logger.Errorf("failed to get the committee data: %w", err)
+	}
+	leafCount := committeeData.CurrentCommittee.LeafCount.Int64()
+
+	// get the operator details
+	operators := make([]networktypes.ClientNode, 0)
+	for i := int64(0); i < leafCount; i++ {
+		addr, err := g.committeeSC.CommitteeAddrs(nil, g.chainID, big.NewInt(i))
+		if err != nil {
+			return err
+		}
+		votingPower, err := g.committeeSC.GetOperatorVotingPower(nil, addr, g.chainID)
+		if err != nil {
+			return err
+		}
+		blsPubKey, err := g.committeeSC.GetBlsPubKey(nil, addr)
+		if err != nil {
+			return err
+		}
+		pubKey := make([]byte, 0)
+		pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[0].Bytes(), 32)...)
+		pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[1].Bytes(), 32)...)
+		operators = append(operators, networktypes.ClientNode{
+			StakeAddress: addr.String(),
+			VotingPower:  votingPower.Uint64(),
+			PublicKey:    pubKey,
+		})
+	}
+
+	g.operators = operators
+	g.isOpertorsSynced = true
+
+	return nil
+}
+
+// fetch the committee root from the committee smart contract.
 func (g *Governance) fetchCommitteeRoot(epochNumber uint64) (*types.CommitteeRoot, error) {
 	epochEndBlockNumber := epochNumber*g.committeeParams.Duration + g.committeeParams.StartBlock - 1
 	committeeData, err := g.committeeSC.GetCommittee(nil, g.chainID, big.NewInt(int64(epochEndBlockNumber)))
@@ -227,43 +283,18 @@ func (g *Governance) fetchCommitteeRoot(epochNumber uint64) (*types.CommitteeRoo
 		EpochStartBlockNumber: epochEndBlockNumber - g.committeeParams.Duration + 1,
 		EpochEndBlockNumber:   epochEndBlockNumber,
 		EpochNumber:           epochNumber,
+		Operators:             g.operators,
 	}
 
-	if committeeRoot.TotalVotingPower == 0 {
-		logger.Errorf("total voting power is 0, committee root %v, epoch number %d", committeeRoot, epochNumber)
-		return nil, fmt.Errorf("total voting power is 0")
+	tvl := uint64(0)
+	for _, operator := range g.operators {
+		tvl += operator.VotingPower
 	}
 
-	if !g.isOpertorsSynced {
-		operators := make([]networktypes.ClientNode, 0)
-		for i := int64(0); i < committeeData.CurrentCommittee.LeafCount.Int64(); i++ {
-			addr, err := g.committeeSC.CommitteeAddrs(nil, g.chainID, big.NewInt(i))
-			if err != nil {
-				return nil, err
-			}
-			votingPower, err := g.committeeSC.GetOperatorVotingPower(nil, addr, g.chainID)
-			if err != nil {
-				return nil, err
-			}
-			blsPubKey, err := g.committeeSC.GetBlsPubKey(nil, addr)
-			if err != nil {
-				return nil, err
-			}
-			pubKey := make([]byte, 0)
-			pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[0].Bytes(), 32)...)
-			pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[1].Bytes(), 32)...)
-			operators = append(operators, networktypes.ClientNode{
-				StakeAddress: addr.String(),
-				VotingPower:  votingPower.Uint64(),
-				PublicKey:    pubKey,
-			})
-		}
-
-		g.operators = operators
-		g.isOpertorsSynced = true
+	if committeeRoot.TotalVotingPower != tvl {
+		logger.Errorf("total voting power mismatch, committee root %+v, tvl %d", committeeRoot, tvl)
+		return nil, fmt.Errorf("total voting power mismatch")
 	}
-
-	committeeRoot.Operators = g.operators
 
 	logger.Infof("fetched committee root %+v", committeeRoot)
 
