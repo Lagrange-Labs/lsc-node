@@ -168,6 +168,17 @@ func (c *Client) Start() {
 					c.TryJoinNetwork()
 					continue
 				}
+				if errors.Is(err, ErrBatchNotFound) {
+					// if the batch is not found, set the begin block number to the L1 block number
+					logger.Infof("the batch is not found, set the begin block number to the L1 block number %d\n", batch.L1BlockNumber())
+					c.rpcClient.SetBeginBlockNumber(batch.L1BlockNumber())
+					continue
+				}
+				if errors.Is(err, ErrBatchNotReady) {
+					logger.Infof("the batch is not ready yet\n")
+					continue
+				}
+
 				logger.Errorf("failed to get the current block: %v\n", err)
 				continue
 			}
@@ -241,7 +252,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	}
 
 	if res.Batch == nil {
-		return nil, ErrBlockNotReady
+		return nil, ErrBatchNotReady
 	}
 	batch := res.Batch
 	logger.Infof("got the batch the block number from %d to %d\n", res.FromBlockNumber, res.ToBlockNumber)
@@ -249,6 +260,9 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	// verify the L1 block number
 	batchHeader, err := c.rpcClient.GetBatchHeaderByNumber(res.FromBlockNumber)
 	if err != nil {
+		if errors.Is(err, rpctypes.ErrBatchNotFound) {
+			return batch, ErrBatchNotFound
+		}
 		return nil, fmt.Errorf("failed to get the batch header by number: %v", err)
 	}
 	if batch.L1BlockNumber() != batchHeader.L1BlockNumber {
@@ -430,5 +444,6 @@ func (c *Client) Stop() {
 }
 
 var (
-	ErrBlockNotReady = fmt.Errorf("the block is not ready")
+	ErrBatchNotReady = fmt.Errorf("the batch is not ready")
+	ErrBatchNotFound = fmt.Errorf("the batch is not found")
 )

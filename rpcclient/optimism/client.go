@@ -55,6 +55,11 @@ func (c *Client) GetBatchHeaderByNumber(l2BlockNumber uint64) (*sequencerv2types
 
 // SetBeginBlockNumber sets the begin L1 block number.
 func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) {
+	lastSyncedL1BlockNumber := c.fetcher.GetFetchedBlockNumber()
+	if lastSyncedL1BlockNumber+ParallelBlocks < l1BlockNumber {
+		logger.Infof("last synced L1 block number: %d, begin L1 block number: %d", lastSyncedL1BlockNumber, l1BlockNumber)
+		c.fetcher.Stop()
+	}
 	go func() {
 		if err := c.fetcher.Fetch(l1BlockNumber); err != nil {
 			logger.Errorf("failed to fetch L2 block headers: %v", err)

@@ -5,6 +5,7 @@ import (
 	"math/big"
 	"sort"
 	"sync"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
@@ -14,14 +15,15 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	"github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 const (
-	ConcurrentFetchers    = 4
+	ConcurrentFetchers    = 6
 	EthereumFinalityDepth = 64
+	ParallelBlocks        = 64
 	cacheLimit            = 2048
 	CacheFullWaitInterval = 10 * time.Microsecond
 	FetchInterval         = 5 * time.Second
@@ -52,6 +54,9 @@ type Fetcher struct {
 	signer            coretypes.Signer
 	batchCache        *utils.Cache
 	blockCache        *utils.Cache
+
+	lastSyncedL1BlockNumber atomic.Uint64
+
 	// decoder
 	chFramesRef             chan *FramesRef
 	lastSyncedL2BlockNumber uint64
@@ -60,6 +65,7 @@ type Fetcher struct {
 
 	ctx    context.Context
 	cancel context.CancelFunc
+	done   chan struct{}
 }
 
 // NewFetcher creates a new Fetcher instance.
@@ -81,7 +87,6 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		return nil, err
 	}
 
-	ctx, cancel := context.WithCancel(context.Background())
 	return &Fetcher{
 		l1Client:          l1Client,
 		l2Client:          l2Client,
@@ -92,21 +97,21 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		batchCache:        utils.NewCache(cacheLimit),
 		blockCache:        utils.NewCache(cacheLimit),
 
-		chFramesRef: make(chan *FramesRef, 64),
-
-		ctx:    ctx,
-		cancel: cancel,
+		done: make(chan struct{}),
 	}, nil
 }
 
-// GetFetchedBlockNumber returns the last fetched block number.
+// GetFetchedBlockNumber returns the last fetched L1 block number.
 func (f *Fetcher) GetFetchedBlockNumber() uint64 {
-	return f.batchCache.GetHeadKey()
+	return f.lastSyncedL1BlockNumber.Load()
 }
 
 // Fetch fetches the block data from the Ethereum and analyzes the
 // transactions which are sent to the BatchInbox EOA.
 func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
+	f.chFramesRef = make(chan *FramesRef, 64)
+	f.ctx, f.cancel = context.WithCancel(context.Background())
+
 	go func() {
 		if err := f.handleFrames(); err != nil {
 			logger.Errorf("failed to handle frames: %v", err)
@@ -114,11 +119,13 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 		logger.Infof("decoder is stopped")
 	}()
 
-	lastSyncedL1BlockNumber := l1BeginBlockNumber
+	f.lastSyncedL1BlockNumber.Store(l1BeginBlockNumber)
 
 	for {
 		select {
 		case <-f.ctx.Done():
+			logger.Infof("fetcher is stopped")
+			f.done <- struct{}{}
 			return nil
 		default:
 			g, ctx := errgroup.WithContext(context.Background())
@@ -128,7 +135,8 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			if err != nil {
 				return err
 			}
-			nextBlockNumber := lastSyncedL1BlockNumber + EthereumFinalityDepth
+			lastSyncedL1BlockNumber := f.lastSyncedL1BlockNumber.Load()
+			nextBlockNumber := lastSyncedL1BlockNumber + ParallelBlocks
 			if blockNumber-EthereumFinalityDepth < nextBlockNumber {
 				nextBlockNumber = blockNumber - EthereumFinalityDepth
 			}
@@ -172,15 +180,21 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			for _, framesRef := range framesRefs {
 				f.chFramesRef <- framesRef
 			}
-			lastSyncedL1BlockNumber = nextBlockNumber
+			f.lastSyncedL1BlockNumber.Store(nextBlockNumber)
 		}
 	}
 }
 
 // Stop stops the Fetcher.
 func (f *Fetcher) Stop() {
+	if f.cancel == nil {
+		return
+	}
+
+	f.lastSyncedL1BlockNumber.Store(0)
 	f.cancel()
 	close(f.chFramesRef)
+	<-f.done
 }
 
 // fetchBlock fetches the given block and analyzes the transactions
