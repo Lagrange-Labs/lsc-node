@@ -283,3 +283,13 @@ func (d *MemDB) GetLastEvidenceBlockNumber(ctx context.Context, chainID uint32) 
 	}
 	return 0, nil
 }
+
+// CleanUp cleans up the database.
+func (d *MemDB) CleanUp(ctx context.Context) error {
+	d.nodes = make(map[string]networktypes.ClientNode, 0)
+	d.blocks = []*sequencertypes.Block{}
+	d.batches = []*sequencerv2types.Batch{}
+	d.evidences = []*contypes.Evidence{}
+	d.committeeRoots = []*govtypes.CommitteeRoot{}
+	return nil
+}

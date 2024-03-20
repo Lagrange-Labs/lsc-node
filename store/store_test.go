@@ -80,6 +80,10 @@ func (s *StorageTestSuite) TestBatch() {
 	s.Require().Equal(batch.FinalizedTime, batch2.FinalizedTime)
 	s.Require().Equal(batch.AggSignature, batch2.AggSignature)
 	s.Require().Equal(batch.PubKeys, batch2.PubKeys)
+
+	// clean up
+	err = storage.CleanUp(ctx)
+	s.Require().NoError(err)
 }
 
 func TestMemDBSuit(t *testing.T) {

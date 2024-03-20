@@ -55,4 +55,6 @@ type Storage interface {
 	GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error)
 	// GetLastEvidenceBlockNumber returns the last submitted evidence block number for the given chainID.
 	GetLastEvidenceBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
+	// CleanUp cleans up the database.
+	CleanUp(ctx context.Context) error
 }
