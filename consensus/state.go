@@ -254,7 +254,7 @@ func (s *State) startRound(batchNumber uint64) error {
 		logger.Infof("the next committee root is loading: %v", batch.L1BlockNumber())
 		nextCommittee, err := s.storage.GetCommitteeRoot(context.Background(), s.chainID, batch.L1BlockNumber())
 		if err != nil {
-			logger.Errorf("failed to get the last committee root: %v", err)
+			logger.Errorf("failed to get the committee root for the block number %d: %v", batch.L1BlockNumber(), err)
 			return err
 		}
 		if s.lastCommittee == nil && s.previousBatch != nil {

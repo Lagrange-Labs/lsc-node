@@ -353,3 +353,15 @@ func (db *MongoDB) GetLastCommitteeEpochNumber(ctx context.Context, chainID uint
 	}
 	return committeeRoot.EpochNumber, err
 }
+
+// CleanUp cleans up the database.
+func (db *MongoDB) CleanUp(ctx context.Context) error {
+	collections := []string{"blocks", "batches", "evidences", "committee_roots", "nodes"}
+	for _, collection := range collections {
+		err := db.client.Database("state").Collection(collection).Drop(ctx)
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
