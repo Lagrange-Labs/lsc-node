@@ -19,7 +19,6 @@ func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []ne
 		BatchHeader: &sequencerv2types.BatchHeader{
 			ChainId:       1,
 			BatchNumber:   1,
-			BatchHash:     utils.RandomHex(32),
 			L1BlockNumber: 1,
 			L1TxHash:      utils.RandomHex(32),
 			L2Blocks: []*sequencerv2types.BlockHeader{

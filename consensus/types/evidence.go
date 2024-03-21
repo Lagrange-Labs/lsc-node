@@ -66,7 +66,6 @@ func GetEvidence(sig *sequencerv2types.BlsSignature) (*Evidence, error) {
 	addr := crypto.PubkeyToAddress(*pubKey).Hex()
 	return &Evidence{
 		Operator:             addr,
-		BlockHash:            common.HexToHash(sig.BatchHeader.BatchHash),
 		CurrentCommitteeRoot: common.HexToHash(sig.CurrentCommittee()),
 		NextCommitteeRoot:    common.HexToHash(sig.NextCommittee()),
 		BlockNumber:          sig.BatchNumber(),
