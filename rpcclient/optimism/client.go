@@ -5,7 +5,6 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
 
@@ -41,11 +40,6 @@ func NewClient(cfg *Config) (*Client, error) {
 		ethClient: ethClient,
 		fetcher:   fetcher,
 	}, nil
-}
-
-// GetBlockHeaderByNumber returns the L2 block header for the given L2 block number.
-func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64, l1TxHash common.Hash) (*types.L2BlockHeader, error) {
-	return nil, nil
 }
 
 // GetBatchHeaderByNumber returns the batch header for the given L2 block number.
