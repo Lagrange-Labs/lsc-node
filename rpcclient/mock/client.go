@@ -39,8 +39,8 @@ func NewClient(cfg *Config) (*Client, error) {
 	}, nil
 }
 
-// GetBlockHeaderByNumber returns the L2 block header for the given L2 block number.
-func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64, l1TxHash common.Hash) (*types.L2BlockHeader, error) {
+// GetBlockHeaderByNumber returns the block header for the given L2 block number.
+func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64, l1TxHash common.Hash) (*ethtypes.Header, error) {
 	rawHeader, err := c.GetRawHeaderByNumber(l2BlockNumber)
 	if err != nil {
 		return nil, err
@@ -51,10 +51,7 @@ func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64, l1TxHash common.Ha
 		return nil, fmt.Errorf("failed to unmarshal Eth block header: %w rawHeader: %s", err, rawHeader)
 	}
 
-	return &types.L2BlockHeader{
-		L1BlockNumber: l2BlockNumber,
-		L2BlockHash:   commonHeader.Hash(),
-	}, nil
+	return &commonHeader, nil
 }
 
 // GetFinalizedBlockNumber returns the L2 finalized block number.
@@ -76,15 +73,15 @@ func (c *Client) GetBatchHeaderByNumber(l2BlockNumber uint64) (*sequencerv2types
 	}
 
 	return &sequencerv2types.BatchHeader{
-		BatchNumber: blockHeader.L1BlockNumber,
+		BatchNumber: blockHeader.Number.Uint64(),
 		ChainId:     c.chainID,
 		L2Blocks: []*sequencerv2types.BlockHeader{
 			{
 				BlockNumber: l2BlockNumber,
-				BlockHash:   blockHeader.L2BlockHash.Hex(),
+				BlockHash:   blockHeader.Hash().Hex(),
 			},
 		},
-		L1BlockNumber: blockHeader.L1BlockNumber,
-		L1TxHash:      blockHeader.L2BlockHash.Hex(),
+		L1BlockNumber: blockHeader.Number.Uint64(),
+		L1TxHash:      blockHeader.Hash().Hex(),
 	}, nil
 }

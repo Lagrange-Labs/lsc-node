@@ -112,12 +112,7 @@ func (c *Client) GetRawHeaderByNumber(blockNumber uint64) (json.RawMessage, erro
 		}
 		return nil, err
 	}
-
-	var header *ethtypes.Header
-	if err := json.Unmarshal(rawHeader, &header); err != nil {
-		return nil, fmt.Errorf("failed to unmarshal block header error: %w rawHeader: %s", err, rawHeader)
-	}
-	if header == nil {
+	if len(rawHeader) < 5 { // to detect empty response and "null" response
 		return nil, types.ErrNoResult
 	}
 

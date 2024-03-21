@@ -99,16 +99,6 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 	return blockNumber.Uint64(), err
 }
 
-// GetBlockHeaderByNumber returns the L2 block header for the given L2 block number.
-func (c *Client) GetBlockHeaderByNumber(l2BlockNumber uint64, l1TxHash common.Hash) (*types.L2BlockHeader, error) {
-	// TODO: This is a temporary workaround for testing.
-	hash, err := c.GetBlockHashByNumber(l2BlockNumber)
-	return &types.L2BlockHeader{
-		L1BlockNumber: l2BlockNumber,
-		L2BlockHash:   hash,
-	}, err
-}
-
 // SetBeginBlockNumber sets the begin L1 block number.
 func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) {}
 

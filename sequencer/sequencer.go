@@ -86,13 +86,7 @@ func (s *Sequencer) GetChainID() uint32 {
 
 // Start starts the sequencer.
 func (s *Sequencer) Start() error {
-	finalizedBlockNumber, err := s.rpcClient.GetFinalizedBlockNumber()
-	if err != nil {
-		logger.Errorf("failed to get finalized block number: %v", err)
-		return err
-	}
-
-	logger.Infof("Sequencer started from %d", finalizedBlockNumber)
+	logger.Infof("Sequencer started from %d", s.lastBlockNumber+1)
 
 	for {
 		select {
@@ -120,6 +114,7 @@ func (s *Sequencer) Start() error {
 			}
 
 			s.lastBlockNumber = batchHeader.ToBlockNumber()
+			logger.Infof("batch block sequenced up to %d", s.lastBlockNumber)
 			time.Sleep(1 * time.Millisecond)
 		}
 	}
