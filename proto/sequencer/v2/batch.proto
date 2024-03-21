@@ -13,11 +13,10 @@ message BlockHeader {
 // BatchHeader is the header for the given batch of the specific chain
 message BatchHeader {
     uint64 batch_number = 1;
-    string batch_hash = 2;
-    uint32 chain_id = 3;
-    repeated BlockHeader l2_blocks = 4;
-    uint64 l1_block_number = 5;
-    string l1_tx_hash = 6;
+    uint32 chain_id = 2;
+    repeated BlockHeader l2_blocks = 3;
+    uint64 l1_block_number = 4;
+    string l1_tx_hash = 5;
 }
 
 // CommitteeHeader is the header for the given committee

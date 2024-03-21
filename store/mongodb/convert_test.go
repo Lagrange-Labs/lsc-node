@@ -53,7 +53,6 @@ func TestConvertProtobufToMongo(t *testing.T) {
 	batch := &sequencerv2types.Batch{
 		BatchHeader: &sequencerv2types.BatchHeader{
 			BatchNumber:   1,
-			BatchHash:     utils.RandomHex(32),
 			L1BlockNumber: 1,
 			L1TxHash:      utils.RandomHex(32),
 			ChainId:       1,
@@ -84,7 +83,6 @@ func TestConvertProtobufToMongo(t *testing.T) {
 	mBatch, err := ConvertProtobufToMongo(batch)
 	require.NoError(t, err)
 	require.Equal(t, batch.BatchHeader.BatchNumber, mBatch["batch_header"].(primitive.M)["batch_number"])
-	require.Equal(t, batch.BatchHeader.BatchHash, mBatch["batch_header"].(primitive.M)["batch_hash"])
 	require.Equal(t, batch.BatchHeader.L1BlockNumber, mBatch["batch_header"].(primitive.M)["l1_block_number"])
 	require.Equal(t, batch.BatchHeader.L1TxHash, mBatch["batch_header"].(primitive.M)["l1_tx_hash"])
 	require.Equal(t, batch.BatchHeader.ChainId, mBatch["batch_header"].(primitive.M)["chain_id"])
@@ -142,7 +140,6 @@ func TestConvertMongoToBatch(t *testing.T) {
 	m := bson.M{
 		"batch_header": bson.M{
 			"batch_number":    int64(1),
-			"batch_hash":      utils.RandomHex(32),
 			"l1_block_number": int64(1),
 			"l1_tx_hash":      utils.RandomHex(32),
 			"chain_id":        int64(1),
@@ -169,7 +166,6 @@ func TestConvertMongoToBatch(t *testing.T) {
 	}
 	batch := ConvertMongoToBatch(m)
 	require.Equal(t, m["batch_header"].(bson.M)["batch_number"], int64(batch.BatchNumber()))
-	require.Equal(t, m["batch_header"].(bson.M)["batch_hash"], batch.BatchHash())
 	require.Equal(t, m["batch_header"].(bson.M)["l1_block_number"], int64(batch.L1BlockNumber()))
 	require.Equal(t, m["batch_header"].(bson.M)["l1_tx_hash"], batch.L1TxHash())
 	require.Equal(t, m["batch_header"].(bson.M)["chain_id"], int64(batch.ChainID()))

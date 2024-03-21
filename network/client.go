@@ -290,9 +290,9 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 		return nil, fmt.Errorf("failed to verify the proposer signature: %v", err)
 	}
 	// verify if the batch hash is correct
-	batchHash := batch.BatchHash()
+	batchHash := batch.BatchHeader.Hash()
 	bhHash := batchHeader.Hash()
-	if !bytes.Equal(common.FromHex(batchHash), bhHash) {
+	if !bytes.Equal(batchHash, bhHash) {
 		return nil, fmt.Errorf("the batch hash %s is not equal to the batch header hash %s", batchHash, utils.Bytes2Hex(bhHash))
 	}
 

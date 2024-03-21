@@ -129,7 +129,7 @@ func (s *sequencerService) CommitBatch(req *networkv2types.CommitBatchRequest, s
 	logger.Infof("CommitBatch request from %v, %d", req.StakeAddress, batchNumber)
 
 	// verify the peer signature
-	reqHash := signature.Hash()
+	reqHash := signature.CommitHash()
 	isVerified, addr, err := utils.VerifyECDSASignature(reqHash, common.FromHex(signature.EcdsaSignature))
 	if err != nil || !isVerified {
 		logger.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)

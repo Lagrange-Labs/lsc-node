@@ -12,11 +12,6 @@ func (b *Batch) ChainID() uint32 {
 	return b.BatchHeader.ChainId
 }
 
-// BatchHash returns the hash of the batch.
-func (b *Batch) BatchHash() string {
-	return b.BatchHeader.BatchHash
-}
-
 // L1BlockNumber returns the L1 block number of the batch.
 func (b *Batch) L1BlockNumber() uint64 {
 	return b.BatchHeader.L1BlockNumber
@@ -81,16 +76,13 @@ func (bh *BatchHeader) ToBlockNumber() uint64 {
 
 // Hash returns the hash of the batch header.
 func (bh *BatchHeader) Hash() []byte {
-	// TODO: implement
-	h := make([]byte, 0)
-	h = append(h, utils.Hex2Bytes(bh.BatchHash)...)         //nolint
-	h = append(h, utils.Hex2Bytes(bh.L1TxHash)...)          //nolint
-	h = append(h, utils.Uint64ToBytes(bh.L1BlockNumber)...) //nolint
+	h := append([]byte{}, utils.Hex2Bytes(bh.L1TxHash)...)
+	h = append(h, utils.Uint64ToBytes(bh.L1BlockNumber)...)
 	for _, block := range bh.L2Blocks {
-		h = append(h, utils.Uint64ToBytes(block.BlockNumber)...) //nolint
-		h = append(h, utils.Hex2Bytes(block.BlockHash)...)       //nolint
+		h = append(h, utils.Uint64ToBytes(block.BlockNumber)...)
+		h = append(h, utils.Hex2Bytes(block.BlockHash)...)
 	}
-	return utils.Hash([]byte(bh.L1TxHash))
+	return utils.Hash(h)
 }
 
 // BatchNumber returns the batch number of the bls signature.
@@ -100,9 +92,7 @@ func (b *BlsSignature) BatchNumber() uint64 {
 
 // Hash returns the hash of the bls signature.
 func (b *BlsSignature) Hash() []byte {
-	// TODO: implement
-	h := make([]byte, 0)
-	h = append(h, b.BatchHeader.Hash()...)
+	h := append([]byte{}, b.BatchHeader.Hash()...)
 	h = append(h, utils.Hex2Bytes(b.CommitteeHeader.CurrentCommittee)...)
 	h = append(h, utils.Hex2Bytes(b.CommitteeHeader.NextCommittee)...)
 	h = append(h, utils.Uint64ToBytes(b.CommitteeHeader.TotalVotingPower)...)
@@ -111,9 +101,7 @@ func (b *BlsSignature) Hash() []byte {
 
 // CommitHash returns the hash of the commit bls signature.
 func (b *BlsSignature) CommitHash() []byte {
-	// TODO: implement
-	h := make([]byte, 0)
-	h = append(h, b.Hash()...)
+	h := append([]byte{}, b.Hash()...)
 	h = append(h, utils.Hex2Bytes(b.BlsSignature)...)
 	return utils.Hash(h)
 }
@@ -139,7 +127,6 @@ func (b *BlsSignature) Clone() *BlsSignature {
 	return &BlsSignature{
 		BatchHeader: &BatchHeader{
 			BatchNumber:   b.BatchHeader.BatchNumber,
-			BatchHash:     b.BatchHeader.BatchHash,
 			L1BlockNumber: b.BatchHeader.L1BlockNumber,
 			L1TxHash:      b.BatchHeader.L1TxHash,
 			ChainId:       b.BatchHeader.ChainId,
