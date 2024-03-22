@@ -90,16 +90,18 @@ func (s *State) OnStart() {
 			return
 		}
 		if err == nil {
-			s.lastBatchNumber = lastBatchNumber + 1
 			batch, err := s.storage.GetBatch(context.Background(), s.chainID, lastBatchNumber)
 			if err == storetypes.ErrBatchNotFound {
 				logger.Infof("the last finalized batch %d is not found", s.lastBatchNumber)
 				s.previousBatch = nil
+				s.lastBatchNumber = lastBatchNumber + 1
 			} else if err != nil {
 				logger.Errorf("failed to get the last finalized batch %d: %v", lastBatchNumber, err)
 				return
+			} else {
+				s.previousBatch = batch
+				s.lastBatchNumber = batch.BatchHeader.ToBlockNumber() + 1
 			}
-			s.previousBatch = batch
 			break
 		}
 
@@ -169,7 +171,7 @@ func (s *State) OnStart() {
 
 		s.rwMutex.Lock()
 		s.previousBatch = s.round.GetCurrentBatch()
-		s.lastBatchNumber = s.previousBatch.BatchNumber() + 1
+		s.lastBatchNumber = s.previousBatch.BatchHeader.ToBlockNumber() + 1
 		s.rwMutex.Unlock()
 	}
 }
