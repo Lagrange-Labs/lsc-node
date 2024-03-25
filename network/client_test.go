@@ -1,13 +1,17 @@
 package network
 
 import (
+	"context"
 	"testing"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/stretchr/testify/require"
 )
 
@@ -36,4 +40,29 @@ func TestECDSASignVerify(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, isVerified)
 	require.Equal(t, addr.Hex(), "0x516D6C27C23CEd21BF7930E2a01F0BcA9A141a0d") // 0x516D6C27C23CEd21BF7930E2a01F0BcA9A141a0d
+}
+
+func TestBlockParams(t *testing.T) {
+	cfg := &ClientConfig{
+		EthereumURL:        "http://localhost:8545",
+		CommitteeSCAddress: "0xF2740f6A6333c7B405aD7EfC68c74adAd83cC30D",
+	}
+
+	etherClient, err := ethclient.Dial(cfg.EthereumURL)
+	if err != nil {
+		logger.Fatalf("failed to create the ethereum client: %v", err)
+	}
+	committeeSC, err := committee.NewCommittee(common.HexToAddress(cfg.CommitteeSCAddress), etherClient)
+	if err != nil {
+		logger.Fatalf("failed to create the committee smart contract: %v", err)
+	}
+
+	chainID, err := etherClient.ChainID(context.Background())
+	if err != nil {
+		logger.Fatalf("failed to get the chain ID: %v", err)
+	}
+
+	params, err := committeeSC.CommitteeParams(nil, uint32(chainID.Uint64()))
+	require.NoError(t, err)
+	t.Log("params:", params)
 }

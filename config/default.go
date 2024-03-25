@@ -21,7 +21,8 @@ DBPath = "mongodb://127.0.0.1:27017"
 
 [Sequencer]
 Chain = "mock"
-FromBlockNumber = 80
+FromL1BlockNumber = 91
+FromL2BlockNumber = 91
 
 [RpcClient]
 

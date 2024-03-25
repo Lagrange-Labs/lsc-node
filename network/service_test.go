@@ -25,6 +25,10 @@ func (m *mockConsensus) GetOpenBatch(batchNumber uint64) *sequencerv2types.Batch
 	}
 }
 
+func (m *mockConsensus) GetOpenBatchNumber() (uint64, uint64) {
+	return 0, 0
+}
+
 func (m *mockConsensus) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr string) error {
 	return nil
 }

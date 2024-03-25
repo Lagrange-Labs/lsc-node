@@ -185,9 +185,17 @@ func (s *State) OnStop() {
 
 // GetOpenBatch returns the batch of the current round.
 func (s *State) GetOpenBatch(batchNumber uint64) *sequencerv2types.Batch {
-	return &sequencerv2types.Batch{
-		BatchHeader: &sequencerv2types.BatchHeader{},
+	return s.round.GetCurrentBatch()
+}
+
+// GetOpenBatchNumber returns the batch number of the current round.
+func (s *State) GetOpenBatchNumber() (uint64, uint64) {
+	batch := s.round.GetCurrentBatch()
+	prevL1BlockNumber := batch.L1BlockNumber()
+	if s.previousBatch != nil {
+		prevL1BlockNumber = s.previousBatch.L1BlockNumber()
 	}
+	return batch.BatchNumber(), prevL1BlockNumber
 }
 
 // AddBatchCommit adds the commit to the round state.

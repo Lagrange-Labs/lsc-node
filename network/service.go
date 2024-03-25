@@ -93,11 +93,11 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.
 	}
 
 	logger.Infof("New node %v joined the network\n", req.StakeAddress)
-	batch := s.consensus.GetOpenBatch(0)
+	batchNumber, prevL1BlockNumber := s.consensus.GetOpenBatchNumber()
 	return &networkv2types.JoinNetworkResponse{
 		Token:           token,
-		OpenBatchNumber: batch.BatchNumber(),
-		L1BlockNumber:   batch.L1BlockNumber(),
+		OpenBatchNumber: batchNumber,
+		L1BlockNumber:   prevL1BlockNumber,
 	}, nil
 }
 

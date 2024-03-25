@@ -25,7 +25,7 @@ func (s *StorageTestSuite) TestBatch() {
 	s.Require().NoError(err)
 	chainID := uint32(1)
 
-	batch := &sequencerv2types.Batch{
+	batch1 := &sequencerv2types.Batch{
 		BatchHeader: &sequencerv2types.BatchHeader{
 			BatchNumber:   1,
 			L1BlockNumber: 1,
@@ -49,19 +49,49 @@ func (s *StorageTestSuite) TestBatch() {
 		},
 		SequencedTime: time.Now().Format("2024-01-01 00:00:00.000000"),
 	}
+	batch2 := &sequencerv2types.Batch{
+		BatchHeader: &sequencerv2types.BatchHeader{
+			BatchNumber:   2,
+			L1BlockNumber: 2,
+			L1TxHash:      utils.RandomHex(32),
+			ChainId:       chainID,
+			L2Blocks: []*sequencerv2types.BlockHeader{
+				{
+					BlockNumber: 3,
+					BlockHash:   utils.RandomHex(32),
+				},
+				{
+					BlockNumber: 4,
+					BlockHash:   utils.RandomHex(32),
+				},
+			},
+		},
+		CommitteeHeader: &sequencerv2types.CommitteeHeader{
+			CurrentCommittee: utils.RandomHex(32),
+			NextCommittee:    utils.RandomHex(32),
+			TotalVotingPower: 100,
+		},
+		SequencedTime: time.Now().Format("2024-01-01 00:00:00.000000"),
+	}
 
 	ctx := context.Background()
-	err = storage.AddBatch(ctx, batch)
+	err = storage.AddBatch(ctx, batch1)
+	s.Require().NoError(err)
+	err = storage.AddBatch(ctx, batch2)
 	s.Require().NoError(err)
 
 	bn, err := storage.GetLastBatchNumber(ctx, chainID)
 	s.Require().NoError(err)
-	s.Require().Equal(batch.BatchNumber(), bn)
+	s.Require().Equal(batch2.BatchNumber(), bn)
 
-	batch2, err := storage.GetBatch(ctx, chainID, bn)
+	batch, err := storage.GetBatch(ctx, chainID, bn)
 	s.Require().NoError(err)
 	s.Require().Equal(batch.SequencedTime, batch2.SequencedTime)
 	s.Require().Equal(batch.BatchHeader.L2Blocks[0], batch2.BatchHeader.L2Blocks[0])
+
+	bnf, err := storage.GetLastFinalizedBatchNumber(ctx, chainID)
+	s.Require().NoError(err)
+	s.Require().Equal(uint64(0), bnf)
 
 	batch.AggSignature = utils.RandomHex(96)
 	batch.PubKeys = []string{utils.RandomHex(32), utils.RandomHex(32)}
@@ -74,11 +104,11 @@ func (s *StorageTestSuite) TestBatch() {
 	s.Require().NoError(err)
 	s.Require().Equal(batch.BatchNumber(), bn)
 
-	batch2, err = storage.GetBatch(ctx, chainID, bn)
+	batch3, err := storage.GetBatch(ctx, chainID, bn)
 	s.Require().NoError(err)
-	s.Require().Equal(batch.FinalizedTime, batch2.FinalizedTime)
-	s.Require().Equal(batch.AggSignature, batch2.AggSignature)
-	s.Require().Equal(batch.PubKeys, batch2.PubKeys)
+	s.Require().Equal(batch.FinalizedTime, batch3.FinalizedTime)
+	s.Require().Equal(batch.AggSignature, batch3.AggSignature)
+	s.Require().Equal(batch.PubKeys, batch3.PubKeys)
 
 	// clean up
 	err = storage.CleanUp(ctx)
