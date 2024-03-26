@@ -37,7 +37,7 @@ message GetBatchRequest {
     string token = 3;
 }
 
-// GetBlockResponse is the response for getting the given block batch
+// GetBatchResponse is the response for getting the given block batch
 message GetBatchResponse {
     sequencer.v2.Batch batch = 1;
 }

@@ -213,7 +213,7 @@ func (x *GetBatchRequest) GetToken() string {
 	return ""
 }
 
-// GetBlockResponse is the response for getting the given block batch
+// GetBatchResponse is the response for getting the given block batch
 type GetBatchResponse struct {
 	state         protoimpl.MessageState
 	sizeCache     protoimpl.SizeCache
