@@ -182,7 +182,7 @@ func (db *MongoDB) GetLastFinalizedBatchNumber(ctx context.Context, chainID uint
 	collection := db.client.Database("state").Collection("batches")
 	sortOptions := options.FindOne().SetSort(bson.D{{"batch_header.batch_number", -1}}).SetProjection(bson.D{{"batch_header.batch_number", 1}}) //nolint:govet
 	batch := bson.M{}
-	err := collection.FindOne(ctx, bson.M{"pub_keys": bson.M{"$ne": nil}, "batch_header.chain_id": chainID}, sortOptions).Decode(&batch)
+	err := collection.FindOne(ctx, bson.M{"pub_keys.0": bson.M{"$exists": true}, "batch_header.chain_id": chainID}, sortOptions).Decode(&batch)
 	if err == mongo.ErrNoDocuments {
 		sortOptions = options.FindOne().SetSort(bson.D{{"batch_header.batch_number", 1}}).SetProjection(bson.D{{"batch_header.batch_number", 1}}) //nolint:govet
 		err = collection.FindOne(ctx, bson.M{"batch_header.chain_id": chainID}, sortOptions).Decode(&batch)

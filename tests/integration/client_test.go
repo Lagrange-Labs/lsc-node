@@ -24,13 +24,14 @@ type ClientTestSuite struct {
 
 func (suite *ClientTestSuite) SetupTest() {
 	suite.cfg = network.ClientConfig{
-		GrpcURL:         "127.0.0.1:9090",
-		Chain:           "arbitrum",
-		EthereumURL:     "http://localhost:8545",
-		BLSPrivateKey:   "0x00000000000000000000000000000000000000000000000000000000499602d7",
-		ECDSAPrivateKey: "0xb126ae5e3d88007081b76024477b854ca4f808d48be1e22fe763822bc0c17cb3",
-		PullInterval:    utils.TimeDuration(2 * time.Second),
-		BLSCurve:        "BN254",
+		GrpcURL:            "127.0.0.1:9090",
+		Chain:              "arbitrum",
+		EthereumURL:        "http://localhost:8545",
+		BLSPrivateKey:      "0x00000000000000000000000000000000000000000000000000000000499602d7",
+		ECDSAPrivateKey:    "0xb126ae5e3d88007081b76024477b854ca4f808d48be1e22fe763822bc0c17cb3",
+		CommitteeSCAddress: "0xF2740f6A6333c7B405aD7EfC68c74adAd83cC30D",
+		PullInterval:       utils.TimeDuration(2 * time.Second),
+		BLSCurve:           "BN254",
 	}
 	var err error
 	suite.manager, err = operations.NewManager()

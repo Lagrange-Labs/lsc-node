@@ -10,8 +10,8 @@ GrpcURL = "127.0.0.1:9090"
 Chain = "mock"
 EthereumURL = "http://localhost:8545"
 CommitteeSCAddress = "0xF2740f6A6333c7B405aD7EfC68c74adAd83cC30D"
-BLSPrivateKey = "0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f654a"
-ECDSAPrivateKey = "0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429"
+BLSPrivateKey = "0x00000000000000000000000000000000000000000000000000000000499602d3"
+ECDSAPrivateKey = "0x3e17bc938ec10c865fc4e2d049902716dc0712b5b0e688b7183c16807234a84c"
 PullInterval = "100ms"
 BLSCurve = "BN254"
 
@@ -21,7 +21,8 @@ DBPath = "mongodb://127.0.0.1:27017"
 
 [Sequencer]
 Chain = "mock"
-FromBlockNumber = 80
+FromL1BlockNumber = 91
+FromL2BlockNumber = 91
 
 [RpcClient]
 

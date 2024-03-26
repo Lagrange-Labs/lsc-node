@@ -73,6 +73,7 @@ localnet-start: stop
 	sleep 3
 	docker compose -f docker-compose.yml up -d simserver
 	docker compose -f docker-compose.yml up -d simsequencer
+	docker compose -f docker-compose.yml up -d simavs-sync
 	sleep 3
 	docker compose -f docker-compose.yml up -d simnode0
 	docker compose -f docker-compose.yml up -d simnode1

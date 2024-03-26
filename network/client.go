@@ -43,16 +43,17 @@ type Client struct {
 	committeeSC *committee.Committee
 	blsScheme   crypto.BLSScheme
 
-	chainID           uint32
-	blsPrivateKey     []byte
-	blsPublicKey      string
-	ecdsaPrivateKey   *ecdsa.PrivateKey
-	jwToken           string
-	stakeAddress      string
-	openBatchNumber   uint64
-	prevBatchL1Number uint64
-	pullInterval      time.Duration
-	committeeCache    *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
+	chainID            uint32
+	blsPrivateKey      []byte
+	blsPublicKey       string
+	ecdsaPrivateKey    *ecdsa.PrivateKey
+	jwToken            string
+	stakeAddress       string
+	openBatchNumber    uint64
+	genesisBlockNumber uint64
+	prevBatchL1Number  uint64
+	pullInterval       time.Duration
+	committeeCache     *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
 
 	ctx        context.Context
 	cancelFunc context.CancelFunc
@@ -126,6 +127,11 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		logger.Fatalf("failed to get the chain ID: %v", err)
 	}
 
+	params, err := committeeSC.CommitteeParams(nil, chainID)
+	if err != nil {
+		logger.Fatalf("failed to get the committee params: %v", err)
+	}
+
 	return &Client{
 		NetworkServiceClient: networkv2types.NewNetworkServiceClient(conn),
 		blsScheme:            blsScheme,
@@ -137,6 +143,7 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		rpcClient:            rpcClient,
 		committeeSC:          committeeSC,
 		chainID:              chainID,
+		genesisBlockNumber:   params.StartBlock.Uint64(),
 		committeeCache:       lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
 
 		ctx:        ctx,
@@ -263,7 +270,9 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 		return nil, ErrBatchNotReady
 	}
 	batch := res.Batch
-	logger.Infof("got the batch the block number from %d to %d\n", res.FromBlockNumber, res.ToBlockNumber)
+	fromBlockNumber := batch.BatchHeader.FromBlockNumber()
+	toBlockNumber := batch.BatchHeader.ToBlockNumber()
+	logger.Infof("got the batch the block number from %d to %d\n", fromBlockNumber, toBlockNumber)
 
 	// check if the batch is the next one to the previous batch
 	if c.openBatchNumber != batch.BatchNumber() {
@@ -273,7 +282,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	}
 
 	// verify the L1 block number
-	batchHeader, err := c.rpcClient.GetBatchHeaderByNumber(res.FromBlockNumber)
+	batchHeader, err := c.rpcClient.GetBatchHeaderByNumber(fromBlockNumber)
 	if err != nil {
 		if errors.Is(err, rpctypes.ErrBatchNotFound) {
 			return batch, ErrBatchNotFound
@@ -283,11 +292,11 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	if batch.L1BlockNumber() != batchHeader.L1BlockNumber {
 		return nil, fmt.Errorf("the batch L1 block number %d is not equal to the rpc L1 block number %d", res.Batch.L1BlockNumber(), batchHeader.L1BlockNumber)
 	}
-	if res.FromBlockNumber != batchHeader.FromBlockNumber() {
-		return nil, fmt.Errorf("the batch from block number %d is not equal to the rpc from block number %d", res.FromBlockNumber, batchHeader.FromBlockNumber())
+	if fromBlockNumber != batchHeader.FromBlockNumber() {
+		return nil, fmt.Errorf("the batch from block number %d is not equal to the rpc from block number %d", fromBlockNumber, batchHeader.FromBlockNumber())
 	}
-	if res.ToBlockNumber != batchHeader.ToBlockNumber() {
-		return nil, fmt.Errorf("the batch to block number %d is not equal to the rpc to block number %d", res.ToBlockNumber, batchHeader.ToBlockNumber())
+	if toBlockNumber != batchHeader.ToBlockNumber() {
+		return nil, fmt.Errorf("the batch to block number %d is not equal to the rpc to block number %d", toBlockNumber, batchHeader.ToBlockNumber())
 	}
 	// verify the committee root
 	if err := c.verifyCommitteeRoot(batch); err != nil {
@@ -329,8 +338,9 @@ func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommi
 }
 
 func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
+	isGenesis := c.genesisBlockNumber == batch.L1BlockNumber()
 	// verify the previous batch's next committee root
-	if c.prevBatchL1Number >= batch.L1BlockNumber() {
+	if !isGenesis && c.prevBatchL1Number >= batch.L1BlockNumber() {
 		return fmt.Errorf("the previous batch L1 block number %d is not less than the current batch L1 block number %d", c.prevBatchL1Number, batch.L1BlockNumber())
 	}
 	prevCommitteeData, err := c.getCommitteeRoot(c.prevBatchL1Number)
