@@ -6,7 +6,6 @@ import (
 	"strings"
 
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
-	governance "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
@@ -22,14 +21,13 @@ const (
 )
 
 type Config struct {
-	Node       sequencer.Config
-	Server     network.ServerConfig
-	Client     network.ClientConfig
-	Store      store.Config
-	Sequencer  sequencer.Config
-	Governance governance.Config
-	Consensus  consensus.Config
-	RpcClient  rpcclient.Config
+	Node      sequencer.Config
+	Server    network.ServerConfig
+	Client    network.ClientConfig
+	Store     store.Config
+	Sequencer sequencer.Config
+	Consensus consensus.Config
+	RpcClient rpcclient.Config
 }
 
 // Default parses the default configuration values.

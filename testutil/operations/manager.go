@@ -3,8 +3,6 @@ package operations
 import (
 	"github.com/Lagrange-Labs/lagrange-node/config"
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/governance"
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
@@ -17,7 +15,7 @@ type Manager struct {
 	cfg       *config.Config
 	chainID   uint32
 	sequencer *sequencer.Sequencer
-	gov       *governance.Governance
+
 	// Storage is a storage interface for test operations.
 	Storage storetypes.Storage
 }
@@ -95,16 +93,6 @@ func (m *Manager) RunSequencer(isGov bool) {
 			panic(err)
 		}
 	}()
-
-	if !isGov {
-		return
-	}
-
-	m.gov, err = governance.NewGovernance(&m.cfg.Governance, crypto.BN254, m.sequencer.GetChainID(), m.Storage)
-	if err != nil {
-		panic(err)
-	}
-	go m.gov.Start()
 }
 
 // GetChainID returns the chain id.
@@ -120,10 +108,6 @@ func (m *Manager) Close() {
 	if m.sequencer != nil {
 		m.sequencer.Stop()
 		m.sequencer = nil
-	}
-	if m.gov != nil {
-		m.gov.Stop()
-		m.gov = nil
 	}
 }
 

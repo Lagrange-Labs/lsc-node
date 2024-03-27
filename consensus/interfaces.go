@@ -4,7 +4,6 @@ import (
 	"context"
 
 	"github.com/Lagrange-Labs/lagrange-node/consensus/types"
-	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
@@ -24,6 +23,6 @@ type storageInterface interface {
 	UpdateBlock(ctx context.Context, block *sequencertypes.Block) error
 	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error)
 	AddEvidences(ctx context.Context, evidences []*types.Evidence) error
-	GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*govtypes.CommitteeRoot, error)
+	GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*sequencerv2types.CommitteeRoot, error)
 	GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error)
 }

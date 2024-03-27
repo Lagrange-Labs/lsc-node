@@ -5,7 +5,6 @@ import (
 	"time"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
-	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
@@ -24,7 +23,7 @@ type MemDB struct {
 	blocks         []*sequencertypes.Block
 	batches        []*sequencerv2types.Batch
 	evidences      []*contypes.Evidence
-	committeeRoots []*govtypes.CommitteeRoot
+	committeeRoots []*sequencerv2types.CommitteeRoot
 }
 
 // NewMemDB creates a new in-memory database.
@@ -249,13 +248,13 @@ func (d *MemDB) GetEvidences(ctx context.Context, chainID uint32, fromBlockNumbe
 }
 
 // UpdateCommitteeRoot updates the committee root in the database.
-func (d *MemDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error {
+func (d *MemDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *sequencerv2types.CommitteeRoot) error {
 	d.committeeRoots = append(d.committeeRoots, committeeRoot)
 	return nil
 }
 
 // GetCommitteeRoot returns the first committee root which EpochBlockNumber is greater than or equal to the given l1BlockNumber.
-func (d *MemDB) GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*govtypes.CommitteeRoot, error) {
+func (d *MemDB) GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*sequencerv2types.CommitteeRoot, error) {
 	for i := 0; i < len(d.committeeRoots); i++ {
 		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].EpochEndBlockNumber >= l1BlockNumber && d.committeeRoots[i].EpochStartBlockNumber <= l1BlockNumber {
 			return d.committeeRoots[i], nil
@@ -290,6 +289,6 @@ func (d *MemDB) CleanUp(ctx context.Context) error {
 	d.blocks = []*sequencertypes.Block{}
 	d.batches = []*sequencerv2types.Batch{}
 	d.evidences = []*contypes.Evidence{}
-	d.committeeRoots = []*govtypes.CommitteeRoot{}
+	d.committeeRoots = []*sequencerv2types.CommitteeRoot{}
 	return nil
 }
