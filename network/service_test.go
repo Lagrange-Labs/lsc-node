@@ -29,11 +29,15 @@ func (m *mockConsensus) GetOpenBatchNumber() (uint64, uint64) {
 	return 0, 0
 }
 
-func (m *mockConsensus) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr string) error {
+func (m *mockConsensus) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr, pubKey string) error {
 	return nil
 }
 
-func (m *mockConsensus) CheckCommitteeMember(stakeAddr string, pubKey []byte) bool {
+func (m *mockConsensus) CheckCommitteeMember(stakeAddr, pubKey string) bool {
+	return true
+}
+
+func (m *mockConsensus) CheckSignAddress(stakeAddr, signAddr string) bool {
 	return true
 }
 

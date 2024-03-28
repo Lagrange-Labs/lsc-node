@@ -38,7 +38,7 @@ func NewMemDB() (*MemDB, error) {
 func (d *MemDB) AddNode(ctx context.Context, node *networktypes.ClientNode) error {
 	node.Status = networktypes.NodeRegistered
 	node.VotingPower = 1
-	d.nodes[utils.Bytes2Hex(node.PublicKey)] = *node
+	d.nodes[node.PublicKey] = *node
 	return nil
 }
 

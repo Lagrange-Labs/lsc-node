@@ -49,9 +49,11 @@ lint:
 test: stop
 	docker compose -f docker-compose.yml up -d mongo
 	docker compose -f docker-compose.yml up -d lagrangesc
-	sleep 5
+	sleep 3
+	docker compose -f docker-compose.yml up -d simavs-sync
+	sleep 2
 	docker ps -a
-	trap '$(STOP)' EXIT; go test ./... --timeout=10m
+	trap '$(STOP)' EXIT; go test ./... --timeout=1m
 .PHONY: test
 
 run-db-mongo:

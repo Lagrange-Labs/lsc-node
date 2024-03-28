@@ -98,7 +98,7 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 
 	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
 	blsPriv := utils.Hex2Bytes(cfg.BLSPrivateKey)
-	pubkey, err := blsScheme.GetPublicKey(blsPriv, true)
+	pubkey, err := blsScheme.GetPublicKey(blsPriv, false)
 	if err != nil {
 		logger.Fatalf("failed to get the bls public key: %v", err)
 	}
@@ -143,7 +143,7 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		rpcClient:            rpcClient,
 		committeeSC:          committeeSC,
 		chainID:              chainID,
-		genesisBlockNumber:   params.StartBlock.Uint64(),
+		genesisBlockNumber:   params.GenesisBlock.Uint64(),
 		committeeCache:       lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
 
 		ctx:        ctx,
@@ -383,6 +383,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 	req := &networkv2types.CommitBatchRequest{
 		BlsSignature: blsSignature,
 		StakeAddress: c.stakeAddress,
+		PublicKey:    c.blsPublicKey,
 		Token:        c.jwToken,
 	}
 

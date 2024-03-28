@@ -1,7 +1,6 @@
 package consensus
 
 import (
-	"bytes"
 	"context"
 	"fmt"
 	"sync"
@@ -32,7 +31,6 @@ type State struct {
 	storage          storageInterface
 	roundLimit       time.Duration
 	roundInterval    time.Duration
-	batchSize        uint32
 	chainID          uint32
 	lastCommittee    *sequencerv2types.CommitteeRoot
 	blockedOperators map[string]struct{}
@@ -59,7 +57,6 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		roundLimit:       time.Duration(cfg.RoundLimit),
 		roundInterval:    time.Duration(cfg.RoundInterval),
 		chainID:          chainID,
-		batchSize:        cfg.BatchSize,
 		chStop:           chStop,
 		rwMutex:          &sync.RWMutex{},
 		blockedOperators: make(map[string]struct{}),
@@ -73,7 +70,7 @@ func (s *State) GetBLSScheme() crypto.BLSScheme {
 
 // OnStart loads the first unverified block and starts the round.
 func (s *State) OnStart() {
-	logger.Info("Consensus process is started with the batch size: ", s.batchSize)
+	logger.Info("Consensus process is started")
 
 	for {
 		// check if chStop is triggered
@@ -198,7 +195,7 @@ func (s *State) GetOpenBatchNumber() (uint64, uint64) {
 }
 
 // AddBatchCommit adds the commit to the round state.
-func (s *State) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr string) error {
+func (s *State) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr, pubKey string) error {
 	s.rwMutex.Lock()
 	defer s.rwMutex.Unlock()
 
@@ -211,7 +208,7 @@ func (s *State) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr 
 		return fmt.Errorf("the operator %s is blocked", stakeAddr)
 	}
 
-	if s.validators.GetVotingPower(stakeAddr) == 0 {
+	if s.validators.GetVotingPower(stakeAddr, pubKey) == 0 {
 		return fmt.Errorf("the stake address %s is not registered", stakeAddr)
 	}
 
@@ -219,15 +216,23 @@ func (s *State) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr 
 		return fmt.Errorf("the batch number %d is not matched with the current batch number %d", commit.BatchNumber(), s.round.GetCurrentBatchNumber())
 	}
 
-	return s.round.AddCommit(commit, s.validators.GetPublicKey(stakeAddr), stakeAddr)
+	return s.round.AddCommit(commit, pubKey, stakeAddr)
 }
 
 // CheckCommitteeMember checks if the operator is a committee member.
-func (s *State) CheckCommitteeMember(stakeAddr string, pubKey []byte) bool {
+func (s *State) CheckCommitteeMember(stakeAddr, pubKey string) bool {
 	if s.validators == nil {
 		return false
 	}
-	return bytes.Equal(s.validators.GetPublicKey(stakeAddr), pubKey)
+	return s.validators.GetVotingPower(stakeAddr, pubKey) > 0
+}
+
+// CheckSignAddress checks if the sign address is valid.
+func (s *State) CheckSignAddress(stakeAddr, signAddr string) bool {
+	if s.validators == nil {
+		return false
+	}
+	return s.validators.GetSignAddress(stakeAddr) == signAddr
 }
 
 // IsFinalized returns true if the current batch is finalized.
