@@ -4,7 +4,6 @@ import (
 	"context"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
-	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
@@ -48,9 +47,9 @@ type Storage interface {
 	// UpdateEvidence updates the evidence in the database.
 	UpdateEvidence(ctx context.Context, evidence *contypes.Evidence) error
 	// UpdateCommitteeRoot updates the committee root in the database.
-	UpdateCommitteeRoot(ctx context.Context, committeeRoot *govtypes.CommitteeRoot) error
+	UpdateCommitteeRoot(ctx context.Context, committeeRoot *sequencerv2types.CommitteeRoot) error
 	// GetCommitteeRoot returns the first committee root which EpochBlockNumber is greater than or equal to the given l1BlockNumber.
-	GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*govtypes.CommitteeRoot, error)
+	GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*sequencerv2types.CommitteeRoot, error)
 	// GetLastCommitteeEpochNumber returns the last committee epoch number for the given chainID.
 	GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error)
 	// GetLastEvidenceBlockNumber returns the last submitted evidence block number for the given chainID.

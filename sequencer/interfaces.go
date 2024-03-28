@@ -13,4 +13,6 @@ type storageInterface interface {
 	GetLastBatchNumber(ctx context.Context, chainID uint32) (uint64, error)
 	AddBatch(ctx context.Context, batch *v2types.Batch) error
 	GetBatch(ctx context.Context, chainID uint32, batchNumber uint64) (*v2types.Batch, error)
+	UpdateCommitteeRoot(ctx context.Context, committeeRoot *v2types.CommitteeRoot) error
+	GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error)
 }

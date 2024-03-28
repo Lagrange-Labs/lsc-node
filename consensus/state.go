@@ -9,7 +9,6 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	govtypes "github.com/Lagrange-Labs/lagrange-node/governance/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
@@ -35,7 +34,7 @@ type State struct {
 	roundInterval    time.Duration
 	batchSize        uint32
 	chainID          uint32
-	lastCommittee    *govtypes.CommitteeRoot
+	lastCommittee    *sequencerv2types.CommitteeRoot
 	blockedOperators map[string]struct{}
 
 	chStop chan struct{}
@@ -259,7 +258,7 @@ func (s *State) startRound(batchNumber uint64) error {
 
 	batch.CommitteeHeader = &sequencerv2types.CommitteeHeader{}
 	// load the committee root
-	var currentCommittee *govtypes.CommitteeRoot
+	var currentCommittee *sequencerv2types.CommitteeRoot
 	if s.lastCommittee == nil || batch.L1BlockNumber() > s.lastCommittee.EpochEndBlockNumber {
 		logger.Infof("the next committee root is loading: %v", batch.L1BlockNumber())
 		nextCommittee, err := s.storage.GetCommitteeRoot(context.Background(), s.chainID, batch.L1BlockNumber())

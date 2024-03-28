@@ -1,4 +1,4 @@
-package types
+package v2
 
 import (
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"

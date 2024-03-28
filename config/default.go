@@ -23,6 +23,9 @@ DBPath = "mongodb://127.0.0.1:27017"
 Chain = "mock"
 FromL1BlockNumber = 91
 FromL2BlockNumber = 91
+EthereumURL = "http://localhost:8545"
+CommitteeSCAddress = "0xF2740f6A6333c7B405aD7EfC68c74adAd83cC30D"
+StakingCheckInterval = "2s"
 
 [RpcClient]
 
@@ -43,13 +46,6 @@ FromL2BlockNumber = 91
 
 	[RpcClient.Mock]
 	RPCURL = "http://localhost:8545"
-
-[Governance]
-EthereumURL = "http://localhost:8545"
-PrivateKey = "0x3e17bc938ec10c865fc4e2d049902716dc0712b5b0e688b7183c16807234a84c"
-CommitteeSCAddress = "0xF2740f6A6333c7B405aD7EfC68c74adAd83cC30D"
-StakingCheckInterval = "2s"
-EvidenceUploadInterval = "3s"
 
 [Consensus]
 OperatorAddress = "0x6E654b122377EA7f592bf3FD5bcdE9e8c1B1cEb9"
