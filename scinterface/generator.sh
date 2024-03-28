@@ -8,5 +8,4 @@ gen() {
     abigen --bin bin/${package}.bin --abi bin/${package}.abi --pkg=${package} --out=${package}/${package}.go
 }
 
-gen lagrange
 gen committee

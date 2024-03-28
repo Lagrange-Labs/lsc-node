@@ -1,6 +1,7 @@
 package sequencer
 
 import (
+	"bytes"
 	"context"
 	"errors"
 	"fmt"
@@ -15,6 +16,7 @@ import (
 	v2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/ethclient"
 )
@@ -27,6 +29,7 @@ const (
 // CommitteeParams is the committee parameters.
 type CommitteeParams struct {
 	StartBlock     uint64
+	GenesisBlock   uint64
 	Duration       uint64
 	FreezeDuration uint64
 }
@@ -46,10 +49,6 @@ type Sequencer struct {
 	committeeParams    *CommitteeParams
 	committeeSC        *committee.Committee
 	etherClient        *ethclient.Client
-
-	// Operators sync is a heavy operation, so we do it only once
-	isOpertorsSynced bool
-	operators        []networktypes.ClientNode
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -137,6 +136,7 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 		currentEpochNumber: lastEpochNumber,
 		committeeParams: &CommitteeParams{
 			StartBlock:     committeeParams.StartBlock.Uint64(),
+			GenesisBlock:   committeeParams.GenesisBlock.Uint64(),
 			Duration:       committeeParams.Duration.Uint64(),
 			FreezeDuration: committeeParams.FreezeDuration.Uint64(),
 		},
@@ -167,9 +167,6 @@ func (s *Sequencer) Start() error {
 			case <-s.ctx.Done():
 				return
 			case <-ticker.C:
-				if err := s.fetchOperatorInfos(); err != nil {
-					logger.Errorf("failed to fetch operator infos: %w", err)
-				}
 				if err := s.updateCommittee(); err != nil {
 					logger.Errorf("failed to update committee root: %w", err)
 				}
@@ -212,70 +209,67 @@ func (s *Sequencer) Start() error {
 }
 
 // fetch the operator information details from the committee smart contract.
-func (s *Sequencer) fetchOperatorInfos() error {
-	// check if the given epoch is locked
-	isLocked, _, err := s.committeeSC.IsLocked(nil, s.chainID)
-	if err != nil {
-		logger.Errorf("failed to check if the given epoch is locked: %w", err)
-		return err
-	}
-	if !isLocked {
-		if s.isOpertorsSynced {
-			logger.Infof("the given epoch is not locked and the operators are already synced")
-		}
-		s.isOpertorsSynced = false
-		return nil
-	}
-
-	if s.isOpertorsSynced {
-		return nil
-	}
+func (s *Sequencer) fetchOperatorInfos(blockNumber *big.Int, leafCount uint32) ([]networktypes.ClientNode, error) {
 	logger.Info("start fetching operator infos")
-
-	// get the leaf count
-	epochEndBlockNumber := (s.updatedEpochNumber+1)*s.committeeParams.Duration + s.committeeParams.StartBlock - 1
-	committeeData, err := s.committeeSC.GetCommittee(nil, s.chainID, big.NewInt(int64(epochEndBlockNumber)))
-	if err != nil {
-		logger.Errorf("failed to get the committee data: %w", err)
+	opts := &bind.CallOpts{
+		BlockNumber: blockNumber,
 	}
-	leafCount := committeeData.CurrentCommittee.LeafCount.Int64()
-
 	// get the operator details
-	operators := make([]networktypes.ClientNode, 0)
-	for i := int64(0); i < leafCount; i++ {
-		addr, err := s.committeeSC.CommitteeAddrs(nil, s.chainID, big.NewInt(i))
+	operators := make([]networktypes.ClientNode, leafCount)
+	operatorIndex := int64(0)
+	leafIndex := uint32(0)
+	for leafIndex < leafCount {
+		addr, err := s.committeeSC.CommitteeAddrs(opts, s.chainID, big.NewInt(operatorIndex))
 		if err != nil {
-			return err
+			return nil, err
 		}
-		votingPower, err := s.committeeSC.GetOperatorVotingPower(nil, addr, s.chainID)
+		if bytes.Equal(addr.Bytes(), common.Address{}.Bytes()) {
+			return nil, fmt.Errorf("leafCount %d is not matched with leafIndex %d", leafCount, leafIndex)
+		}
+
+		operatorStatus, err := s.committeeSC.OperatorsStatus(opts, addr)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		blsPubKey, err := s.committeeSC.GetBlsPubKey(nil, addr)
+		blsPubKeys, err := s.committeeSC.GetBlsPubKeys(opts, addr)
 		if err != nil {
-			return err
+			return nil, err
 		}
-		pubKey := make([]byte, 0)
-		pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[0].Bytes(), 32)...)
-		pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[1].Bytes(), 32)...)
-		operators = append(operators, networktypes.ClientNode{
-			StakeAddress: addr.String(),
-			VotingPower:  votingPower.Uint64(),
-			PublicKey:    pubKey,
-		})
+		votingPowers, err := s.committeeSC.GetBlsPubKeyVotingPowers(opts, addr, s.chainID)
+		if err != nil {
+			return nil, err
+		}
+		for i, votingPower := range votingPowers {
+			pubKey := make([]byte, 0)
+			pubKey = append(pubKey, common.LeftPadBytes(blsPubKeys[i][0].Bytes(), 32)...)
+			pubKey = append(pubKey, common.LeftPadBytes(blsPubKeys[i][1].Bytes(), 32)...)
+			operators[leafIndex] = networktypes.ClientNode{
+				StakeAddress: addr.Hex(),
+				SignAddress:  operatorStatus.SignAddress.Hex(),
+				VotingPower:  votingPower.Uint64(),
+				PublicKey:    utils.Bytes2Hex(pubKey),
+			}
+			leafIndex++
+		}
+		operatorIndex++
 	}
 
-	s.operators = operators
-	s.isOpertorsSynced = true
-
-	return nil
+	return operators, nil
 }
 
 func (s *Sequencer) updateCommittee() error {
 	logger.Infof("update committee is started, current epoch number %d, updated epoch number %d", s.currentEpochNumber, s.updatedEpochNumber)
-	// check if there are any missing committee roots
-	// NOTE: this is for only test scenario, it should not be happened in the live network
-	for epochNumber := s.currentEpochNumber + 1; epochNumber <= s.updatedEpochNumber+1; epochNumber++ {
+
+	// check if the committee tree is updated
+	updatedEpochNumber, err := s.committeeSC.UpdatedEpoch(nil, s.chainID)
+	if err != nil {
+		return fmt.Errorf("failed to get updated epoch number: %w", err)
+	}
+	if updatedEpochNumber.Uint64() > s.updatedEpochNumber {
+		s.updatedEpochNumber = updatedEpochNumber.Uint64()
+	}
+
+	for epochNumber := s.currentEpochNumber + 1; epochNumber <= s.updatedEpochNumber; epochNumber++ {
 		committeeRoot, err := s.fetchCommitteeRoot(epochNumber)
 		if err != nil {
 			return err
@@ -286,30 +280,6 @@ func (s *Sequencer) updateCommittee() error {
 		s.currentEpochNumber = epochNumber
 	}
 
-	// check if the committee tree needs to be updated
-	blockNumber, err := s.etherClient.BlockNumber(s.ctx)
-	if err != nil {
-		return err
-	}
-	currentEpochNumber := (blockNumber-s.committeeParams.StartBlock)/s.committeeParams.Duration + 1
-
-	for epochNumber := s.updatedEpochNumber + 1; epochNumber <= currentEpochNumber; epochNumber++ {
-		if epochNumber > s.currentEpochNumber {
-			committeeRoot, err := s.fetchCommitteeRoot(epochNumber)
-			if err != nil {
-				return err
-			}
-			if err := s.storage.UpdateCommitteeRoot(context.Background(), committeeRoot); err != nil {
-				return err
-			}
-			s.currentEpochNumber = epochNumber
-		}
-	}
-
-	if currentEpochNumber > s.currentEpochNumber {
-		return fmt.Errorf("missing committee roots")
-	}
-
 	return nil
 }
 
@@ -317,30 +287,37 @@ func (s *Sequencer) updateCommittee() error {
 func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRoot, error) {
 	epochEndBlockNumber := epochNumber*s.committeeParams.Duration + s.committeeParams.StartBlock - 1
 	committeeData, err := s.committeeSC.GetCommittee(nil, s.chainID, big.NewInt(int64(epochEndBlockNumber)))
-
 	if err != nil {
 		logger.Errorf("failed to get committee data for block number %d, epoch number %d: %w", epochEndBlockNumber, epochNumber, err)
 		return nil, err
 	}
+	if committeeData.LeafCount == 0 {
+		logger.Warnf("no operator in the committee for block number %d, epoch number %d", epochEndBlockNumber, epochNumber)
+		return nil, fmt.Errorf("no operator in the committee epoch number %d", epochNumber)
+	}
+
+	operators, err := s.fetchOperatorInfos(committeeData.UpdatedBlock, committeeData.LeafCount)
+	if err != nil {
+		logger.Errorf("failed to fetch operator infos: %w", err)
+		return nil, err
+	}
+	tvl := uint64(0)
+	for _, operator := range operators {
+		tvl += operator.VotingPower
+	}
+	epochStart := epochEndBlockNumber - s.committeeParams.Duration + 1
+	if epochNumber == uint64(1) {
+		epochStart = s.committeeParams.GenesisBlock
+	}
 
 	committeeRoot := &v2types.CommitteeRoot{
 		ChainID:               s.chainID,
-		CurrentCommitteeRoot:  utils.Bytes2Hex(committeeData.CurrentCommittee.Root[:]),
-		TotalVotingPower:      committeeData.CurrentCommittee.TotalVotingPower.Uint64(),
-		EpochStartBlockNumber: epochEndBlockNumber - s.committeeParams.Duration + 1,
+		CurrentCommitteeRoot:  utils.Bytes2Hex(committeeData.Root[:]),
+		TotalVotingPower:      tvl,
+		EpochStartBlockNumber: epochStart,
 		EpochEndBlockNumber:   epochEndBlockNumber,
 		EpochNumber:           epochNumber,
-		Operators:             s.operators,
-	}
-
-	tvl := uint64(0)
-	for _, operator := range s.operators {
-		tvl += operator.VotingPower
-	}
-
-	if committeeRoot.TotalVotingPower != tvl {
-		logger.Errorf("total voting power mismatch, committee root %+v, tvl %d", committeeRoot, tvl)
-		return nil, fmt.Errorf("total voting power mismatch")
+		Operators:             operators,
 	}
 
 	logger.Infof("fetched committee root %+v", committeeRoot)

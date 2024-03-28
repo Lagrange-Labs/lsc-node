@@ -6,6 +6,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/Lagrange-Labs/lagrange-node/config"
 	"github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/testutil/operations"
 	"github.com/stretchr/testify/require"
@@ -30,6 +31,9 @@ func (suite *SequencerTestSuite) TearDownSuite() {
 }
 
 func (suite *SequencerTestSuite) Test_Sequencer_Block_Generation() {
+	cfg, err := config.Default()
+	require.NoError(suite.T(), err)
+
 	ctx, cancel := context.WithTimeout(context.Background(), 30*time.Second)
 	defer cancel()
 	for {
@@ -38,7 +42,7 @@ func (suite *SequencerTestSuite) Test_Sequencer_Block_Generation() {
 			suite.T().Fatal("timeout")
 		default:
 		}
-		batch, err := suite.manager.Storage.GetBatch(ctx, suite.manager.GetChainID(), 91)
+		batch, err := suite.manager.Storage.GetBatch(ctx, suite.manager.GetChainID(), cfg.Sequencer.FromL2BlockNumber)
 		if errors.Is(err, types.ErrBlockNotFound) {
 			time.Sleep(1 * time.Second)
 			continue

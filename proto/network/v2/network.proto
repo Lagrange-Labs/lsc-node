@@ -46,7 +46,8 @@ message GetBatchResponse {
 message CommitBatchRequest {
     sequencer.v2.BlsSignature bls_signature = 1;
     string stake_address = 2;
-    string token = 3;
+    string public_key = 3;
+    string token = 4;
 }
 
 // CommitBatchResponse is the response for uploading the signature for the given block batch

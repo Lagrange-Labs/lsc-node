@@ -11,19 +11,12 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
-// CommitSignature defines the commit signature.
-type CommitSignature struct {
-	Signature *sequencerv2types.BlsSignature
-	PubKey    []byte
-	StakeAddr string
-}
-
 // RoundState defines the internal consensus state.
 type RoundState struct {
 	blsScheme     crypto.BLSScheme
 	proposedBatch *sequencerv2types.Batch
 
-	commitSignatures map[string]CommitSignature
+	commitSignatures map[string]map[string]*sequencerv2types.BlsSignature
 	evidences        []*sequencerv2types.BlsSignature // to determine slashing
 
 	rwMutex   sync.RWMutex // to protect the round state updates
@@ -44,24 +37,22 @@ func (rs *RoundState) UpdateRoundState(prposedBatch *sequencerv2types.Batch) {
 	defer rs.rwMutex.Unlock()
 
 	rs.proposedBatch = prposedBatch
-	rs.commitSignatures = make(map[string]CommitSignature)
+	rs.commitSignatures = make(map[string]map[string]*sequencerv2types.BlsSignature)
 	rs.isBlocked = false
 }
 
 // AddCommit adds a commit to the round state.
-func (rs *RoundState) AddCommit(commit *sequencerv2types.BlsSignature, pubKey []byte, stakeAddr string) error {
+func (rs *RoundState) AddCommit(commit *sequencerv2types.BlsSignature, pubKey string, stakeAddr string) error {
 	rs.rwMutex.Lock()
 	defer rs.rwMutex.Unlock()
 
 	if rs.isBlocked {
 		return fmt.Errorf("the current round is blocked")
 	}
-
-	rs.commitSignatures[stakeAddr] = CommitSignature{
-		Signature: commit,
-		PubKey:    pubKey,
-		StakeAddr: stakeAddr,
+	if _, ok := rs.commitSignatures[stakeAddr]; !ok {
+		rs.commitSignatures[stakeAddr] = make(map[string]*sequencerv2types.BlsSignature)
 	}
+	rs.commitSignatures[stakeAddr][pubKey] = commit
 
 	return nil
 }
@@ -112,8 +103,10 @@ func (rs *RoundState) CheckEnoughVotingPower(vs *ValidatorSet) bool {
 	defer rs.rwMutex.RUnlock()
 
 	votingPower := uint64(0)
-	for stakeAddr := range rs.commitSignatures {
-		votingPower += vs.GetVotingPower(stakeAddr)
+	for stakeAddr, signatures := range rs.commitSignatures {
+		for pubKey := range signatures {
+			votingPower += vs.GetVotingPower(stakeAddr, pubKey)
+		}
 	}
 
 	logger.Infof("committed count: %d, committed voting power: %v, total voting power: %v", len(rs.commitSignatures), votingPower, vs.GetCommitteeVotingPower())
@@ -131,9 +124,11 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 	pubKeys := make([][]byte, 0)
 
 	// aggregate the signatures of client nodes
-	for _, commit := range rs.commitSignatures {
-		signatures = append(signatures, utils.Hex2Bytes(commit.Signature.BlsSignature))
-		pubKeys = append(pubKeys, commit.PubKey)
+	for _, operatorSignatures := range rs.commitSignatures {
+		for pubKey, commit := range operatorSignatures {
+			signatures = append(signatures, utils.Hex2Bytes(commit.BlsSignature))
+			pubKeys = append(pubKeys, utils.Hex2Bytes(pubKey))
+		}
 	}
 
 	aggSig, err := rs.blsScheme.AggregateSignatures(signatures)
@@ -154,22 +149,24 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 	}
 
 	// find the invalid signature
-	for operator, commit := range rs.commitSignatures {
-		commitHash := commit.Signature.Hash()
-		if !bytes.Equal(commitHash, sigHash) {
-			logger.Errorf("wrong commit message: %v, original: %v", utils.Bytes2Hex(commitHash), utils.Bytes2Hex(sigHash))
-			rs.addEvidence(operator, commit.Signature)
-			continue
-		}
-		verified, err := rs.blsScheme.VerifySignature(commit.PubKey, commitHash, utils.Hex2Bytes(commit.Signature.BlsSignature))
-		if err != nil {
-			logger.Errorf("failed to verify the signature: %v", err)
-			rs.addEvidence(operator, commit.Signature)
-			continue
-		}
-		if !verified {
-			logger.Errorf("invalid signature: %v", commit)
-			rs.addEvidence(operator, commit.Signature)
+	for operator, operatorSignatures := range rs.commitSignatures {
+		for pubKey, commit := range operatorSignatures {
+			commitHash := commit.Hash()
+			if !bytes.Equal(commitHash, sigHash) {
+				logger.Errorf("wrong commit message: %v, original: %v", utils.Bytes2Hex(commitHash), utils.Bytes2Hex(sigHash))
+				rs.addEvidence(operator, commit)
+				continue
+			}
+			verified, err := rs.blsScheme.VerifySignature(utils.Hex2Bytes(pubKey), commitHash, utils.Hex2Bytes(commit.BlsSignature))
+			if err != nil {
+				logger.Errorf("failed to verify the signature: %v", err)
+				rs.addEvidence(operator, commit)
+				continue
+			}
+			if !verified {
+				logger.Errorf("invalid signature: %v", commit)
+				rs.addEvidence(operator, commit)
+			}
 		}
 	}
 

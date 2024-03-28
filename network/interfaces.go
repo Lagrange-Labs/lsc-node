@@ -21,8 +21,9 @@ type storageInterface interface {
 type consensusInterface interface {
 	GetOpenBatch(batchNumber uint64) *sequencerv2types.Batch
 	GetOpenBatchNumber() (uint64, uint64)
-	AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr string) error
-	CheckCommitteeMember(stakeAddr string, pubKey []byte) bool
+	AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr, pubKey string) error
+	CheckCommitteeMember(stakeAddr, pubKey string) bool
+	CheckSignAddress(stakeAddr, signAddr string) bool
 	IsFinalized(batchNumber uint64) bool
 	GetBLSScheme() crypto.BLSScheme
 }

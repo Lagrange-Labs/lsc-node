@@ -55,18 +55,13 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.
 	if err != nil {
 		return nil, err
 	}
-	pubKey := utils.Hex2Bytes(req.PublicKey)
-	verified, err := s.blsScheme.VerifySignature(pubKey, msg, utils.Hex2Bytes(sigMessage))
+	verified, err := s.blsScheme.VerifySignature(utils.Hex2Bytes(req.PublicKey), msg, utils.Hex2Bytes(sigMessage))
 	if err != nil || !verified {
 		logger.Warnf("BLS signature verification failed: %v", err)
 		return nil, fmt.Errorf("BLS signature verification failed: %v", err)
 	}
 	// Check if the operator is a committee member
-	rawPubKey, err := s.blsScheme.ConvertPublicKey(pubKey, false)
-	if err != nil {
-		return nil, err
-	}
-	if !s.consensus.CheckCommitteeMember(req.StakeAddress, rawPubKey) {
+	if !s.consensus.CheckCommitteeMember(req.StakeAddress, req.PublicKey) {
 		logger.Warnf("The operator is not a committee member")
 		return &networkv2types.JoinNetworkResponse{}, fmt.Errorf("the operator is not a committee member")
 	}
@@ -78,7 +73,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.
 	if err := s.storage.AddNode(ctx,
 		&types.ClientNode{
 			StakeAddress: req.StakeAddress,
-			PublicKey:    utils.Hex2Bytes(req.PublicKey),
+			PublicKey:    req.PublicKey,
 			IPAddress:    ip,
 			ChainID:      s.chainID,
 			JoinedAt:     time.Now().UnixMilli(),
@@ -135,13 +130,13 @@ func (s *sequencerService) CommitBatch(req *networkv2types.CommitBatchRequest, s
 		logger.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)
 		return fmt.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)
 	}
-	if addr != common.HexToAddress(req.StakeAddress) {
-		logger.Errorf("the stake address is not matched in ECDSA signature: %v, %v", addr, req.StakeAddress)
-		return fmt.Errorf("the stake address is not matched in ECDSA signature: %v, %v", addr, req.StakeAddress)
+	if !s.consensus.CheckSignAddress(req.StakeAddress, addr.Hex()) {
+		logger.Errorf("the sign address is not matched in ECDSA signature: %v, %v", addr, req.StakeAddress)
+		return fmt.Errorf("the sign address is not matched in ECDSA signature: %v, %v", addr, req.StakeAddress)
 	}
 
 	// upload the commit to the consensus layer
-	if err := s.consensus.AddBatchCommit(signature, req.StakeAddress); err != nil {
+	if err := s.consensus.AddBatchCommit(signature, req.StakeAddress, req.PublicKey); err != nil {
 		logger.Errorf("failed to add the commit to the consensus layer: %v", err)
 		return err
 	}

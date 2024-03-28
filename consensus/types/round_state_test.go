@@ -47,9 +47,11 @@ func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []ne
 		secKey, _ := blsScheme.GenerateRandomKey()
 		pubKey, _ := blsScheme.GetPublicKey(secKey, true)
 		secKeys = append(secKeys, secKey)
+		addr := utils.RandomHex(20)
 		node := networktypes.ClientNode{
-			PublicKey:    pubKey,
-			StakeAddress: utils.RandomHex(20),
+			PublicKey:    utils.Bytes2Hex(pubKey),
+			StakeAddress: addr,
+			SignAddress:  addr,
 			VotingPower:  1,
 		}
 		nodes = append(nodes, node)
@@ -88,7 +90,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		require.NoError(t, err)
 		blsSign.BlsSignature = utils.Bytes2Hex(signature)
 
-		verified, err := blsScheme.VerifySignature(validators[i].PublicKey, sigHash, signature)
+		verified, err := blsScheme.VerifySignature(utils.Hex2Bytes(validators[i].PublicKey), sigHash, signature)
 		require.NoError(t, err)
 		require.True(t, verified, i)
 
@@ -120,7 +122,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 			blsSign.BlsSignature = wrongSignature // wrong signature
 		}
 
-		verified, err := blsScheme.VerifySignature(validators[i].PublicKey, sigHash, signature)
+		verified, err := blsScheme.VerifySignature(utils.Hex2Bytes(validators[i].PublicKey), sigHash, signature)
 		require.NoError(t, err)
 		require.True(t, verified)
 
