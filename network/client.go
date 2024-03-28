@@ -332,9 +332,9 @@ func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommi
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the committee data: %v", err)
 	}
-	c.committeeCache.Add(blockNumber, &committeeData.CurrentCommittee)
+	c.committeeCache.Add(blockNumber, &committeeData)
 
-	return &committeeData.CurrentCommittee, nil
+	return &committeeData, nil
 }
 
 func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {

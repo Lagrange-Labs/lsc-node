@@ -238,7 +238,7 @@ func (s *Sequencer) fetchOperatorInfos() error {
 	if err != nil {
 		logger.Errorf("failed to get the committee data: %w", err)
 	}
-	leafCount := committeeData.CurrentCommittee.LeafCount.Int64()
+	leafCount := int64(committeeData.LeafCount)
 
 	// get the operator details
 	operators := make([]networktypes.ClientNode, 0)
@@ -251,13 +251,13 @@ func (s *Sequencer) fetchOperatorInfos() error {
 		if err != nil {
 			return err
 		}
-		blsPubKey, err := s.committeeSC.GetBlsPubKey(nil, addr)
+		blsPubKey, err := s.committeeSC.GetBlsPubKeys(nil, addr)
 		if err != nil {
 			return err
 		}
 		pubKey := make([]byte, 0)
-		pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[0].Bytes(), 32)...)
-		pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[1].Bytes(), 32)...)
+		pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[0][0].Bytes(), 32)...)
+		pubKey = append(pubKey, common.LeftPadBytes(blsPubKey[0][1].Bytes(), 32)...)
 		operators = append(operators, networktypes.ClientNode{
 			StakeAddress: addr.String(),
 			VotingPower:  votingPower.Uint64(),
@@ -324,9 +324,9 @@ func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRo
 	}
 
 	committeeRoot := &v2types.CommitteeRoot{
-		ChainID:               s.chainID,
-		CurrentCommitteeRoot:  utils.Bytes2Hex(committeeData.CurrentCommittee.Root[:]),
-		TotalVotingPower:      committeeData.CurrentCommittee.TotalVotingPower.Uint64(),
+		ChainID:              s.chainID,
+		CurrentCommitteeRoot: utils.Bytes2Hex(committeeData.Root[:]),
+		// TotalVotingPower:      committeeData.TotalVotingPower.Uint64(),
 		EpochStartBlockNumber: epochEndBlockNumber - s.committeeParams.Duration + 1,
 		EpochEndBlockNumber:   epochEndBlockNumber,
 		EpochNumber:           epochNumber,

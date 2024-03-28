@@ -27,6 +27,12 @@
       {
         "indexed": false,
         "internalType": "uint256",
+        "name": "genesisBlock",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
         "name": "duration",
         "type": "uint256"
       },
@@ -41,6 +47,18 @@
         "internalType": "uint8",
         "name": "quorumNumber",
         "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint96",
+        "name": "minWeight",
+        "type": "uint96"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint96",
+        "name": "maxWeight",
+        "type": "uint96"
       }
     ],
     "name": "InitCommittee",
@@ -95,6 +113,49 @@
       }
     ],
     "name": "UpdateCommittee",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "chainID",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "duration",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "freezeDuration",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint8",
+        "name": "quorumNumber",
+        "type": "uint8"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint96",
+        "name": "minWeight",
+        "type": "uint96"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint96",
+        "name": "maxWeight",
+        "type": "uint96"
+      }
+    ],
+    "name": "UpdateCommitteeParams",
     "type": "event"
   },
   {
@@ -157,14 +218,56 @@
         "type": "address"
       },
       {
-        "internalType": "uint256[2]",
-        "name": "blsPubKey",
-        "type": "uint256[2]"
+        "internalType": "uint256[2][]",
+        "name": "additionalBlsPubKeys",
+        "type": "uint256[2][]"
+      }
+    ],
+    "name": "addBlsPubKeys",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "signAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint256[2][]",
+        "name": "blsPubKeys",
+        "type": "uint256[2][]"
       }
     ],
     "name": "addOperator",
     "outputs": [],
     "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint256",
+        "name": "",
+        "type": "uint256"
+      }
+    ],
+    "name": "chainIDs",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
     "type": "function"
   },
   {
@@ -199,83 +302,16 @@
         "type": "uint32"
       }
     ],
-    "name": "committeeHeights",
-    "outputs": [
-      {
-        "internalType": "uint8",
-        "name": "",
-        "type": "uint8"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint32",
-        "name": "",
-        "type": "uint32"
-      },
-      {
-        "internalType": "address",
-        "name": "",
-        "type": "address"
-      }
-    ],
-    "name": "committeeLeavesMap",
-    "outputs": [
-      {
-        "internalType": "uint32",
-        "name": "",
-        "type": "uint32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint32",
-        "name": "",
-        "type": "uint32"
-      },
-      {
-        "internalType": "uint8",
-        "name": "",
-        "type": "uint8"
-      },
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "name": "committeeNodes",
-    "outputs": [
-      {
-        "internalType": "bytes32",
-        "name": "",
-        "type": "bytes32"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "uint32",
-        "name": "",
-        "type": "uint32"
-      }
-    ],
     "name": "committeeParams",
     "outputs": [
       {
         "internalType": "uint256",
         "name": "startBlock",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "genesisBlock",
         "type": "uint256"
       },
       {
@@ -292,6 +328,16 @@
         "internalType": "uint8",
         "name": "quorumNumber",
         "type": "uint8"
+      },
+      {
+        "internalType": "uint96",
+        "name": "minWeight",
+        "type": "uint96"
+      },
+      {
+        "internalType": "uint96",
+        "name": "maxWeight",
+        "type": "uint96"
       }
     ],
     "stateMutability": "view",
@@ -318,14 +364,38 @@
         "type": "bytes32"
       },
       {
-        "internalType": "uint256",
-        "name": "leafCount",
-        "type": "uint256"
+        "internalType": "uint224",
+        "name": "updatedBlock",
+        "type": "uint224"
       },
       {
-        "internalType": "uint256",
-        "name": "totalVotingPower",
-        "type": "uint256"
+        "internalType": "uint32",
+        "name": "leafCount",
+        "type": "uint32"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "opAddr",
+        "type": "address"
+      },
+      {
+        "internalType": "uint32",
+        "name": "chainID",
+        "type": "uint32"
+      }
+    ],
+    "name": "getBlsPubKeyVotingPowers",
+    "outputs": [
+      {
+        "internalType": "uint96[]",
+        "name": "individualVotingPowers",
+        "type": "uint96[]"
       }
     ],
     "stateMutability": "view",
@@ -339,12 +409,12 @@
         "type": "address"
       }
     ],
-    "name": "getBlsPubKey",
+    "name": "getBlsPubKeys",
     "outputs": [
       {
-        "internalType": "uint256[2]",
+        "internalType": "uint256[2][]",
         "name": "",
-        "type": "uint256[2]"
+        "type": "uint256[2][]"
       }
     ],
     "stateMutability": "view",
@@ -373,24 +443,19 @@
             "type": "bytes32"
           },
           {
-            "internalType": "uint256",
-            "name": "leafCount",
-            "type": "uint256"
+            "internalType": "uint224",
+            "name": "updatedBlock",
+            "type": "uint224"
           },
           {
-            "internalType": "uint256",
-            "name": "totalVotingPower",
-            "type": "uint256"
+            "internalType": "uint32",
+            "name": "leafCount",
+            "type": "uint32"
           }
         ],
         "internalType": "struct ILagrangeCommittee.CommitteeData",
         "name": "currentCommittee",
         "type": "tuple"
-      },
-      {
-        "internalType": "bytes32",
-        "name": "nextRoot",
-        "type": "bytes32"
       }
     ],
     "stateMutability": "view",
@@ -426,42 +491,6 @@
         "internalType": "address",
         "name": "opAddr",
         "type": "address"
-      }
-    ],
-    "name": "getOperatorStatus",
-    "outputs": [
-      {
-        "internalType": "uint8",
-        "name": "",
-        "type": "uint8"
-      },
-      {
-        "components": [
-          {
-            "internalType": "uint32",
-            "name": "chainID",
-            "type": "uint32"
-          },
-          {
-            "internalType": "uint256",
-            "name": "blockNumber",
-            "type": "uint256"
-          }
-        ],
-        "internalType": "struct ILagrangeCommittee.UnsubscribedParam[]",
-        "name": "",
-        "type": "tuple[]"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [
-      {
-        "internalType": "address",
-        "name": "opAddr",
-        "type": "address"
       },
       {
         "internalType": "uint32",
@@ -475,6 +504,25 @@
         "internalType": "uint96",
         "name": "",
         "type": "uint96"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      }
+    ],
+    "name": "getTokenListForOperator",
+    "outputs": [
+      {
+        "internalType": "address[]",
+        "name": "",
+        "type": "address[]"
       }
     ],
     "stateMutability": "view",
@@ -566,6 +614,30 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
+      }
+    ],
+    "name": "operatorsStatus",
+    "outputs": [
+      {
+        "internalType": "address",
+        "name": "signAddress",
+        "type": "address"
+      },
+      {
+        "internalType": "uint8",
+        "name": "subscribedChainCount",
+        "type": "uint8"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "owner",
     "outputs": [
@@ -587,6 +659,11 @@
       },
       {
         "internalType": "uint256",
+        "name": "genesisBlock",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
         "name": "epochPeriod",
         "type": "uint256"
       },
@@ -597,8 +674,18 @@
       },
       {
         "internalType": "uint8",
-        "name": "quorunNumber",
+        "name": "quorumNumber",
         "type": "uint8"
+      },
+      {
+        "internalType": "uint96",
+        "name": "minWeight",
+        "type": "uint96"
+      },
+      {
+        "internalType": "uint96",
+        "name": "maxWeight",
+        "type": "uint96"
       }
     ],
     "name": "registerChain",
@@ -650,14 +737,19 @@
         "internalType": "uint32",
         "name": "",
         "type": "uint32"
+      },
+      {
+        "internalType": "address",
+        "name": "",
+        "type": "address"
       }
     ],
-    "name": "totalVotingPower",
+    "name": "subscribedChains",
     "outputs": [
       {
-        "internalType": "uint256",
+        "internalType": "bool",
         "name": "",
-        "type": "uint256"
+        "type": "bool"
       }
     ],
     "stateMutability": "view",
@@ -715,17 +807,37 @@
   {
     "inputs": [
       {
-        "internalType": "address",
-        "name": "operator",
-        "type": "address"
-      },
-      {
         "internalType": "uint32",
         "name": "chainID",
         "type": "uint32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "epochPeriod",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "freezeDuration",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint8",
+        "name": "quorumNumber",
+        "type": "uint8"
+      },
+      {
+        "internalType": "uint96",
+        "name": "minWeight",
+        "type": "uint96"
+      },
+      {
+        "internalType": "uint96",
+        "name": "maxWeight",
+        "type": "uint96"
       }
     ],
-    "name": "updateOperatorAmount",
+    "name": "updateChain",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

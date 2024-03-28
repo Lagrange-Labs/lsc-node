@@ -3,9 +3,7 @@ package testutil
 import (
 	"context"
 	"math/big"
-	"time"
 
-	"github.com/Lagrange-Labs/lagrange-node/scinterface/lagrange"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
@@ -46,11 +44,5 @@ func RegisterOperator(client *ethclient.Client, auth *bind.TransactOpts, stakeAd
 		return err
 	}
 
-	time.Sleep(3 * time.Second)
-	service, err := lagrange.NewLagrange(stakeAddr, client)
-	if err != nil {
-		return err
-	}
-	_, err = service.Register(auth, [2]*big.Int{big.NewInt(0), big.NewInt(0)})
-	return err
+	return nil
 }
