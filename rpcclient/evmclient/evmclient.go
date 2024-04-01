@@ -20,7 +20,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 )
 
-const CacheSize = 128
+const CacheSize = 2048
 
 // Client is an EVM client.
 type Client struct {
@@ -74,6 +74,24 @@ func (c *Client) GetBlockHashByNumber(blockNumber uint64) (common.Hash, error) {
 	}
 
 	return result.Hash, nil
+}
+
+// GetBlockNumberByHash returns the block number by the given block hash.
+func (c *Client) GetBlockNumberByHash(blockHash common.Hash) (uint64, error) {
+	header, err := c.ethClient.HeaderByHash(context.Background(), blockHash)
+	if err != nil {
+		return 0, err
+	}
+	return header.Number.Uint64(), nil
+}
+
+// GetBlockNumberByTxHash returns the block number by the given transaction hash.
+func (c *Client) GetBlockNumberByTxHash(txHash common.Hash) (uint64, error) {
+	receipt, err := c.ethClient.TransactionReceipt(context.Background(), txHash)
+	if err != nil {
+		return 0, err
+	}
+	return receipt.BlockNumber.Uint64(), nil
 }
 
 // GetChainID returns the chain ID.

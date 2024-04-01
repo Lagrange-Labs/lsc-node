@@ -18,14 +18,19 @@ func (s *BlsTestSuite) TestKeyGeneration() {
 	s.Require().NoError(err)
 	s.Require().NotNil(privKey)
 
+	s.T().Logf("Private Key: %x", privKey)
+
 	pubKey, err := s.scheme.GetPublicKey(privKey, true)
 	s.Require().NoError(err)
 	s.Require().NotNil(pubKey)
+
+	s.T().Logf("Public Key: %x", pubKey)
 
 	pubKey, err = s.scheme.GetPublicKey(privKey, false)
 	s.Require().NoError(err)
 	s.Require().NotNil(pubKey)
 
+	s.T().Logf("Public Key: %x", pubKey)
 }
 
 func (s *BlsTestSuite) TestSignature() {

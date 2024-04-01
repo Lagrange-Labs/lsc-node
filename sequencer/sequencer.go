@@ -30,6 +30,7 @@ const (
 type CommitteeParams struct {
 	StartBlock     uint64
 	GenesisBlock   uint64
+	L1Bias         int64
 	Duration       uint64
 	FreezeDuration uint64
 }
@@ -137,6 +138,7 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 		committeeParams: &CommitteeParams{
 			StartBlock:     committeeParams.StartBlock.Uint64(),
 			GenesisBlock:   committeeParams.GenesisBlock.Uint64(),
+			L1Bias:         committeeParams.L1Bias.Int64(),
 			Duration:       committeeParams.Duration.Uint64(),
 			FreezeDuration: committeeParams.FreezeDuration.Uint64(),
 		},
@@ -286,6 +288,7 @@ func (s *Sequencer) updateCommittee() error {
 // fetch the committee root from the committee smart contract.
 func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRoot, error) {
 	epochEndBlockNumber := epochNumber*s.committeeParams.Duration + s.committeeParams.StartBlock - 1
+	epochEndBlockNumber = uint64(int64(epochEndBlockNumber) - s.committeeParams.L1Bias)
 	committeeData, err := s.committeeSC.GetCommittee(nil, s.chainID, big.NewInt(int64(epochEndBlockNumber)))
 	if err != nil {
 		logger.Errorf("failed to get committee data for block number %d, epoch number %d: %w", epochEndBlockNumber, epochNumber, err)
@@ -307,7 +310,7 @@ func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRo
 	}
 	epochStart := epochEndBlockNumber - s.committeeParams.Duration + 1
 	if epochNumber == uint64(1) {
-		epochStart = s.committeeParams.GenesisBlock
+		epochStart = uint64(int64(s.committeeParams.GenesisBlock) - s.committeeParams.L1Bias)
 	}
 
 	committeeRoot := &v2types.CommitteeRoot{
