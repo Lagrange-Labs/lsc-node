@@ -26,7 +26,7 @@ func NewCache(maxCount uint64) *Cache {
 
 // Set sets the value for the given key.
 func (c *Cache) Set(key uint64, value interface{}) {
-	for c.hKey.Load()+c.maxItems < key {
+	for hKey := c.hKey.Load(); hKey > 0 && hKey+c.maxItems < key; hKey = c.hKey.Load() {
 		// If the key is too large, we should block the set operation.
 		time.Sleep(500 * time.Millisecond)
 	}

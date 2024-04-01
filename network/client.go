@@ -143,7 +143,7 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		rpcClient:            rpcClient,
 		committeeSC:          committeeSC,
 		chainID:              chainID,
-		genesisBlockNumber:   params.GenesisBlock.Uint64(),
+		genesisBlockNumber:   uint64(params.GenesisBlock.Int64() - params.L1Bias.Int64()),
 		committeeCache:       lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
 
 		ctx:        ctx,
@@ -338,10 +338,11 @@ func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommi
 }
 
 func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
-	isGenesis := c.genesisBlockNumber == batch.L1BlockNumber()
+	blockNumber := batch.L1BlockNumber()
+	isGenesis := c.genesisBlockNumber == blockNumber
 	// verify the previous batch's next committee root
-	if !isGenesis && c.prevBatchL1Number >= batch.L1BlockNumber() {
-		return fmt.Errorf("the previous batch L1 block number %d is not less than the current batch L1 block number %d", c.prevBatchL1Number, batch.L1BlockNumber())
+	if !isGenesis && c.prevBatchL1Number >= blockNumber {
+		return fmt.Errorf("the previous batch L1 block number %d is not less than the current batch L1 block number %d", c.prevBatchL1Number, blockNumber)
 	}
 	prevCommitteeData, err := c.getCommitteeRoot(c.prevBatchL1Number)
 	if err != nil {
@@ -352,7 +353,7 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 	}
 
 	// verify the current batch's next committee root
-	curCommitteeData, err := c.getCommitteeRoot(batch.L1BlockNumber())
+	curCommitteeData, err := c.getCommitteeRoot(blockNumber)
 	if err != nil {
 		return fmt.Errorf("failed to get the current committee root: %v", err)
 	}

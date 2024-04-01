@@ -107,6 +107,12 @@
       },
       {
         "indexed": false,
+        "internalType": "uint256",
+        "name": "epochNumber",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
         "internalType": "bytes32",
         "name": "current",
         "type": "bytes32"
@@ -122,6 +128,18 @@
         "indexed": false,
         "internalType": "uint256",
         "name": "chainID",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "int256",
+        "name": "l1Bias",
+        "type": "int256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "genesisBlock",
         "type": "uint256"
       },
       {
@@ -157,32 +175,6 @@
     ],
     "name": "UpdateCommitteeParams",
     "type": "event"
-  },
-  {
-    "inputs": [],
-    "name": "COMMITTEE_CURRENT",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
-  },
-  {
-    "inputs": [],
-    "name": "COMMITTEE_NEXT_1",
-    "outputs": [
-      {
-        "internalType": "uint256",
-        "name": "",
-        "type": "uint256"
-      }
-    ],
-    "stateMutability": "view",
-    "type": "function"
   },
   {
     "inputs": [],
@@ -308,6 +300,11 @@
         "internalType": "uint256",
         "name": "startBlock",
         "type": "uint256"
+      },
+      {
+        "internalType": "int256",
+        "name": "l1Bias",
+        "type": "int256"
       },
       {
         "internalType": "uint256",
@@ -810,6 +807,16 @@
         "internalType": "uint32",
         "name": "chainID",
         "type": "uint32"
+      },
+      {
+        "internalType": "int256",
+        "name": "l1Bias",
+        "type": "int256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "genesisBlock",
+        "type": "uint256"
       },
       {
         "internalType": "uint256",

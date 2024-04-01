@@ -15,6 +15,7 @@ import (
 	"golang.org/x/sync/errgroup"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
@@ -48,12 +49,11 @@ type FramesRef struct {
 // Fetcher is a synchronizer for the BatchInbox EOA.
 type Fetcher struct {
 	l1Client          *ethclient.Client
-	l2Client          *ethclient.Client
+	l2Client          *evmclient.Client
 	batchInboxAddress common.Address
 	batchSender       common.Address
 	signer            coretypes.Signer
 	batchCache        *utils.Cache
-	blockCache        *utils.Cache
 
 	lastSyncedL1BlockNumber atomic.Uint64
 
@@ -74,7 +74,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	l2Client, err := ethclient.Dial(cfg.RPCURL)
+	l2Client, err := evmclient.NewClient(cfg.RPCURL)
 	if err != nil {
 		return nil, err
 	}
@@ -82,7 +82,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	l2ChainID, err := l2Client.ChainID(context.Background())
+	l2ChainID, err := l2Client.GetChainID()
 	if err != nil {
 		return nil, err
 	}
@@ -90,12 +90,11 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 	return &Fetcher{
 		l1Client:          l1Client,
 		l2Client:          l2Client,
-		chainID:           l2ChainID,
+		chainID:           big.NewInt(int64(l2ChainID)),
 		batchInboxAddress: common.HexToAddress(cfg.BatchInbox),
 		batchSender:       common.HexToAddress(cfg.BatchSender),
 		signer:            coretypes.LatestSignerForChainID(chainID),
 		batchCache:        utils.NewCache(cacheLimit),
-		blockCache:        utils.NewCache(cacheLimit),
 
 		done: make(chan struct{}),
 	}, nil
@@ -229,40 +228,22 @@ func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64) ([]*Frames
 
 // getL2BlockHash returns the L2 block hash for the given block number.
 func (f *Fetcher) getL2BlockHash(blockNumber uint64) (common.Hash, error) {
-	raw, ok := f.blockCache.Get(blockNumber)
-	if !ok {
-		block, err := f.l2Client.BlockByNumber(context.Background(), big.NewInt(int64(blockNumber)))
-		if err != nil {
-			return common.Hash{}, err
-		}
-		hash := block.Hash()
-		f.blockCache.Set(blockNumber, hash)
-		return hash, nil
+	blockHash, err := f.l2Client.GetBlockHashByNumber(blockNumber)
+	if err != nil {
+		return common.Hash{}, err
 	}
-	return raw.(common.Hash), nil
+
+	return blockHash, nil
 }
 
 // getL2BlockNumberByHash returns the L2 block number for the given block hash.
 func (f *Fetcher) getL2BlockNumberByHash(blockHash common.Hash) (uint64, error) {
-	block, err := f.l2Client.BlockByHash(context.Background(), blockHash)
-	if err != nil {
-		return 0, err
-	}
-	number := block.NumberU64()
-	f.blockCache.Set(number, blockHash)
-	return number, nil
+	return f.l2Client.GetBlockNumberByHash(blockHash)
 }
 
 // getL2BlockNumberByTxHash returns the L2 block number for the given transaction hash.
 func (f *Fetcher) getL2BlockNumberByTxHash(txHash common.Hash) (uint64, error) {
-	receipt, err := f.l2Client.TransactionReceipt(context.Background(), txHash)
-	if err != nil {
-		return 0, err
-	}
-
-	blockNumber := receipt.BlockNumber.Uint64()
-	f.blockCache.Set(blockNumber, receipt.BlockHash)
-	return blockNumber, nil
+	return f.l2Client.GetBlockNumberByTxHash(txHash)
 }
 
 // validTransaction returns true if the given transaction is valid.
