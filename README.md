@@ -14,7 +14,7 @@ This is the Lagrange Node, a node that can be used to run a Lagrange network.
 The Lagrange Node consists of the following components:
 
 - Sequencer
-- Synchronizer
+- AVS-Synchronizer
 - gRPC Sequencer Server
 - gRPC Client Node
 
