@@ -105,7 +105,7 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 	if err != nil {
 		if errors.Is(err, storetypes.ErrBatchNotFound) {
 			logger.Infof("no batch found")
-			rpcClient.SetBeginBlockNumber(cfg.FromL1BlockNumber)
+			rpcClient.SetBeginBlockNumber(cfg.FromL1BlockNumber, cfg.FromL2BlockNumber)
 		} else {
 			logger.Errorf("failed to get last batch number: %v", err)
 			return nil, err
@@ -117,7 +117,7 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 			return nil, err
 		}
 		lastBlockNumber = batch.BatchHeader.ToBlockNumber()
-		rpcClient.SetBeginBlockNumber(batch.L1BlockNumber())
+		rpcClient.SetBeginBlockNumber(batch.L1BlockNumber(), lastBlockNumber+1)
 	}
 	if cfg.FromL2BlockNumber > lastBlockNumber {
 		lastBlockNumber = cfg.FromL2BlockNumber - 1

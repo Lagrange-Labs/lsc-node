@@ -26,7 +26,8 @@ func NewCache(maxCount uint64) *Cache {
 
 // Set sets the value for the given key.
 func (c *Cache) Set(key uint64, value interface{}) {
-	for hKey := c.hKey.Load(); hKey > 0 && hKey+c.maxItems < key; hKey = c.hKey.Load() {
+	hKey := c.hKey.Load()
+	for ; hKey > 0 && hKey+c.maxItems < key; hKey = c.hKey.Load() {
 		// If the key is too large, we should block the set operation.
 		time.Sleep(500 * time.Millisecond)
 	}
@@ -34,7 +35,7 @@ func (c *Cache) Set(key uint64, value interface{}) {
 	c.store.Store(key, value)
 
 	c.store.Range(func(key, value interface{}) bool {
-		if key.(uint64) < c.hKey.Load() {
+		if hKey > c.maxItems && key.(uint64) < hKey-c.maxItems {
 			c.store.Delete(key)
 		}
 		return true
@@ -43,8 +44,12 @@ func (c *Cache) Set(key uint64, value interface{}) {
 
 // Get returns the value for the given key.
 func (c *Cache) Get(key uint64) (interface{}, bool) {
+	value, ok := c.store.Load(key)
+	if !ok {
+		return nil, false
+	}
 	c.hKey.Store(key)
-	return c.store.Load(key)
+	return value, true
 }
 
 // GetHeadKey returns the head key.

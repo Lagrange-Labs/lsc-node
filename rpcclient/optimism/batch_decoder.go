@@ -221,7 +221,7 @@ func (f *Fetcher) getBeginL2BlockNumber(batchesRef *BatchesRef) (uint64, error) 
 		logger.Warnf("no L2 block number found: %+v", batchesRef)
 		return 0, ErrNoTransaction
 	}
-	for bn := l2BlockNumber - forwardCount; bn <= l2BlockNumber; bn++ {
+	for bn := l2BlockNumber; bn >= l2BlockNumber-forwardCount; bn-- {
 		blockHash, err := f.getL2BlockHash(bn)
 		if err != nil {
 			logger.Errorf("failed to get L2 block hash: %v", err)

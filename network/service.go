@@ -61,7 +61,11 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.
 		return nil, fmt.Errorf("BLS signature verification failed: %v", err)
 	}
 	// Check if the operator is a committee member
-	if !s.consensus.CheckCommitteeMember(req.StakeAddress, req.PublicKey) {
+	isMember, err := s.consensus.CheckCommitteeMember(req.StakeAddress, req.PublicKey)
+	if err != nil {
+		return nil, err
+	}
+	if !isMember {
 		logger.Warnf("The operator is not a committee member")
 		return &networkv2types.JoinNetworkResponse{}, fmt.Errorf("the operator is not a committee member")
 	}
@@ -88,11 +92,11 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.
 	}
 
 	logger.Infof("New node %v joined the network\n", req.StakeAddress)
-	batchNumber, prevL1BlockNumber := s.consensus.GetOpenBatchNumber()
+	prevBatch := s.consensus.GetPrevBatch()
 	return &networkv2types.JoinNetworkResponse{
 		Token:           token,
-		OpenBatchNumber: batchNumber,
-		L1BlockNumber:   prevL1BlockNumber,
+		OpenBatchNumber: prevBatch.BatchNumber(),
+		L1BlockNumber:   prevBatch.L1BlockNumber(),
 	}, nil
 }
 
@@ -107,7 +111,7 @@ func (s *sequencerService) GetBatch(ctx context.Context, req *networkv2types.Get
 	logger.Infof("GetBatch request from %v, %d", req.StakeAddress, req.BatchNumber)
 
 	return &networkv2types.GetBatchResponse{
-		Batch: s.consensus.GetOpenBatch(req.BatchNumber),
+		Batch: s.consensus.GetOpenBatch(),
 	}, nil
 }
 
@@ -141,7 +145,7 @@ func (s *sequencerService) CommitBatch(req *networkv2types.CommitBatchRequest, s
 		return err
 	}
 
-	timeoutCtx, cancel := context.WithTimeout(stream.Context(), 5*time.Second)
+	timeoutCtx, cancel := context.WithTimeout(stream.Context(), s.consensus.GetRoundInterval())
 	defer cancel()
 
 	for {

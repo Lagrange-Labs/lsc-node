@@ -4,6 +4,7 @@ import (
 	"context"
 	"net"
 	"testing"
+	"time"
 
 	"github.com/stretchr/testify/require"
 	"google.golang.org/grpc/peer"
@@ -19,22 +20,28 @@ import (
 
 type mockConsensus struct{}
 
-func (m *mockConsensus) GetOpenBatch(batchNumber uint64) *sequencerv2types.Batch {
+func (m *mockConsensus) GetOpenBatch() *sequencerv2types.Batch {
 	return &sequencerv2types.Batch{
 		BatchHeader: &sequencerv2types.BatchHeader{},
 	}
 }
 
-func (m *mockConsensus) GetOpenBatchNumber() (uint64, uint64) {
-	return 0, 0
+func (m *mockConsensus) GetPrevBatch() *sequencerv2types.Batch {
+	return &sequencerv2types.Batch{
+		BatchHeader: &sequencerv2types.BatchHeader{},
+	}
+}
+
+func (m *mockConsensus) GetRoundInterval() time.Duration {
+	return 0
 }
 
 func (m *mockConsensus) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr, pubKey string) error {
 	return nil
 }
 
-func (m *mockConsensus) CheckCommitteeMember(stakeAddr, pubKey string) bool {
-	return true
+func (m *mockConsensus) CheckCommitteeMember(stakeAddr, pubKey string) (bool, error) {
+	return true, nil
 }
 
 func (m *mockConsensus) CheckSignAddress(stakeAddr, signAddr string) bool {

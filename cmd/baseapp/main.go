@@ -35,6 +35,7 @@ const DEBUG_MODE = false
 func main() {
 	// Start an HTTP server for pprof profiling data.
 	if DEBUG_MODE {
+		logger.Infof("Starting pprof server on 6060")
 		go func() {
 			log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
 		}()

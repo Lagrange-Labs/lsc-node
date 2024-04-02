@@ -20,7 +20,7 @@ func TestSetBeginBlockNumber(t *testing.T) {
 
 	beginBlockNumber := uint64(10)
 	b := uint64(0)
-	c.SetBeginBlockNumber(beginBlockNumber)
+	c.SetBeginBlockNumber(beginBlockNumber, beginBlockNumber)
 	for i := 0; i < 100; i++ {
 		b = c.fetcher.GetFetchedBlockNumber()
 		if b > beginBlockNumber {
@@ -29,7 +29,8 @@ func TestSetBeginBlockNumber(t *testing.T) {
 		time.Sleep(200 * time.Millisecond)
 	}
 
-	c.SetBeginBlockNumber(b + ParallelBlocks + 10)
+	nextBeginBlockNumber := b + ParallelBlocks + 10
+	c.SetBeginBlockNumber(nextBeginBlockNumber, nextBeginBlockNumber)
 	for i := 0; i < 100; i++ {
 		b2 := c.fetcher.GetFetchedBlockNumber()
 		if b2 > 0 {

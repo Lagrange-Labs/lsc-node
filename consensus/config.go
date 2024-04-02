@@ -4,8 +4,6 @@ import "github.com/Lagrange-Labs/lagrange-node/utils"
 
 // Config is the configuration for the consensus module.
 type Config struct {
-	// OperatorAddress is the address of the operator.
-	OperatorAddress string `mapstructure:"OperatorAddress"`
 	// ProposerPrivateKey is the BLS private key of the proposer node.
 	ProposerPrivateKey string `mapstructure:"ProposerPrivateKey"`
 	// RoundLimit is the maximum time to wait for the block finalization.
