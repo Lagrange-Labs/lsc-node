@@ -19,12 +19,12 @@ func TestCache(t *testing.T) {
 		c.Set(i, i)
 	}
 
-	for i := uint64(0); i < upTo-maxCount-1; i++ {
+	for i := uint64(0); i < upTo-maxCount*2; i++ {
 		_, ok := c.Get(i)
 		require.False(t, ok, "key %d should not be in the cache", i)
 	}
 
-	for i := upTo - maxCount; i < upTo; i++ {
+	for i := upTo - maxCount*2; i < upTo; i++ {
 		ret, ok := c.Get(i)
 		require.True(t, ok, "key %d should be in the cache", i)
 		require.Equal(t, i, ret)

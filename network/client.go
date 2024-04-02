@@ -179,7 +179,7 @@ func (c *Client) Start() {
 				if errors.Is(err, ErrBatchNotFound) {
 					// if the batch is not found, set the begin block number to the L1 block number
 					logger.Infof("the batch is not found, set the begin block number to the L1 block number %d\n", batch.L1BlockNumber())
-					c.rpcClient.SetBeginBlockNumber(batch.L1BlockNumber())
+					c.rpcClient.SetBeginBlockNumber(batch.L1BlockNumber(), batch.BatchHeader.FromBlockNumber())
 					continue
 				}
 				if errors.Is(err, ErrBatchNotReady) {
@@ -243,16 +243,35 @@ func (c *Client) joinNetwork() error {
 	}
 
 	c.jwToken = res.Token
-	// if the client is started from the beginning, prevBatchL1Number is set to the current
-	// batch L1 block number, so the client will fail to verify the committee root and can
-	// not commit the batch. It will be fixed in the next batch.
-	if c.openBatchNumber != res.OpenBatchNumber {
-		c.openBatchNumber = res.OpenBatchNumber
-		c.prevBatchL1Number = res.L1BlockNumber
-		c.rpcClient.SetBeginBlockNumber(res.L1BlockNumber)
-	}
 
-	return nil
+	c.rpcClient.SetBeginBlockNumber(res.L1BlockNumber, res.OpenBatchNumber)
+	return c.verifyPrevBatch(res.OpenBatchNumber, res.L1BlockNumber)
+}
+
+// verifyPrevBatch verifies the previous batch and returns the next batch number.
+func (c *Client) verifyPrevBatch(batchNumber, l1BlockNumber uint64) error {
+	for {
+		batchHeader, err := c.rpcClient.GetBatchHeaderByNumber(batchNumber)
+		if err != nil {
+			if errors.Is(err, rpctypes.ErrBatchNotFound) {
+				time.Sleep(c.pullInterval)
+				continue
+			}
+			return fmt.Errorf("failed to get the batch header by number: %v", err)
+		}
+		if batchHeader.L1BlockNumber != l1BlockNumber {
+			return fmt.Errorf("the batch L1 block number %d is not equal to the rpc L1 block number %d", l1BlockNumber, batchHeader.L1BlockNumber)
+		}
+
+		if l1BlockNumber == c.genesisBlockNumber && c.openBatchNumber == 0 {
+			c.openBatchNumber = batchNumber
+		} else {
+			c.openBatchNumber = batchHeader.ToBlockNumber() + 1
+		}
+		c.prevBatchL1Number = l1BlockNumber
+
+		return nil
+	}
 }
 
 // TryGetBatch tries to get the batch from the network.
@@ -298,9 +317,17 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	if toBlockNumber != batchHeader.ToBlockNumber() {
 		return nil, fmt.Errorf("the batch to block number %d is not equal to the rpc to block number %d", toBlockNumber, batchHeader.ToBlockNumber())
 	}
+
 	// verify the committee root
 	if err := c.verifyCommitteeRoot(batch); err != nil {
 		return nil, fmt.Errorf("failed to verify the committee root: %v", err)
+	}
+
+	// verify if the batch hash is correct
+	batchHash := batch.BatchHeader.Hash()
+	bhHash := batchHeader.Hash()
+	if !bytes.Equal(batchHash, bhHash) {
+		return nil, fmt.Errorf("the batch hash %s is not equal to the batch header hash %s", batchHash, utils.Bytes2Hex(bhHash))
 	}
 
 	// verify the proposer signature
@@ -308,16 +335,9 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 		return nil, fmt.Errorf("the block %d proposer key is empty", batch.BatchNumber())
 	}
 	blsSigHash := batch.BlsSignature().Hash()
-	// verify the proposer signature
 	verified, err := c.blsScheme.VerifySignature(common.FromHex(batch.ProposerPubKey), blsSigHash, common.FromHex(batch.ProposerSignature))
 	if err != nil || !verified {
 		return nil, fmt.Errorf("failed to verify the proposer signature: %v", err)
-	}
-	// verify if the batch hash is correct
-	batchHash := batch.BatchHeader.Hash()
-	bhHash := batchHeader.Hash()
-	if !bytes.Equal(batchHash, bhHash) {
-		return nil, fmt.Errorf("the batch hash %s is not equal to the batch header hash %s", batchHash, utils.Bytes2Hex(bhHash))
 	}
 
 	return batch, nil

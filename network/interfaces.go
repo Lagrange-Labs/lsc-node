@@ -2,6 +2,7 @@ package network
 
 import (
 	"context"
+	"time"
 
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/network/types"
@@ -19,10 +20,11 @@ type storageInterface interface {
 }
 
 type consensusInterface interface {
-	GetOpenBatch(batchNumber uint64) *sequencerv2types.Batch
-	GetOpenBatchNumber() (uint64, uint64)
+	GetOpenBatch() *sequencerv2types.Batch
+	GetPrevBatch() *sequencerv2types.Batch
+	GetRoundInterval() time.Duration
 	AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr, pubKey string) error
-	CheckCommitteeMember(stakeAddr, pubKey string) bool
+	CheckCommitteeMember(stakeAddr, pubKey string) (bool, error)
 	CheckSignAddress(stakeAddr, signAddr string) bool
 	IsFinalized(batchNumber uint64) bool
 	GetBLSScheme() crypto.BLSScheme

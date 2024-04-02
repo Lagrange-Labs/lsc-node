@@ -68,6 +68,25 @@ func (s *State) GetBLSScheme() crypto.BLSScheme {
 	return s.blsScheme
 }
 
+// GetRoundInterval returns the round interval.
+func (s *State) GetRoundInterval() time.Duration {
+	return s.roundInterval + 500*time.Millisecond
+}
+
+// GetOpenBatch returns the batch of the current round.
+func (s *State) GetOpenBatch() *sequencerv2types.Batch {
+	return s.round.GetCurrentBatch()
+}
+
+// GetPrevBatch returns the previous batch.
+func (s *State) GetPrevBatch() *sequencerv2types.Batch {
+	if s.previousBatch == nil {
+		return s.round.GetCurrentBatch()
+	}
+
+	return s.previousBatch
+}
+
 // OnStart loads the first unverified block and starts the round.
 func (s *State) OnStart() {
 	logger.Info("Consensus process is started")
@@ -179,21 +198,6 @@ func (s *State) OnStop() {
 	close(s.chStop)
 }
 
-// GetOpenBatch returns the batch of the current round.
-func (s *State) GetOpenBatch(batchNumber uint64) *sequencerv2types.Batch {
-	return s.round.GetCurrentBatch()
-}
-
-// GetOpenBatchNumber returns the batch number of the current round.
-func (s *State) GetOpenBatchNumber() (uint64, uint64) {
-	batch := s.round.GetCurrentBatch()
-	prevL1BlockNumber := batch.L1BlockNumber()
-	if s.previousBatch != nil {
-		prevL1BlockNumber = s.previousBatch.L1BlockNumber()
-	}
-	return batch.BatchNumber(), prevL1BlockNumber
-}
-
 // AddBatchCommit adds the commit to the round state.
 func (s *State) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr, pubKey string) error {
 	s.rwMutex.Lock()
@@ -220,11 +224,11 @@ func (s *State) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr,
 }
 
 // CheckCommitteeMember checks if the operator is a committee member.
-func (s *State) CheckCommitteeMember(stakeAddr, pubKey string) bool {
+func (s *State) CheckCommitteeMember(stakeAddr, pubKey string) (bool, error) {
 	if s.validators == nil {
-		return false
+		return false, fmt.Errorf("the validator set is not initialized")
 	}
-	return s.validators.GetVotingPower(stakeAddr, pubKey) > 0
+	return s.validators.GetVotingPower(stakeAddr, pubKey) > 0, nil
 }
 
 // CheckSignAddress checks if the sign address is valid.
@@ -250,7 +254,8 @@ func (s *State) IsFinalized(batchNumber uint64) bool {
 // startRound loads the next batch and initializes the round state.
 func (s *State) startRound(batchNumber uint64) error {
 	s.rwMutex.Lock()
-	defer s.rwMutex.Unlock()
+	s.round = types.NewEmptyRoundState(s.blsScheme)
+	s.rwMutex.Unlock()
 
 	ctx, cancel := context.WithTimeout(context.Background(), time.Duration(s.roundLimit))
 	defer cancel()
@@ -298,8 +303,6 @@ func (s *State) startRound(batchNumber uint64) error {
 	batch.CommitteeHeader.TotalVotingPower = currentCommittee.TotalVotingPower
 	s.validators = types.NewValidatorSet(currentCommittee.Operators, currentCommittee.TotalVotingPower)
 
-	s.round = types.NewEmptyRoundState(s.blsScheme)
-
 	// generate a proposer signature
 	blsSigHash := batch.BlsSignature().Hash()
 	signature, err := s.blsScheme.Sign(s.proposerPrivKey, blsSigHash)
@@ -310,6 +313,8 @@ func (s *State) startRound(batchNumber uint64) error {
 	batch.ProposerSignature = utils.Bytes2Hex(signature)
 	batch.ProposerPubKey = s.proposerPubKey
 
+	s.rwMutex.Lock()
+	defer s.rwMutex.Unlock()
 	s.round.UpdateRoundState(batch)
 
 	return nil

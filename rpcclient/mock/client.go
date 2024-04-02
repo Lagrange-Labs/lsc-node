@@ -59,8 +59,8 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 	return c.GetCurrentBlockNumber()
 }
 
-// SetBeginBlockNumber sets the begin L1 block number.
-func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) {}
+// SetBeginBlockNumber sets the begin L1 & L2 block number.
+func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {}
 
 // GetBatchHeaderByNumber returns the batch header for the given L2 block number.
 func (c *Client) GetBatchHeaderByNumber(l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {

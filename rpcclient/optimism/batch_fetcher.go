@@ -22,11 +22,10 @@ import (
 )
 
 const (
-	ConcurrentFetchers    = 6
+	ConcurrentFetchers    = 32
 	EthereumFinalityDepth = 64
-	ParallelBlocks        = 64
-	cacheLimit            = 2048
-	CacheFullWaitInterval = 10 * time.Microsecond
+	ParallelBlocks        = 32
+	cacheLimit            = 1024
 	FetchInterval         = 5 * time.Second
 )
 
@@ -53,15 +52,16 @@ type Fetcher struct {
 	batchInboxAddress common.Address
 	batchSender       common.Address
 	signer            coretypes.Signer
+	l2BlockCache      *utils.Cache
 	batchCache        *utils.Cache
 
 	lastSyncedL1BlockNumber atomic.Uint64
+	lastSyncedL2BlockNumber uint64
 
 	// decoder
-	chFramesRef             chan *FramesRef
-	lastSyncedL2BlockNumber uint64
-	pendingBatchesRefs      []*BatchesRef
-	chainID                 *big.Int
+	chFramesRef        chan *FramesRef
+	pendingBatchesRefs []*BatchesRef
+	chainID            *big.Int
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -94,6 +94,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		batchInboxAddress: common.HexToAddress(cfg.BatchInbox),
 		batchSender:       common.HexToAddress(cfg.BatchSender),
 		signer:            coretypes.LatestSignerForChainID(chainID),
+		l2BlockCache:      utils.NewCache(cacheLimit),
 		batchCache:        utils.NewCache(cacheLimit),
 
 		done: make(chan struct{}),
@@ -105,12 +106,15 @@ func (f *Fetcher) GetFetchedBlockNumber() uint64 {
 	return f.lastSyncedL1BlockNumber.Load()
 }
 
+// InitFetch inits the fetcher context.
+func (f *Fetcher) InitFetch() {
+	f.chFramesRef = make(chan *FramesRef, 64)
+	f.ctx, f.cancel = context.WithCancel(context.Background())
+}
+
 // Fetch fetches the block data from the Ethereum and analyzes the
 // transactions which are sent to the BatchInbox EOA.
 func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
-	f.chFramesRef = make(chan *FramesRef, 64)
-	f.ctx, f.cancel = context.WithCancel(context.Background())
-
 	go func() {
 		if err := f.handleFrames(); err != nil {
 			logger.Errorf("failed to handle frames: %v", err)
@@ -146,7 +150,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			m := sync.Map{}
 			for i := lastSyncedL1BlockNumber; i < nextBlockNumber; i++ {
 				if err := ctx.Err(); err != nil {
-					logger.Errorf("context error: %v", err)
+					logger.Errorf("fetch context error: %v", err)
 					return err
 				}
 
@@ -184,6 +188,55 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 	}
 }
 
+// FetchL2Blocks fetches the L2 blocks from the given L2 block number.
+func (f *Fetcher) FetchL2Blocks(l2BeginBlockNumber uint64) error {
+	for {
+		select {
+		case <-f.ctx.Done():
+			logger.Infof("fetcher is stopped")
+			f.done <- struct{}{}
+			return nil
+		default:
+			// Fetch the latest finalized block number.
+			blockNumber, err := f.l2Client.GetFinalizedBlockNumber()
+			if err != nil {
+				return err
+			}
+			if l2BeginBlockNumber >= blockNumber {
+				time.Sleep(FetchInterval)
+				continue
+			}
+			g, ctx := errgroup.WithContext(context.Background())
+			g.SetLimit(ConcurrentFetchers)
+			nextBlockNumber := l2BeginBlockNumber + ParallelBlocks
+			if blockNumber < nextBlockNumber {
+				nextBlockNumber = blockNumber
+			}
+			ti := time.Now()
+			for i := l2BeginBlockNumber; i < nextBlockNumber; i++ {
+				if err := ctx.Err(); err != nil {
+					logger.Errorf("fetch l2 block context error: %v", err)
+					return err
+				}
+				number := i
+				g.Go(func() error {
+					blockHash, err := f.l2Client.GetBlockHashByNumber(number)
+					if err != nil {
+						return err
+					}
+					f.l2BlockCache.Set(number, blockHash)
+					return nil
+				})
+			}
+			if err := g.Wait(); err != nil {
+				return err
+			}
+			logger.Infof("L2 blocks are fetched from %d to %d in %v milliseconds", l2BeginBlockNumber, nextBlockNumber, time.Since(ti).Milliseconds())
+			l2BeginBlockNumber = nextBlockNumber
+		}
+	}
+}
+
 // Stop stops the Fetcher.
 func (f *Fetcher) Stop() {
 	if f.cancel == nil {
@@ -193,6 +246,7 @@ func (f *Fetcher) Stop() {
 	f.lastSyncedL1BlockNumber.Store(0)
 	f.cancel()
 	close(f.chFramesRef)
+	<-f.done
 	<-f.done
 }
 
@@ -228,11 +282,15 @@ func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64) ([]*Frames
 
 // getL2BlockHash returns the L2 block hash for the given block number.
 func (f *Fetcher) getL2BlockHash(blockNumber uint64) (common.Hash, error) {
+	hash, ok := f.l2BlockCache.Get(blockNumber)
+	if ok {
+		return hash.(common.Hash), nil
+	}
 	blockHash, err := f.l2Client.GetBlockHashByNumber(blockNumber)
 	if err != nil {
 		return common.Hash{}, err
 	}
-
+	f.l2BlockCache.Set(blockNumber, blockHash)
 	return blockHash, nil
 }
 
