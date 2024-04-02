@@ -107,7 +107,6 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	if err != nil {
 		logger.Fatalf("failed to get the ecdsa private key: %v", err)
 	}
-	stakeAddress := ecrypto.PubkeyToAddress(ecdsaPriv.PublicKey).Hex()
 
 	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg)
 	if err != nil {
@@ -138,7 +137,7 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		blsPrivateKey:        blsPriv,
 		blsPublicKey:         utils.Bytes2Hex(pubkey),
 		ecdsaPrivateKey:      ecdsaPriv,
-		stakeAddress:         stakeAddress,
+		stakeAddress:         cfg.OperatorAddress,
 		pullInterval:         time.Duration(cfg.PullInterval),
 		rpcClient:            rpcClient,
 		committeeSC:          committeeSC,

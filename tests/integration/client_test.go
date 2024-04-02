@@ -32,6 +32,7 @@ func (suite *ClientTestSuite) SetupTest() {
 		EthereumURL:        "http://localhost:8545",
 		BLSPrivateKey:      "0x00000000000000000000000000000000000000000000000000000000499602d7",
 		ECDSAPrivateKey:    "0xb126ae5e3d88007081b76024477b854ca4f808d48be1e22fe763822bc0c17cb3",
+		OperatorAddress:    "0x13cF11F76a08214A826355a1C8d661E41EA7Bf97",
 		CommitteeSCAddress: cfg.Client.CommitteeSCAddress,
 		PullInterval:       utils.TimeDuration(2 * time.Second),
 		BLSCurve:           "BN254",
