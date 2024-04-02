@@ -16,6 +16,8 @@ type ClientConfig struct {
 	GrpcURL string `mapstructure:"GrpcURL"`
 	// Chain is the chain name of the blockchain
 	Chain string `mapstructure:"Chain"`
+	// OperatorAddress is the address of the operator
+	OperatorAddress string `mapstructure:"OperatorAddress"`
 	// EthereumURL is the endpoint of the ethereum node
 	EthereumURL string `mapstructure:"EthereumURL"`
 	// CommitteeSCAddress is the address of the committee smart contract
