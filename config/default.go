@@ -9,6 +9,7 @@ GRPCPort = "9090"
 GrpcURL = "127.0.0.1:9090"
 Chain = "mock"
 EthereumURL = "http://localhost:8545"
+OperatorAddress = "0x6E654b122377EA7f592bf3FD5bcdE9e8c1B1cEb9"
 CommitteeSCAddress = "0xBF4E09354df24900e3d2A1e9057a9F7601fbDD06"
 BLSPrivateKey = "0x00000000000000000000000000000000000000000000000000000000499602d3"
 ECDSAPrivateKey = "0x3e17bc938ec10c865fc4e2d049902716dc0712b5b0e688b7183c16807234a84c"
@@ -32,7 +33,6 @@ StakingCheckInterval = "2s"
 	[RpcClient.Optimism]
 	RPCURL = "http://localhost:8545"
 	L1RPCURL = "http://localhost:8545"
-	BeginBlockNumber = 80
 	BatchInbox = "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f"
 	BatchSender = "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f"
 	
@@ -48,7 +48,6 @@ StakingCheckInterval = "2s"
 	RPCURL = "http://localhost:8545"
 
 [Consensus]
-OperatorAddress = "0x6E654b122377EA7f592bf3FD5bcdE9e8c1B1cEb9"
 ProposerPrivateKey = "0x8afdc78675918678650ad4cf045701e3535eb8b46e8b5425a99f2100a92ea06b"
 RoundInterval = "500ms"
 RoundLimit = "30s"
