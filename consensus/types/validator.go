@@ -49,7 +49,13 @@ func (vs *ValidatorSet) GetValidatorCount() int {
 
 // GetVotingPower returns the voting power of a validator.
 func (vs *ValidatorSet) GetVotingPower(stakeAddr, pubKey string) uint64 {
-	return vs.validators[stakeAddr][pubKey].VotingPower
+	if ops, ok := vs.validators[stakeAddr]; !ok {
+		return 0
+	} else if vp, ok := ops[pubKey]; !ok {
+		return 0
+	} else {
+		return vp.VotingPower
+	}
 }
 
 // GetSignAddress returns the sign address of a validator.

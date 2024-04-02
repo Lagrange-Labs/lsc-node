@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"math"
 	"math/big"
 	"strings"
 
@@ -108,7 +107,12 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 	var header *ethtypes.Header
 	if err := c.rpcClient.CallContext(context.Background(), &header, "eth_getBlockByNumber", "finalized", false); err != nil {
 		if strings.Contains(err.Error(), "'finalized' tag not supported on pre-merge network") {
-			return math.MaxUint64, nil
+			err := c.rpcClient.CallContext(context.Background(), &header, "eth_getBlockByNumber", "latest", false)
+			if err != nil {
+				logger.Errorf("failed to get latest block number error: %v", err)
+				return 0, err
+			}
+			return header.Number.Uint64(), nil
 		}
 		logger.Errorf("failed to get finalized block number error: %v", err)
 		return 0, err
