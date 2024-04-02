@@ -263,9 +263,10 @@ func (c *Client) verifyPrevBatch(batchNumber, l1BlockNumber uint64) error {
 			return fmt.Errorf("the batch L1 block number %d is not equal to the rpc L1 block number %d", l1BlockNumber, batchHeader.L1BlockNumber)
 		}
 
-		c.openBatchNumber = batchHeader.ToBlockNumber() + 1
-		if l1BlockNumber == c.genesisBlockNumber {
+		if l1BlockNumber == c.genesisBlockNumber && c.openBatchNumber == 0 {
 			c.openBatchNumber = batchNumber
+		} else {
+			c.openBatchNumber = batchHeader.ToBlockNumber() + 1
 		}
 		c.prevBatchL1Number = l1BlockNumber
 
