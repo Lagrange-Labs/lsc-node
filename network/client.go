@@ -61,14 +61,11 @@ type Client struct {
 
 // NewClient creates a new client.
 func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
-	ctx, cancel := context.WithCancel(context.Background())
-
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-	conn, err := grpc.DialContext(ctx, cfg.GrpcURL, opts...)
+	conn, err := grpc.NewClient(cfg.GrpcURL, opts...)
 	if err != nil {
-		cancel()
 		return nil, err
 	}
 
@@ -79,7 +76,6 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	watcher, err := healthClient.Watch(hctx, &grpc_health_v1.HealthCheckRequest{})
 	if err != nil {
 		logger.Error("Failed to check gRPC health:", err)
-		cancel()
 		return nil, err
 	}
 
@@ -130,6 +126,8 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	if err != nil {
 		logger.Fatalf("failed to get the committee params: %v", err)
 	}
+
+	ctx, cancel := context.WithCancel(context.Background())
 
 	return &Client{
 		NetworkServiceClient: networkv2types.NewNetworkServiceClient(conn),
