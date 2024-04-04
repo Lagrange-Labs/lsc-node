@@ -64,6 +64,10 @@ run-lagrange-sc:
 	docker compose -f docker-compose.yml up -d lagrangesc
 .PHONY: run-lagrange-sc
 
+run-avs-sync:
+	docker compose -f docker-compose.yml up -d simavs-sync
+.PHONY: run-avs-sync
+
 benchmark: 
 	go test -run=NOTEST -timeout=30m -benchmem  -bench=. ./...
 .PHONY: benchmark
