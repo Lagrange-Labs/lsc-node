@@ -27,7 +27,6 @@ import (
 )
 
 const (
-	ConcurrentFetchers    = 32
 	EthereumFinalityDepth = 64
 	ParallelBlocks        = 32
 	cacheLimit            = 1024
@@ -66,6 +65,7 @@ type Fetcher struct {
 	l1BlobFetcher     *sources.L1BeaconClient
 	batchInboxAddress common.Address
 	batchSender       common.Address
+	concurrentFetcher int
 	signer            coretypes.Signer
 	l2BlockCache      *utils.Cache
 	batchCache        *utils.Cache
@@ -112,6 +112,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		chainID:           big.NewInt(int64(l2ChainID)),
 		batchInboxAddress: common.HexToAddress(cfg.BatchInbox),
 		batchSender:       common.HexToAddress(cfg.BatchSender),
+		concurrentFetcher: cfg.ConcurrentFetchers,
 		signer:            coretypes.LatestSignerForChainID(chainID),
 		l2BlockCache:      utils.NewCache(cacheLimit),
 		batchCache:        utils.NewCache(cacheLimit),
@@ -151,7 +152,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			return nil
 		default:
 			g, ctx := errgroup.WithContext(context.Background())
-			g.SetLimit(ConcurrentFetchers)
+			g.SetLimit(f.concurrentFetcher)
 			// Fetch the latest finalized block number.
 			blockNumber, err := f.l1Client.BlockNumber(ctx)
 			if err != nil {
@@ -226,7 +227,7 @@ func (f *Fetcher) FetchL2Blocks(l2BeginBlockNumber uint64) error {
 				continue
 			}
 			g, ctx := errgroup.WithContext(context.Background())
-			g.SetLimit(ConcurrentFetchers)
+			g.SetLimit(f.concurrentFetcher)
 			nextBlockNumber := l2BeginBlockNumber + ParallelBlocks
 			if blockNumber < nextBlockNumber {
 				nextBlockNumber = blockNumber

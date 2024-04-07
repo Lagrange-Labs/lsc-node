@@ -12,4 +12,6 @@ type Config struct {
 	BatchInbox string `mapstructure:"BatchInbox"`
 	// BatchSender is the address of the Batcher
 	BatchSender string `mapstructure:"BatchSender"`
+	// ConcurrentFetchers is the number of concurrent fetchers
+	ConcurrentFetchers int `mapstructure:"ConcurrentFetchers"`
 }
