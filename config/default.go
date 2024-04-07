@@ -33,6 +33,7 @@ StakingCheckInterval = "2s"
 	[RpcClient.Optimism]
 	RPCURL = "http://localhost:8545"
 	L1RPCURL = "http://localhost:8545"
+	BeaconURL = "http://localhost:8545"
 	BatchInbox = "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f"
 	BatchSender = "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f"
 	
