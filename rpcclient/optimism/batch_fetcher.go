@@ -2,6 +2,7 @@ package optimism
 
 import (
 	"context"
+	"fmt"
 	"math/big"
 	"sort"
 	"sync"
@@ -9,9 +10,13 @@ import (
 	"time"
 
 	"github.com/ethereum-optimism/optimism/op-node/rollup/derive"
+	"github.com/ethereum-optimism/optimism/op-service/client"
+	"github.com/ethereum-optimism/optimism/op-service/eth"
+	"github.com/ethereum-optimism/optimism/op-service/sources"
 	"github.com/ethereum/go-ethereum/common"
 	coretypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/log"
 	"golang.org/x/sync/errgroup"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
@@ -26,8 +31,17 @@ const (
 	EthereumFinalityDepth = 64
 	ParallelBlocks        = 32
 	cacheLimit            = 1024
+	maxTxBlobCount        = 10000
 	FetchInterval         = 5 * time.Second
 )
+
+// TxDataRef is a the list of transaction data with tx metadata.
+type TxDataRef struct {
+	Data    []byte
+	TxType  uint8
+	TxHash  common.Hash
+	TxIndex int
+}
 
 // BatchesRef is a the list of batches with the L1 metadata.
 type BatchesRef struct {
@@ -49,6 +63,7 @@ type FramesRef struct {
 type Fetcher struct {
 	l1Client          *ethclient.Client
 	l2Client          *evmclient.Client
+	l1BlobFetcher     *sources.L1BeaconClient
 	batchInboxAddress common.Address
 	batchSender       common.Address
 	signer            coretypes.Signer
@@ -87,9 +102,13 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		return nil, err
 	}
 
+	l1Beacon := sources.NewBeaconHTTPClient(client.NewBasicHTTPClient(cfg.BeaconURL, log.New()))
+	l1BlobFetcher := sources.NewL1BeaconClient(l1Beacon, sources.L1BeaconClientConfig{FetchAllSidecars: false})
+
 	return &Fetcher{
 		l1Client:          l1Client,
 		l2Client:          l2Client,
+		l1BlobFetcher:     l1BlobFetcher,
 		chainID:           big.NewInt(int64(l2ChainID)),
 		batchInboxAddress: common.HexToAddress(cfg.BatchInbox),
 		batchSender:       common.HexToAddress(cfg.BatchSender),
@@ -161,7 +180,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 						return err
 					}
 					for _, ref := range res {
-						m.Store(ref.L1TxHash, ref)
+						m.Store(fmt.Sprintf("%x_%d", ref.L1TxHash, ref.TxIndex), ref)
 					}
 					return nil
 				})
@@ -259,11 +278,75 @@ func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64) ([]*Frames
 	}
 
 	res := make([]*FramesRef, 0)
+	txDatas := make([]TxDataRef, 0)
+	var hashes []eth.IndexedBlobHash
+	blobIndex := 0
+
 	for i, tx := range block.Transactions() {
 		if !f.validTransaction(tx) {
+			blobIndex += len(tx.BlobHashes())
 			continue
 		}
-		frames, err := derive.ParseFrames(tx.Data())
+
+		if tx.Type() != coretypes.BlobTxType {
+			txDatas = append(txDatas, TxDataRef{
+				Data:    tx.Data(),
+				TxType:  tx.Type(),
+				TxHash:  tx.Hash(),
+				TxIndex: i * maxTxBlobCount,
+			})
+		} else {
+			if len(tx.Data()) > 0 {
+				logger.Warnf("blob tx has calldata which will be ignored %v", tx.Hash().Hex())
+			}
+			for bi, hash := range tx.BlobHashes() {
+				hashes = append(hashes, eth.IndexedBlobHash{
+					Index: uint64(blobIndex),
+					Hash:  hash,
+				})
+				blobIndex++
+				txDatas = append(txDatas, TxDataRef{
+					Data:    nil,
+					TxType:  tx.Type(),
+					TxHash:  tx.Hash(),
+					TxIndex: i*maxTxBlobCount + bi,
+				})
+			}
+		}
+	}
+
+	if len(hashes) > 0 {
+		blockRef := eth.L1BlockRef{
+			Number:     blockNumber,
+			Hash:       block.Hash(),
+			ParentHash: block.ParentHash(),
+			Time:       block.Time(),
+		}
+		blobs, err := f.l1BlobFetcher.GetBlobs(ctx, blockRef, hashes)
+		if err != nil {
+			logger.Errorf("failed to get blobs: %v", err)
+			return nil, err
+		}
+		if len(blobs) != len(hashes) {
+			logger.Errorf("blobs length is not matched: %d, %d", len(blobs), len(hashes))
+			return nil, fmt.Errorf("blobs length is not matched: %d, %d", len(blobs), len(hashes))
+		}
+		blobIndex := 0
+		for i := range txDatas {
+			if txDatas[i].TxType == coretypes.BlobTxType {
+				logger.Infof("L1 blob tx is loaded from %d TxIndex: %d TxHash: %v", blockNumber, txDatas[i].TxIndex, txDatas[i].TxHash.Hex())
+				data, err := blobs[blobIndex].ToData()
+				if err != nil {
+					logger.Errorf("failed to convert blob data: %v", err)
+					return nil, err
+				}
+				txDatas[i].Data = data
+				blobIndex++
+			}
+		}
+	}
+	for _, data := range txDatas {
+		frames, err := derive.ParseFrames(data.Data)
 		if err != nil {
 			logger.Errorf("failed to parse frames: %v", err)
 			return nil, err
@@ -271,8 +354,8 @@ func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64) ([]*Frames
 		framesRef := &FramesRef{
 			Frames:        frames,
 			L1BlockNumber: blockNumber,
-			L1TxHash:      tx.Hash(),
-			TxIndex:       i,
+			L1TxHash:      data.TxHash,
+			TxIndex:       data.TxIndex,
 		}
 		res = append(res, framesRef)
 	}
@@ -319,9 +402,7 @@ func (f *Fetcher) validTransaction(tx *coretypes.Transaction) bool {
 	if from != f.batchSender {
 		return false
 	}
-	if len(tx.Data()) == 0 {
-		return false
-	}
+
 	return true
 }
 
