@@ -39,10 +39,10 @@ type CommitteeParams struct {
 // - It is responsible for fetching batch headers from the given L2 chain.
 // - It is responsible for fetching the operator information details from the committee smart contract.
 type Sequencer struct {
-	storage         storageInterface
-	rpcClient       rpctypes.RpcClient
-	chainID         uint32
-	lastBlockNumber uint64
+	storage           storageInterface
+	rpcClient         rpctypes.RpcClient
+	chainID           uint32
+	fromL2BlockNumber uint64
 
 	stakingInterval    time.Duration
 	updatedEpochNumber uint64
@@ -100,12 +100,12 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 		return nil, err
 	}
 
-	lastBlockNumber := uint64(0)
+	fromL2BlockNumber := uint64(0)
+	fromL1BlockNumber := uint64(0)
 	batchNumber, err := storage.GetLastBatchNumber(context.Background(), chainID)
 	if err != nil {
 		if errors.Is(err, storetypes.ErrBatchNotFound) {
 			logger.Infof("no batch found")
-			rpcClient.SetBeginBlockNumber(cfg.FromL1BlockNumber, cfg.FromL2BlockNumber)
 		} else {
 			logger.Errorf("failed to get last batch number: %v", err)
 			return nil, err
@@ -116,19 +116,23 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 			logger.Errorf("failed to get batch for batch number: %d error : %v", batchNumber, err)
 			return nil, err
 		}
-		lastBlockNumber = batch.BatchHeader.ToBlockNumber()
-		rpcClient.SetBeginBlockNumber(batch.L1BlockNumber(), lastBlockNumber+1)
+		fromL2BlockNumber = batch.BatchHeader.ToBlockNumber() + 1
+		fromL1BlockNumber = batch.L1BlockNumber()
 	}
-	if cfg.FromL2BlockNumber > lastBlockNumber {
-		lastBlockNumber = cfg.FromL2BlockNumber - 1
+	if cfg.FromL1BlockNumber > fromL1BlockNumber {
+		fromL1BlockNumber = cfg.FromL1BlockNumber
 	}
+	if cfg.FromL2BlockNumber > fromL2BlockNumber {
+		fromL2BlockNumber = cfg.FromL2BlockNumber
+	}
+	rpcClient.SetBeginBlockNumber(fromL1BlockNumber, fromL2BlockNumber)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Sequencer{
-		storage:         storage,
-		rpcClient:       rpcClient,
-		lastBlockNumber: lastBlockNumber,
-		chainID:         uint32(chainID),
+		storage:           storage,
+		rpcClient:         rpcClient,
+		fromL2BlockNumber: fromL2BlockNumber,
+		chainID:           uint32(chainID),
 
 		etherClient:        client,
 		committeeSC:        committeeSC,
@@ -176,14 +180,14 @@ func (s *Sequencer) Start() error {
 		}
 	}()
 
-	logger.Infof("Sequencer batch fetching started from %d", s.lastBlockNumber+1)
+	logger.Infof("Sequencer batch fetching started from %d", s.fromL2BlockNumber)
 
 	for {
 		select {
 		case <-s.ctx.Done():
 			return nil
 		default:
-			nextBlockNumber := s.lastBlockNumber + 1
+			nextBlockNumber := s.fromL2BlockNumber
 			batchHeader, err := s.rpcClient.GetBatchHeaderByNumber(nextBlockNumber)
 			if err != nil {
 				if errors.Is(err, rpctypes.ErrBatchNotFound) {
@@ -203,8 +207,8 @@ func (s *Sequencer) Start() error {
 				return err
 			}
 
-			s.lastBlockNumber = batchHeader.ToBlockNumber()
-			logger.Infof("batch block sequenced up to %d", s.lastBlockNumber)
+			s.fromL2BlockNumber = batchHeader.ToBlockNumber() + 1
+			logger.Infof("batch block sequenced up to %d", batchHeader.ToBlockNumber())
 			time.Sleep(1 * time.Millisecond)
 		}
 	}
