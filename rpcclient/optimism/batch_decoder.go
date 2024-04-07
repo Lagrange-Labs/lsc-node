@@ -163,9 +163,9 @@ func (f *Fetcher) pushBatchesRef(batchesRef *BatchesRef) error {
 			f.lastSyncedL2BlockNumber += uint64(batchesRef.L2BlockCount)
 			return nil
 		} else {
-			logger.Errorf("parent hash mismatch L2 BlockNumber: %d, Parent Hash: %v, Ref: %+v", f.lastSyncedL2BlockNumber, parentHash, batchesRef)
-			return fmt.Errorf("parent hash mismatch")
+			logger.Warnf("parent hash mismatch L2 BlockNumber: %d, Parent Hash: %v, Ref: %+v", f.lastSyncedL2BlockNumber, parentHash, batchesRef)
 		}
+		return nil
 	}
 
 	if f.lastSyncedL2BlockNumber > 0 {

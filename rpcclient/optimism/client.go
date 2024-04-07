@@ -62,13 +62,13 @@ func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {
 	// Fetch L1 batch headers
 	go func() {
 		if err := c.fetcher.Fetch(l1BlockNumber); err != nil {
-			logger.Errorf("failed to fetch L1 batch headers: %v", err)
+			logger.Fatalf("failed to fetch L1 batch headers: %v", err)
 		}
 	}()
 	// Fetch L2 block headers
 	go func() {
 		if err := c.fetcher.FetchL2Blocks(l2BlockNumber); err != nil {
-			logger.Errorf("failed to fetch L2 block headers: %v", err)
+			logger.Fatalf("failed to fetch L2 block headers: %v", err)
 		}
 	}()
 }
