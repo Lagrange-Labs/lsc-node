@@ -22,7 +22,7 @@ type State struct {
 
 	round           *types.RoundState
 	previousBatch   *sequencerv2types.Batch
-	lastBatchNumber uint64
+	fromBatchNumber uint64
 	rwMutex         *sync.RWMutex
 	blsScheme       crypto.BLSScheme
 
@@ -107,15 +107,15 @@ func (s *State) OnStart() {
 		if err == nil {
 			batch, err := s.storage.GetBatch(context.Background(), s.chainID, lastBatchNumber)
 			if err == storetypes.ErrBatchNotFound {
-				logger.Infof("the last finalized batch %d is not found", s.lastBatchNumber)
+				logger.Infof("the last finalized batch %d is not found", lastBatchNumber)
 				s.previousBatch = nil
-				s.lastBatchNumber = lastBatchNumber + 1
+				s.fromBatchNumber = lastBatchNumber + 1
 			} else if err != nil {
 				logger.Errorf("failed to get the last finalized batch %d: %v", lastBatchNumber, err)
 				return
 			} else {
 				s.previousBatch = batch
-				s.lastBatchNumber = batch.BatchHeader.ToBlockNumber() + 1
+				s.fromBatchNumber = batch.BatchNumber() + 1
 			}
 			break
 		}
@@ -132,8 +132,8 @@ func (s *State) OnStart() {
 		default:
 		}
 
-		logger.Infof("start the round with batch number %v", s.lastBatchNumber)
-		if err := s.startRound(s.lastBatchNumber); err != nil {
+		logger.Infof("start the round with batch number %v", s.fromBatchNumber)
+		if err := s.startRound(s.fromBatchNumber); err != nil {
 			logger.Errorf("failed to start the round: %v", err)
 			time.Sleep(s.roundInterval)
 			continue
@@ -151,10 +151,10 @@ func (s *State) OnStart() {
 			batch := s.round.GetCurrentBatch()
 			batch.FinalizedTime = fmt.Sprintf("%d", time.Now().UnixMicro())
 			if err := s.storage.UpdateBatch(context.Background(), batch); err != nil {
-				logger.Errorf("failed to update the batch %d: %v", s.lastBatchNumber, err)
+				logger.Errorf("failed to update the batch %d: %v", s.fromBatchNumber, err)
 				return
 			}
-			logger.Infof("the batch %d is finalized", s.lastBatchNumber)
+			logger.Infof("the batch number %d, L1 block number %d, upto L2 block number %d  is finalized", batch.BatchNumber(), batch.L1BlockNumber(), batch.BatchHeader.ToBlockNumber())
 		}
 
 		if s.round.IsFinalized() {
@@ -186,7 +186,7 @@ func (s *State) OnStart() {
 
 		s.rwMutex.Lock()
 		s.previousBatch = s.round.GetCurrentBatch()
-		s.lastBatchNumber = s.previousBatch.BatchHeader.ToBlockNumber() + 1
+		s.fromBatchNumber++
 		s.rwMutex.Unlock()
 	}
 }
@@ -244,7 +244,7 @@ func (s *State) IsFinalized(batchNumber uint64) bool {
 	s.rwMutex.RLock()
 	defer s.rwMutex.RUnlock()
 
-	if s.lastBatchNumber > batchNumber {
+	if s.fromBatchNumber > batchNumber {
 		return true
 	}
 
@@ -389,7 +389,7 @@ func (s *State) processRound(ctx context.Context) bool {
 		case <-ticker.C:
 			isFinalized, err := checkCommit(s.round)
 			if err != nil {
-				logger.Errorf("failed to check the commit for the batch %d: %v", s.lastBatchNumber, err)
+				logger.Errorf("failed to check the commit for the batch %d: %v", s.fromBatchNumber, err)
 				return false
 			}
 			if isFinalized {

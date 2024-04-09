@@ -121,6 +121,7 @@ func ConvertMongoToBatch(m bson.M) *sequencerv2types.Batch {
 		batch.BatchHeader.BatchNumber = uint64(mBatchHeader["batch_number"].(int64))
 		batch.BatchHeader.L1BlockNumber = uint64(mBatchHeader["l1_block_number"].(int64))
 		batch.BatchHeader.L1TxHash = mBatchHeader["l1_tx_hash"].(string)
+		batch.BatchHeader.L1TxIndex = uint32(mBatchHeader["l1_tx_index"].(int64))
 		batch.BatchHeader.ChainId = uint32(mBatchHeader["chain_id"].(int64))
 		batch.BatchHeader.L2Blocks = make([]*sequencerv2types.BlockHeader, 0)
 		for _, l2Block := range mBatchHeader["l2_blocks"].(primitive.A) {
