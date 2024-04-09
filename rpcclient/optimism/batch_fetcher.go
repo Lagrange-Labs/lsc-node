@@ -46,7 +46,9 @@ type TxDataRef struct {
 type BatchesRef struct {
 	Batches       []L2BlockBatch
 	L1BlockNumber uint64
+	L2BlockNumber uint64
 	L1TxHash      common.Hash
+	L1TxIndex     int
 	L2BlockCount  int
 }
 
@@ -68,7 +70,7 @@ type Fetcher struct {
 	concurrentFetcher int
 	signer            coretypes.Signer
 	l2BlockCache      *utils.Cache
-	batchCache        *utils.Cache
+	batchHeaders      chan *BatchesRef
 
 	lastSyncedL1BlockNumber atomic.Uint64
 	lastSyncedL2BlockNumber uint64
@@ -114,7 +116,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		concurrentFetcher: cfg.ConcurrentFetchers,
 		signer:            coretypes.LatestSignerForChainID(chainID),
 		l2BlockCache:      utils.NewCache(cacheLimit),
-		batchCache:        utils.NewCache(cacheLimit),
+		batchHeaders:      make(chan *BatchesRef, 64),
 
 		done: make(chan struct{}),
 	}, nil
@@ -142,13 +144,16 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 		logger.Infof("decoder is stopped")
 	}()
 
+	defer func() {
+		f.done <- struct{}{}
+	}()
+
 	f.lastSyncedL1BlockNumber.Store(l1BeginBlockNumber)
 
 	for {
 		select {
 		case <-f.ctx.Done():
 			logger.Infof("fetcher is stopped")
-			f.done <- struct{}{}
 			return nil
 		default:
 			g, ctx := errgroup.WithContext(context.Background())
@@ -209,12 +214,16 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 }
 
 // FetchL2Blocks fetches the L2 blocks from the given L2 block number.
-func (f *Fetcher) FetchL2Blocks(l2BeginBlockNumber uint64) error {
+func (f *Fetcher) FetchL2Blocks() error {
+	defer func() {
+		f.done <- struct{}{}
+	}()
+
+	l2BeginBlockNumber := f.lastSyncedL2BlockNumber
 	for {
 		select {
 		case <-f.ctx.Done():
-			logger.Infof("fetcher is stopped")
-			f.done <- struct{}{}
+			logger.Infof("l2 fetcher is stopped")
 			return nil
 		default:
 			// Fetch the latest finalized block number.
@@ -407,22 +416,22 @@ func (f *Fetcher) validTransaction(tx *coretypes.Transaction) bool {
 	return true
 }
 
-// getL2BatchData returns the L2 batch data for the given L2 block number.
-func (f *Fetcher) getL2BatchData(blockNumber uint64) (*sequencerv2types.BatchHeader, error) {
-	raw, ok := f.batchCache.Get(blockNumber)
+// nextBatchHeader returns the L2 batch header.
+func (f *Fetcher) nextBatchHeader() (*sequencerv2types.BatchHeader, error) {
+	batchesRef, ok := <-f.batchHeaders
 	if !ok {
 		return nil, types.ErrBatchNotFound
 	}
-	batchesRef := raw.(*BatchesRef)
+
 	header := sequencerv2types.BatchHeader{
 		L1BlockNumber: batchesRef.L1BlockNumber,
 		L1TxHash:      batchesRef.L1TxHash.Hex(),
-		BatchNumber:   blockNumber,
+		L1TxIndex:     uint32(batchesRef.L1TxIndex),
 		ChainId:       uint32(f.chainID.Uint64()),
 	}
 
 	l2Blocks := make([]*sequencerv2types.BlockHeader, 0)
-	blockNumberIndex := blockNumber
+	blockNumberIndex := batchesRef.L2BlockNumber
 	for _, batch := range batchesRef.Batches {
 		for i := uint64(0); i < uint64(batch.BlockCount); i++ {
 			blockHash, err := f.getL2BlockHash(blockNumberIndex)

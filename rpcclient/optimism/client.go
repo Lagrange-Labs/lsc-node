@@ -44,11 +44,6 @@ func NewClient(cfg *Config) (*Client, error) {
 	}, nil
 }
 
-// GetBatchHeaderByNumber returns the batch header for the given L2 block number.
-func (c *Client) GetBatchHeaderByNumber(l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
-	return c.fetcher.getL2BatchData(l2BlockNumber)
-}
-
 // SetBeginBlockNumber sets the begin L1 & L2 block number.
 func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {
 	lastSyncedL1BlockNumber := c.fetcher.GetFetchedBlockNumber()
@@ -67,8 +62,13 @@ func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {
 	}()
 	// Fetch L2 block headers
 	go func() {
-		if err := c.fetcher.FetchL2Blocks(l2BlockNumber); err != nil {
+		if err := c.fetcher.FetchL2Blocks(); err != nil {
 			logger.Fatalf("failed to fetch L2 block headers: %v", err)
 		}
 	}()
+}
+
+// NextBatch returns the next batch header after SetBeginBlockNumber.
+func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
+	return c.fetcher.nextBatchHeader()
 }
