@@ -11,7 +11,6 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -61,7 +60,6 @@ type Client struct {
 	pullInterval       time.Duration
 	committeeCache     *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
 
-	mtx        sync.Mutex
 	db         *goleveldb.DB
 	ctx        context.Context
 	cancelFunc context.CancelFunc
@@ -205,9 +203,7 @@ func (c *Client) Start() {
 				if errors.Is(err, ErrBatchNotFound) {
 					// if the batch is not found, set the begin block number to the L1 block number
 					logger.Infof("the batch is not found, set the begin block number to the L1 block number %d\n", batch.L1BlockNumber())
-					c.mtx.Lock()
 					c.rpcClient.SetBeginBlockNumber(batch.L1BlockNumber(), batch.BatchHeader.FromBlockNumber())
-					c.mtx.Unlock()
 					continue
 				}
 				if errors.Is(err, ErrBatchNotReady) {
@@ -270,8 +266,6 @@ func (c *Client) joinNetwork() error {
 
 	c.jwToken = res.Token
 
-	c.mtx.Lock()
-	defer c.mtx.Unlock()
 	c.rpcClient.SetBeginBlockNumber(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
 	return c.verifyPrevBatch(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
 }
@@ -279,9 +273,7 @@ func (c *Client) joinNetwork() error {
 // startBatchFetching starts the batch fetching loop.
 func (c *Client) startBatchFetching() {
 	for {
-		c.mtx.Lock()
 		batch, err := c.rpcClient.NextBatch()
-		c.mtx.Unlock()
 		if err != nil {
 			logger.Fatalf("failed to get the next batch: %v", err)
 		}
@@ -362,7 +354,7 @@ func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 	}
 
 	if batchHeader == nil {
-		return fmt.Errorf("the batch header is not found")
+		return fmt.Errorf("the batch header is not found for L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
 	}
 
 	return nil
@@ -388,7 +380,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 
 	// verify the L1 block number
 	batchHeader, err := c.getBatchHeader(batch.L1BlockNumber(), fromBlockNumber)
-	if err != nil {
+	if err != nil || batchHeader == nil {
 		logger.Errorf("failed to get the batch header: %v", err)
 		return batch, ErrBatchNotFound
 	}

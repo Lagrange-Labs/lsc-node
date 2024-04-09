@@ -4,6 +4,7 @@ import (
 	"bytes"
 
 	"github.com/syndtr/goleveldb/leveldb"
+	"github.com/syndtr/goleveldb/leveldb/opt"
 )
 
 // DB is a LevelDB database.
@@ -30,7 +31,7 @@ func (d *DB) Close() error {
 
 // Put puts a key-value pair into the database.
 func (d *DB) Put(key, value []byte) error {
-	return d.db.Put(key, value, nil)
+	return d.db.Put(key, value, &opt.WriteOptions{Sync: true})
 }
 
 // Get gets the value of a key from the database.
@@ -95,10 +96,12 @@ func (d *DB) Prune(prefix []byte) error {
 	iter := d.db.NewIterator(nil, nil)
 	defer iter.Release()
 
-	for iter.Seek(prefix); iter.Valid(); iter.Prev() {
+	iter.Seek(prefix)
+	iter.Prev()
+	for ; iter.Valid(); iter.Prev() {
 		key := iter.Key()
 
-		if err := d.db.Delete(key, nil); err != nil {
+		if err := d.db.Delete(key, &opt.WriteOptions{Sync: true}); err != nil {
 			return err
 		}
 	}
