@@ -35,7 +35,7 @@ func NewClient(cfg *Config) (*Client, error) {
 // SetBeginBlockNumber sets the begin L1 & L2 block number.
 func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {}
 
-// GetBatchHeaderByNumber returns the batch header for the given L2 block number.
-func (c *Client) GetBatchHeaderByNumber(l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
-	return nil, nil
+// NextBatch returns the next batch after SetBeginBlockNumber.
+func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
+	return nil, types.ErrNoResult
 }

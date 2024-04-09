@@ -55,6 +55,7 @@ func TestConvertProtobufToMongo(t *testing.T) {
 			BatchNumber:   1,
 			L1BlockNumber: 1,
 			L1TxHash:      utils.RandomHex(32),
+			L1TxIndex:     1,
 			ChainId:       1,
 			L2Blocks: []*sequencerv2types.BlockHeader{
 				{
@@ -85,6 +86,7 @@ func TestConvertProtobufToMongo(t *testing.T) {
 	require.Equal(t, batch.BatchHeader.BatchNumber, mBatch["batch_header"].(primitive.M)["batch_number"])
 	require.Equal(t, batch.BatchHeader.L1BlockNumber, mBatch["batch_header"].(primitive.M)["l1_block_number"])
 	require.Equal(t, batch.BatchHeader.L1TxHash, mBatch["batch_header"].(primitive.M)["l1_tx_hash"])
+	require.Equal(t, batch.BatchHeader.L1TxIndex, mBatch["batch_header"].(primitive.M)["l1_tx_index"])
 	require.Equal(t, batch.BatchHeader.ChainId, mBatch["batch_header"].(primitive.M)["chain_id"])
 	require.Equal(t, len(batch.BatchHeader.L2Blocks), len(mBatch["batch_header"].(primitive.M)["l2_blocks"].(primitive.A)))
 	require.Equal(t, batch.BatchHeader.L2Blocks[0].BlockNumber, mBatch["batch_header"].(primitive.M)["l2_blocks"].(primitive.A)[0].(primitive.M)["block_number"])
@@ -142,6 +144,7 @@ func TestConvertMongoToBatch(t *testing.T) {
 			"batch_number":    int64(1),
 			"l1_block_number": int64(1),
 			"l1_tx_hash":      utils.RandomHex(32),
+			"l1_tx_index":     int64(1),
 			"chain_id":        int64(1),
 			"l2_blocks": bson.A{
 				bson.M{
@@ -168,6 +171,7 @@ func TestConvertMongoToBatch(t *testing.T) {
 	require.Equal(t, m["batch_header"].(bson.M)["batch_number"], int64(batch.BatchNumber()))
 	require.Equal(t, m["batch_header"].(bson.M)["l1_block_number"], int64(batch.L1BlockNumber()))
 	require.Equal(t, m["batch_header"].(bson.M)["l1_tx_hash"], batch.L1TxHash())
+	require.Equal(t, m["batch_header"].(bson.M)["l1_tx_index"], int64(batch.BatchHeader.L1TxIndex))
 	require.Equal(t, m["batch_header"].(bson.M)["chain_id"], int64(batch.ChainID()))
 	require.Equal(t, len(m["batch_header"].(bson.M)["l2_blocks"].(bson.A)), len(batch.BatchHeader.L2Blocks))
 	require.Equal(t, m["batch_header"].(bson.M)["l2_blocks"].(bson.A)[0].(bson.M)["block_number"], int64(batch.BatchHeader.L2Blocks[0].BlockNumber))

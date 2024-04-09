@@ -14,6 +14,7 @@ require (
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.9.0
 	github.com/supranational/blst v0.3.11
+	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a
 	github.com/umbracle/go-eth-consensus v0.1.3-0.20230304221055-e39ee9cb4167
 	github.com/urfave/cli/v2 v2.27.1
 	go.mongodb.org/mongo-driver v1.14.0
@@ -126,7 +127,6 @@ require (
 	github.com/spf13/pflag v1.0.5 // indirect
 	github.com/status-im/keycard-go v0.2.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/syndtr/goleveldb v1.0.1-0.20220614013038-64ee5596c38a // indirect
 	github.com/tklauser/go-sysconf v0.3.12 // indirect
 	github.com/tklauser/numcpus v0.6.1 // indirect
 	github.com/tyler-smith/go-bip39 v1.1.0 // indirect

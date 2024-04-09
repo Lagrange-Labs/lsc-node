@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
@@ -18,6 +19,9 @@ var _ types.RpcClient = (*Client)(nil)
 // Client is a Arbitrum client.
 type Client struct {
 	evmclient.Client
+
+	fromL1BlockNumber uint64
+	fromL2BlockNumber uint64
 
 	chainID uint32
 }
@@ -60,18 +64,35 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 }
 
 // SetBeginBlockNumber sets the begin L1 & L2 block number.
-func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {}
+func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {
+	c.fromL1BlockNumber = l1BlockNumber
+	c.fromL2BlockNumber = l2BlockNumber
+}
 
-// GetBatchHeaderByNumber returns the batch header for the given L2 block number.
-func (c *Client) GetBatchHeaderByNumber(l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
+// NextBatch returns the next batch after SetBeginBlockNumber.
+func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
+	l2BlockNumber := c.fromL2BlockNumber
 	blockHeader, err := c.GetBlockHeaderByNumber(l2BlockNumber, common.Hash{})
 	if err != nil {
 		if errors.Is(err, types.ErrNoResult) {
-			return nil, types.ErrBatchNotFound
+			// wait for the block to be available
+			for {
+				blockHeader, err = c.GetBlockHeaderByNumber(l2BlockNumber, common.Hash{})
+				if errors.Is(err, types.ErrNoResult) {
+					time.Sleep(1 * time.Second)
+					continue
+				}
+				if err != nil {
+					return nil, fmt.Errorf("failed to get the block header for block number: %d  error: %w", l2BlockNumber, err)
+				}
+				break
+			}
+		} else {
+			return nil, fmt.Errorf("failed to get the block header for block number: %d  error: %w", l2BlockNumber, err)
 		}
-		return nil, fmt.Errorf("failed to get the block header for block number: %d  error: %w", l2BlockNumber, err)
 	}
 
+	c.fromL2BlockNumber++
 	return &sequencerv2types.BatchHeader{
 		BatchNumber: blockHeader.Number.Uint64(),
 		ChainId:     c.chainID,
