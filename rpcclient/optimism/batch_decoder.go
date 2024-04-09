@@ -35,8 +35,9 @@ type L2BlockBatch struct {
 func (f *Fetcher) handleFrames() error {
 	var (
 		channels = make(map[derive.ChannelID]struct {
-			Channel  *derive.Channel
-			L1TxHash common.Hash
+			Channel   *derive.Channel
+			L1TxHash  common.Hash
+			L1TxIndex int
 		})
 	)
 
@@ -45,11 +46,13 @@ func (f *Fetcher) handleFrames() error {
 		for _, frame := range framesRef.Frames {
 			if _, ok := channels[frame.ID]; !ok {
 				channels[frame.ID] = struct {
-					Channel  *derive.Channel
-					L1TxHash common.Hash
+					Channel   *derive.Channel
+					L1TxHash  common.Hash
+					L1TxIndex int
 				}{
 					derive.NewChannel(frame.ID, blockRef),
 					framesRef.L1TxHash,
+					framesRef.TxIndex,
 				}
 			}
 			ch := channels[frame.ID]
@@ -73,6 +76,7 @@ func (f *Fetcher) handleFrames() error {
 				batchesRef := &BatchesRef{
 					L1BlockNumber: ch.Channel.OpenBlockNumber(),
 					L1TxHash:      ch.L1TxHash,
+					L1TxIndex:     ch.L1TxIndex,
 					Batches:       make([]L2BlockBatch, 0),
 					L2BlockCount:  0,
 				}
@@ -158,8 +162,9 @@ func (f *Fetcher) pushBatchesRef(batchesRef *BatchesRef) error {
 			return err
 		}
 		if bytes.Equal(batchesRef.Batches[0].ParentHashCheck, parentHash[:20]) {
-			f.batchCache.Set(l2BlockNumber, batchesRef)
 			logger.Infof("L2 batch is loaded from %d BlockCount: %d L1 BlockNumber:%d TxHash: %v", l2BlockNumber, batchesRef.L2BlockCount, batchesRef.L1BlockNumber, batchesRef.L1TxHash.Hex())
+			batchesRef.L2BlockNumber = l2BlockNumber
+			f.batchHeaders <- batchesRef
 			f.lastSyncedL2BlockNumber = l2BlockNumber
 			return nil
 		} else {
