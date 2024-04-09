@@ -74,9 +74,8 @@ type Fetcher struct {
 	lastSyncedL2BlockNumber uint64
 
 	// decoder
-	chFramesRef        chan *FramesRef
-	pendingBatchesRefs []*BatchesRef
-	chainID            *big.Int
+	chFramesRef chan *FramesRef
+	chainID     *big.Int
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -127,9 +126,10 @@ func (f *Fetcher) GetFetchedBlockNumber() uint64 {
 }
 
 // InitFetch inits the fetcher context.
-func (f *Fetcher) InitFetch() {
+func (f *Fetcher) InitFetch(l2BlockNumber uint64) {
 	f.chFramesRef = make(chan *FramesRef, 64)
 	f.ctx, f.cancel = context.WithCancel(context.Background())
+	f.lastSyncedL2BlockNumber = l2BlockNumber
 }
 
 // Fetch fetches the block data from the Ethereum and analyzes the
