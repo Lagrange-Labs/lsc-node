@@ -11,6 +11,7 @@ import (
 	"os"
 	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -36,6 +37,7 @@ import (
 const (
 	CommitteeCacheSize = 10
 	ClientDBPath       = ".lagrange/db/"
+	PruningBlocks      = 1000
 )
 
 type PreviousBatchInfo struct {
@@ -59,6 +61,7 @@ type Client struct {
 	genesisBlockNumber uint64
 	pullInterval       time.Duration
 	committeeCache     *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
+	openL1BlockNumber  atomic.Uint64
 
 	db         *goleveldb.DB
 	ctx        context.Context
@@ -277,11 +280,15 @@ func (c *Client) startBatchFetching() {
 		if err != nil {
 			logger.Fatalf("failed to get the next batch: %v", err)
 		}
+		// block the writeBatchHeader if the batch is too far from the current block
+		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/2 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
+			time.Sleep(1 * time.Second)
+		}
 		if err := c.writeBatchHeader(batch); err != nil {
 			logger.Errorf("failed to write the batch header: %v", err)
 		}
-		if batch.L1BlockNumber > 1000 {
-			prunedBlockNumber := batch.L1BlockNumber - 1000
+		if batch.L1BlockNumber > PruningBlocks {
+			prunedBlockNumber := batch.L1BlockNumber - PruningBlocks
 			prefix := make([]byte, 8)
 			binary.BigEndian.PutUint64(prefix, prunedBlockNumber)
 			if err := c.db.Prune(prefix); err != nil {
@@ -376,6 +383,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	batch := res.Batch
 	fromBlockNumber := batch.BatchHeader.FromBlockNumber()
 	toBlockNumber := batch.BatchHeader.ToBlockNumber()
+	c.openL1BlockNumber.Store(batch.L1BlockNumber())
 	logger.Infof("got the batch the block number from %d to %d\n", fromBlockNumber, toBlockNumber)
 
 	// verify the L1 block number
