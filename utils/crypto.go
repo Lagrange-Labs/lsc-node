@@ -83,6 +83,11 @@ func Bytes2Hex(bytes []byte) string {
 	return common.Bytes2Hex(bytes)
 }
 
+// GetValidAddress returns a valid address from the given hex string.
+func GetValidAddress(hex string) string {
+	return common.HexToAddress(hex).Hex()
+}
+
 // HexToBlsPrivKey converts a hex string to a BLS private key.
 func HexToBlsPrivKey(hex string) (*bls.SecretKey, error) {
 	priv := new(bls.SecretKey)
