@@ -4,10 +4,14 @@ import (
 	"bytes"
 	"context"
 	"crypto/ecdsa"
+	"encoding/binary"
 	"errors"
 	"fmt"
 	"math/big"
+	"os"
+	"path/filepath"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -26,10 +30,15 @@ import (
 	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/store/goleveldb"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
-const CommitteeCacheSize = 10
+const (
+	CommitteeCacheSize = 10
+	ClientDBPath       = ".lagrange/db/"
+	PruningBlocks      = 1000
+)
 
 type PreviousBatchInfo struct {
 	NextCommitteeRoot string
@@ -49,12 +58,12 @@ type Client struct {
 	ecdsaPrivateKey    *ecdsa.PrivateKey
 	jwToken            string
 	stakeAddress       string
-	openBatchNumber    uint64
 	genesisBlockNumber uint64
-	prevBatchL1Number  uint64
 	pullInterval       time.Duration
 	committeeCache     *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
+	openL1BlockNumber  atomic.Uint64
 
+	db         *goleveldb.DB
 	ctx        context.Context
 	cancelFunc context.CancelFunc
 }
@@ -127,9 +136,26 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		logger.Fatalf("failed to get the committee params: %v", err)
 	}
 
+	homePath, err := os.UserHomeDir()
+	if err != nil {
+		logger.Fatalf("failed to get the home directory: %v", err)
+	}
+	dbPath := filepath.Clean(filepath.Join(homePath, ClientDBPath))
+	if err := os.MkdirAll(dbPath, os.ModePerm); err != nil {
+		logger.Fatalf("failed to create the database directory: %v", err)
+	}
+	pubKey, err := blsScheme.GetPublicKey(blsPriv, false)
+	if err != nil {
+		logger.Fatalf("failed to get the public key: %v", err)
+	}
+	dbPath = filepath.Join(dbPath, fmt.Sprintf("client_%d_%x.db", chainID, pubKey))
+	db, err := goleveldb.NewDB(dbPath)
+	if err != nil {
+		logger.Fatalf("failed to create the database: %v", err)
+	}
 	ctx, cancel := context.WithCancel(context.Background())
 
-	return &Client{
+	c := &Client{
 		NetworkServiceClient: networkv2types.NewNetworkServiceClient(conn),
 		blsScheme:            blsScheme,
 		blsPrivateKey:        blsPriv,
@@ -143,9 +169,13 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		genesisBlockNumber:   uint64(params.GenesisBlock.Int64() - params.L1Bias.Int64()),
 		committeeCache:       lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
 
+		db:         db,
 		ctx:        ctx,
 		cancelFunc: cancel,
-	}, nil
+	}
+	go c.startBatchFetching()
+
+	return c, nil
 }
 
 // GetStakeAddress returns the stake address.
@@ -197,9 +227,7 @@ func (c *Client) Start() {
 				continue
 			}
 
-			c.openBatchNumber = batch.BatchHeader.ToBlockNumber() + 1
-			c.prevBatchL1Number = batch.L1BlockNumber()
-			logger.Infof("uploaded the signature up to block %d\n", c.openBatchNumber-1)
+			logger.Infof("uploaded the signature up to block %d\n", batch.BatchHeader.ToBlockNumber())
 		}
 	}
 }
@@ -241,40 +269,107 @@ func (c *Client) joinNetwork() error {
 
 	c.jwToken = res.Token
 
-	c.rpcClient.SetBeginBlockNumber(res.L1BlockNumber, res.OpenBatchNumber)
-	return c.verifyPrevBatch(res.OpenBatchNumber, res.L1BlockNumber)
+	c.rpcClient.SetBeginBlockNumber(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
+	return c.verifyPrevBatch(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
 }
 
-// verifyPrevBatch verifies the previous batch and returns the next batch number.
-func (c *Client) verifyPrevBatch(batchNumber, l1BlockNumber uint64) error {
+// startBatchFetching starts the batch fetching loop.
+func (c *Client) startBatchFetching() {
 	for {
-		batchHeader, err := c.rpcClient.GetBatchHeaderByNumber(batchNumber)
+		batch, err := c.rpcClient.NextBatch()
 		if err != nil {
-			if errors.Is(err, rpctypes.ErrBatchNotFound) {
-				time.Sleep(c.pullInterval)
-				continue
+			logger.Fatalf("failed to get the next batch: %v", err)
+		}
+		// block the writeBatchHeader if the batch is too far from the current block
+		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/2 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
+			time.Sleep(1 * time.Second)
+		}
+		if err := c.writeBatchHeader(batch); err != nil {
+			logger.Errorf("failed to write the batch header: %v", err)
+		}
+		if batch.L1BlockNumber > PruningBlocks {
+			prunedBlockNumber := batch.L1BlockNumber - PruningBlocks
+			prefix := make([]byte, 8)
+			binary.BigEndian.PutUint64(prefix, prunedBlockNumber)
+			if err := c.db.Prune(prefix); err != nil {
+				logger.Errorf("failed to prune the database: %v", err)
 			}
-			return fmt.Errorf("failed to get the batch header by number: %v", err)
 		}
-		if batchHeader.L1BlockNumber != l1BlockNumber {
-			return fmt.Errorf("the batch L1 block number %d is not equal to the rpc L1 block number %d", l1BlockNumber, batchHeader.L1BlockNumber)
-		}
-
-		if l1BlockNumber == c.genesisBlockNumber && c.openBatchNumber == 0 {
-			c.openBatchNumber = batchNumber
-		} else {
-			c.openBatchNumber = batchHeader.ToBlockNumber() + 1
-		}
-		c.prevBatchL1Number = l1BlockNumber
-
-		return nil
+		time.Sleep(100 * time.Millisecond)
 	}
+}
+
+// writeBatchHeader writes the batch header to the database.
+func (c *Client) writeBatchHeader(batchHeader *sequencerv2types.BatchHeader) error {
+	key := make([]byte, 12)
+	binary.BigEndian.PutUint64(key, batchHeader.L1BlockNumber)
+	binary.BigEndian.PutUint32(key[8:], batchHeader.L1TxIndex)
+	value, err := proto.Marshal(batchHeader)
+	if err != nil {
+		return fmt.Errorf("failed to marshal the batch header: %v", err)
+	}
+
+	return c.db.Put(key, value)
+}
+
+// getPrevBatchL1Number gets the previous batch L1 number from the database.
+func (c *Client) getPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (uint64, error) {
+	key := make([]byte, 12)
+	binary.BigEndian.PutUint64(key, l1BlockNumber)
+	binary.BigEndian.PutUint32(key[8:], l1TxIndex)
+
+	prevKey, _, err := c.db.Prev(key)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get the previous key: %v", err)
+	}
+	var prevL1BlockNumber uint64
+	if prevKey != nil {
+		prevL1BlockNumber = binary.BigEndian.Uint64(prevKey[:8])
+	}
+
+	return prevL1BlockNumber, nil
+}
+
+// getBatchHeader gets the batch header from the database.
+func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
+	prefix := make([]byte, 8)
+	binary.BigEndian.PutUint64(prefix, l1BlockNumber)
+
+	var res *sequencerv2types.BatchHeader
+	if err := c.db.Iterate(prefix, func(key, value []byte) error {
+		var batchHeader sequencerv2types.BatchHeader
+		if err := proto.Unmarshal(value, &batchHeader); err != nil {
+			return fmt.Errorf("failed to unmarshal the batch header: %v", err)
+		}
+		if batchHeader.FromBlockNumber() == l2BlockNumber {
+			res = &batchHeader
+			return nil
+		}
+		return fmt.Errorf("the batch header is not found for the L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
+	}); err != nil {
+		return nil, fmt.Errorf("failed to iterate the database: %v", err)
+	}
+
+	return res, nil
+}
+
+// verifyPrevBatch verifies the previous batch.
+func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
+	batchHeader, err := c.getBatchHeader(l1BlockNumber, l2BlockNumber)
+	if err != nil {
+		return fmt.Errorf("failed to get the batch header: %v", err)
+	}
+
+	if batchHeader == nil {
+		return fmt.Errorf("the batch header is not found for L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
+	}
+
+	return nil
 }
 
 // TryGetBatch tries to get the batch from the network.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
-	res, err := c.GetBatch(context.Background(), &networkv2types.GetBatchRequest{
-		BatchNumber: c.openBatchNumber, StakeAddress: c.stakeAddress, Token: c.jwToken})
+	res, err := c.GetBatch(context.Background(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
 			return nil, ErrInvalidToken
@@ -288,22 +383,14 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	batch := res.Batch
 	fromBlockNumber := batch.BatchHeader.FromBlockNumber()
 	toBlockNumber := batch.BatchHeader.ToBlockNumber()
+	c.openL1BlockNumber.Store(batch.L1BlockNumber())
 	logger.Infof("got the batch the block number from %d to %d\n", fromBlockNumber, toBlockNumber)
 
-	// check if the batch is the next one to the previous batch
-	if c.openBatchNumber != batch.BatchNumber() {
-		logger.Errorf("the batch number %d is not equal to the open batch number %d", batch.BatchNumber(), c.openBatchNumber)
-		// retry to join the network
-		return nil, ErrInvalidToken
-	}
-
 	// verify the L1 block number
-	batchHeader, err := c.rpcClient.GetBatchHeaderByNumber(fromBlockNumber)
-	if err != nil {
-		if errors.Is(err, rpctypes.ErrBatchNotFound) {
-			return batch, ErrBatchNotFound
-		}
-		return nil, fmt.Errorf("failed to get the batch header by number: %v", err)
+	batchHeader, err := c.getBatchHeader(batch.L1BlockNumber(), fromBlockNumber)
+	if err != nil || batchHeader == nil {
+		logger.Errorf("failed to get the batch header: %v", err)
+		return batch, ErrBatchNotFound
 	}
 	if batch.L1BlockNumber() != batchHeader.L1BlockNumber {
 		return nil, fmt.Errorf("the batch L1 block number %d is not equal to the rpc L1 block number %d", res.Batch.L1BlockNumber(), batchHeader.L1BlockNumber)
@@ -356,12 +443,17 @@ func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommi
 
 func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 	blockNumber := batch.L1BlockNumber()
+	prevBatchL1Number := batch.L1BlockNumber()
 	isGenesis := c.genesisBlockNumber == blockNumber
 	// verify the previous batch's next committee root
-	if !isGenesis && c.prevBatchL1Number >= blockNumber {
-		return fmt.Errorf("the previous batch L1 block number %d is not less than the current batch L1 block number %d", c.prevBatchL1Number, blockNumber)
+	if !isGenesis {
+		var err error
+		prevBatchL1Number, err = c.getPrevBatchL1Number(batch.L1BlockNumber(), batch.BatchHeader.L1TxIndex)
+		if err != nil {
+			return fmt.Errorf("failed to get the previous batch L1 number: %v", err)
+		}
 	}
-	prevCommitteeData, err := c.getCommitteeRoot(c.prevBatchL1Number)
+	prevCommitteeData, err := c.getCommitteeRoot(prevBatchL1Number)
 	if err != nil {
 		return fmt.Errorf("failed to get the previous committee root: %v", err)
 	}

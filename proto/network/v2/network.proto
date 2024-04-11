@@ -26,8 +26,8 @@ message JoinNetworkRequest {
 // JoinNetworkResponse is the response for joining the network
 message JoinNetworkResponse {
     string token = 1;
-    uint64 open_batch_number = 2;
-    uint64 l1_block_number = 3;
+    uint64 prev_l2_block_number = 2;
+    uint64 prev_l1_block_number = 3;
 }
 
 // GetBatchRequest is the request to get the given block batch

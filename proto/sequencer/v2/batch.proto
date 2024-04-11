@@ -17,6 +17,7 @@ message BatchHeader {
     repeated BlockHeader l2_blocks = 3;
     uint64 l1_block_number = 4;
     string l1_tx_hash = 5;
+    uint32 l1_tx_index = 6;
 }
 
 // CommitteeHeader is the header for the given committee
