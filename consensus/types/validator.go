@@ -6,14 +6,14 @@ import (
 
 // Validator defines a validator state.
 type Validator struct {
-	StakeAddress string
-	VotingPower  uint64
-	SignAddress  string
+	VotingPower uint64
+	SignAddress string
 }
 
 // ValidatorSet defines a set of validators.
 type ValidatorSet struct {
 	validators           map[string]map[string]*Validator
+	validatorCount       int
 	totalVotingPower     uint64
 	committeeVotingPower uint64
 }
@@ -28,15 +28,15 @@ func NewValidatorSet(nodes []networktypes.ClientNode, committeeVotingPower uint6
 			validators[node.StakeAddress] = make(map[string]*Validator)
 		}
 		validators[node.StakeAddress][node.PublicKey] = &Validator{
-			StakeAddress: node.StakeAddress,
-			VotingPower:  node.VotingPower,
-			SignAddress:  node.SignAddress,
+			VotingPower: node.VotingPower,
+			SignAddress: node.SignAddress,
 		}
 		totalVotingPower += node.VotingPower
 	}
 
 	return &ValidatorSet{
 		validators:           validators,
+		validatorCount:       len(nodes),
 		totalVotingPower:     totalVotingPower,
 		committeeVotingPower: committeeVotingPower,
 	}
@@ -44,7 +44,7 @@ func NewValidatorSet(nodes []networktypes.ClientNode, committeeVotingPower uint6
 
 // GetValidatorCount returns the number of validators.
 func (vs *ValidatorSet) GetValidatorCount() int {
-	return len(vs.validators)
+	return vs.validatorCount
 }
 
 // GetVotingPower returns the voting power of a validator.

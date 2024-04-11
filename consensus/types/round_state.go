@@ -103,14 +103,16 @@ func (rs *RoundState) CheckEnoughVotingPower(vs *ValidatorSet) bool {
 	defer rs.rwMutex.RUnlock()
 
 	votingPower := uint64(0)
+	votingCount := 0
 	for stakeAddr, signatures := range rs.commitSignatures {
 		for pubKey := range signatures {
 			votingPower += vs.GetVotingPower(stakeAddr, pubKey)
+			votingCount++
 		}
 	}
 
-	logger.Infof("committed count: %d, committed voting power: %v, total voting power: %v", len(rs.commitSignatures), votingPower, vs.GetCommitteeVotingPower())
-	return len(rs.commitSignatures)*3 > len(vs.validators)*2 && votingPower*3 > vs.GetCommitteeVotingPower()*2
+	logger.Infof("committed count: %d, committed voting power: %v, total voting power: %v", votingCount, votingPower, vs.GetCommitteeVotingPower())
+	return votingCount*3 > vs.GetValidatorCount() && votingPower*3 > vs.GetCommitteeVotingPower()*2
 }
 
 // CheckAggregatedSignature checks if the aggregated signature is valid.
