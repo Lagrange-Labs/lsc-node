@@ -47,7 +47,6 @@ func NewSequencerService(storage storageInterface, consensus consensusInterface,
 // JoinNetwork is a method to join the attestation network.
 func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.JoinNetworkRequest) (*networkv2types.JoinNetworkResponse, error) {
 	logger.Infof("JoinNetwork request: %+v\n", req)
-
 	// Verify signature
 	sigMessage := req.Signature
 	req.Signature = ""
@@ -61,7 +60,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.
 		return nil, fmt.Errorf("BLS signature verification failed: %v", err)
 	}
 	// Check if the operator is a committee member
-	isMember, err := s.consensus.CheckCommitteeMember(req.StakeAddress, req.PublicKey)
+	isMember, err := s.consensus.CheckCommitteeMember(utils.GetValidAddress(req.StakeAddress), strings.TrimPrefix(req.PublicKey, "0x"))
 	if err != nil {
 		return nil, err
 	}
@@ -134,13 +133,14 @@ func (s *sequencerService) CommitBatch(req *networkv2types.CommitBatchRequest, s
 		logger.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)
 		return fmt.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)
 	}
-	if !s.consensus.CheckSignAddress(req.StakeAddress, addr.Hex()) {
+
+	if !s.consensus.CheckSignAddress(utils.GetValidAddress(req.StakeAddress), addr.Hex()) {
 		logger.Errorf("the sign address is not matched in ECDSA signature: %v, %v", addr, req.StakeAddress)
 		return fmt.Errorf("the sign address is not matched in ECDSA signature: %v, %v", addr, req.StakeAddress)
 	}
 
 	// upload the commit to the consensus layer
-	if err := s.consensus.AddBatchCommit(signature, req.StakeAddress, req.PublicKey); err != nil {
+	if err := s.consensus.AddBatchCommit(signature, utils.GetValidAddress(req.StakeAddress), strings.TrimPrefix(req.PublicKey, "0x")); err != nil {
 		logger.Errorf("failed to add the commit to the consensus layer: %v", err)
 		return err
 	}
