@@ -297,7 +297,7 @@ func (s *Sequencer) updateCommittee() error {
 
 // fetch the committee root from the committee smart contract.
 func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRoot, error) {
-	epochEndBlockNumber := epochNumber*s.committeeParams.Duration + s.committeeParams.StartBlock - 1
+	epochEndBlockNumber := (epochNumber+1)*s.committeeParams.Duration + s.committeeParams.StartBlock - 1
 	epochEndBlockNumber = uint64(int64(epochEndBlockNumber) - s.committeeParams.L1Bias)
 	committeeData, err := s.committeeSC.GetCommittee(nil, s.chainID, big.NewInt(int64(epochEndBlockNumber)))
 	if err != nil {

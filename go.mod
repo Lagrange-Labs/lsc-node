@@ -20,7 +20,7 @@ require (
 	go.mongodb.org/mongo-driver v1.14.0
 	golang.org/x/crypto v0.22.0
 	golang.org/x/sync v0.7.0
-	google.golang.org/grpc v1.63.0
+	google.golang.org/grpc v1.63.2
 	google.golang.org/protobuf v1.33.0
 )
 
