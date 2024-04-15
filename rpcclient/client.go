@@ -3,6 +3,7 @@ package rpcclient
 import (
 	"strings"
 
+	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/arbitrum"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/mantle"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/mock"
@@ -12,6 +13,8 @@ import (
 
 // NewClient creates a new rpc client.
 func NewClient(chain string, cfg *Config) (types.RpcClient, error) {
+	logger.Infof("creating the rpc client for chain: %s", chain)
+
 	switch strings.ToLower(chain) {
 	case "mantle":
 		return mantle.NewClient(cfg.Mantle)

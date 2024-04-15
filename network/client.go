@@ -240,7 +240,7 @@ func (c *Client) TryJoinNetwork() {
 			time.Sleep(5 * time.Second)
 			continue
 		}
-		logger.Infof("joined the network with the new token: %s\n", c.jwToken)
+		logger.Info("joined the network with the new token")
 		break
 	}
 }
