@@ -59,7 +59,7 @@ type Sequencer struct {
 
 // NewSequencer creates a new sequencer instance.
 func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterface) (*Sequencer, error) {
-	logger.Infof("Creating sequencer with config: %+v", cfg)
+	logger.Infof("Creating sequencer for chain: %s", cfg.Chain)
 
 	client, err := ethclient.Dial(cfg.EthereumURL)
 	if err != nil {
