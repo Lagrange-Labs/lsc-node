@@ -52,8 +52,8 @@ func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {
 	if lastSyncedL1BlockNumber > 0 && lastSyncedL1BlockNumber+ParallelBlocks > l1BlockNumber {
 		return
 	}
-	logger.Infof("last synced L1 block number: %d, begin L1 block number: %d", lastSyncedL1BlockNumber, l1BlockNumber)
 	c.fetcher.Stop()
+	logger.Infof("last synced L1 block number: %d, begin L1 block number: %d", lastSyncedL1BlockNumber, l1BlockNumber)
 
 	c.fetcher.InitFetch(l2BlockNumber)
 	// Fetch L1 batch headers
@@ -77,6 +77,7 @@ func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
 	// check if there is any error
 	select {
 	case err := <-c.chErr:
+		c.fetcher.Stop()
 		return nil, err
 	default:
 		return c.fetcher.nextBatchHeader()

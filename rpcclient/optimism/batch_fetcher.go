@@ -120,7 +120,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		batchHeaders:      make(chan *BatchesRef, 64),
 
 		chErr: make(chan error),
-		done:  make(chan struct{}),
+		done:  make(chan struct{}, 2),
 	}, nil
 }
 
@@ -282,6 +282,8 @@ func (f *Fetcher) Stop() {
 	close(f.chFramesRef)
 	<-f.done
 	<-f.done
+	f.cancel = nil
+	f.ctx = nil
 }
 
 // fetchBlock fetches the given block and analyzes the transactions
