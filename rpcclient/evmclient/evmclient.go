@@ -102,7 +102,7 @@ func (c *Client) GetChainID() (uint32, error) {
 	return uint32(chainID.Int64()), err
 }
 
-// GetFinalizedBlockNumber returns the L2 finalized block number.
+// GetFinalizedBlockNumber returns the finalized block number.
 func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 	var header *ethtypes.Header
 	if err := c.rpcClient.CallContext(context.Background(), &header, "eth_getBlockByNumber", "finalized", false); err != nil {

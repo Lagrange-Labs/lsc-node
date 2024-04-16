@@ -63,7 +63,7 @@ type FramesRef struct {
 // Fetcher is a synchronizer for the BatchInbox EOA.
 type Fetcher struct {
 	l1Client          *ethclient.Client
-	l2Client          *evmclient.Client
+	l2Client          types.EvmClient
 	l1BlobFetcher     *sources.L1BeaconClient
 	batchInboxAddress common.Address
 	batchSender       common.Address
@@ -82,6 +82,7 @@ type Fetcher struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	done   chan struct{}
+	chErr  chan error
 }
 
 // NewFetcher creates a new Fetcher instance.
@@ -118,7 +119,8 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		l2BlockCache:      utils.NewCache(cacheLimit),
 		batchHeaders:      make(chan *BatchesRef, 64),
 
-		done: make(chan struct{}),
+		chErr: make(chan error),
+		done:  make(chan struct{}),
 	}, nil
 }
 
@@ -140,6 +142,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 	go func() {
 		if err := f.handleFrames(); err != nil {
 			logger.Errorf("failed to handle frames: %v", err)
+			f.chErr <- err
 		}
 		logger.Infof("decoder is stopped")
 	}()
@@ -155,6 +158,8 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 		case <-f.ctx.Done():
 			logger.Infof("fetcher is stopped")
 			return nil
+		case err := <-f.chErr:
+			return err
 		default:
 			g, ctx := errgroup.WithContext(context.Background())
 			g.SetLimit(f.concurrentFetcher)
