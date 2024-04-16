@@ -4,26 +4,42 @@ import "github.com/Lagrange-Labs/lagrange-node/utils"
 
 // BatchNumber returns the batch number of the batch.
 func (b *Batch) BatchNumber() uint64 {
+	if b.BatchHeader == nil {
+		return 0
+	}
 	return b.BatchHeader.BatchNumber
 }
 
 // ChainID returns the chain ID of the batch.
 func (b *Batch) ChainID() uint32 {
+	if b.BatchHeader == nil {
+		return 0
+	}
 	return b.BatchHeader.ChainId
 }
 
 // L1BlockNumber returns the L1 block number of the batch.
 func (b *Batch) L1BlockNumber() uint64 {
+	if b.BatchHeader == nil {
+		return 0
+	}
 	return b.BatchHeader.L1BlockNumber
 }
 
 // L1TxHash returns the L1 transaction hash of the batch.
 func (b *Batch) L1TxHash() string {
+	if b.BatchHeader == nil {
+		return ""
+	}
 	return b.BatchHeader.L1TxHash
 }
 
 // L2BlockHash returns the hash of the block with the given block number.
 func (b *Batch) BlockHash(blockNumber uint64) string {
+	if b.BatchHeader == nil {
+		return ""
+	}
+
 	for _, block := range b.BatchHeader.L2Blocks {
 		if block.BlockNumber == blockNumber {
 			return block.BlockHash
@@ -43,16 +59,25 @@ func (b *Batch) BlsSignature() *BlsSignature {
 
 // CurrentCommittee returns the current committee root of the batch.
 func (b *Batch) CurrentCommittee() string {
+	if b.CommitteeHeader == nil {
+		return ""
+	}
 	return b.CommitteeHeader.CurrentCommittee
 }
 
 // NextCommittee returns the next committee root of the batch.
 func (b *Batch) NextCommittee() string {
+	if b.CommitteeHeader == nil {
+		return ""
+	}
 	return b.CommitteeHeader.NextCommittee
 }
 
 // TotalVotingPower returns the total voting power of the batch.
 func (b *Batch) TotalVotingPower() uint64 {
+	if b.CommitteeHeader == nil {
+		return 0
+	}
 	return b.CommitteeHeader.TotalVotingPower
 }
 
@@ -87,6 +112,9 @@ func (bh *BatchHeader) Hash() []byte {
 
 // BatchNumber returns the batch number of the bls signature.
 func (b *BlsSignature) BatchNumber() uint64 {
+	if b.BatchHeader == nil {
+		return 0
+	}
 	return b.BatchHeader.BatchNumber
 }
 
@@ -108,16 +136,25 @@ func (b *BlsSignature) CommitHash() []byte {
 
 // CurrentCommittee returns the current committee root of the bls signature.
 func (b *BlsSignature) CurrentCommittee() string {
+	if b.CommitteeHeader == nil {
+		return ""
+	}
 	return b.CommitteeHeader.CurrentCommittee
 }
 
 // NextCommittee returns the next committee root of the bls signature.
 func (b *BlsSignature) NextCommittee() string {
+	if b.CommitteeHeader == nil {
+		return ""
+	}
 	return b.CommitteeHeader.NextCommittee
 }
 
 // TotalVotingPower returns the total voting power of the bls signature.
 func (b *BlsSignature) TotalVotingPower() uint64 {
+	if b.CommitteeHeader == nil {
+		return 0
+	}
 	return b.CommitteeHeader.TotalVotingPower
 }
 
