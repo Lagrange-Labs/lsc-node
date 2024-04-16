@@ -66,6 +66,7 @@ type Client struct {
 	db         *goleveldb.DB
 	ctx        context.Context
 	cancelFunc context.CancelFunc
+	chErr      chan error
 }
 
 // NewClient creates a new client.
@@ -172,6 +173,7 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		db:         db,
 		ctx:        ctx,
 		cancelFunc: cancel,
+		chErr:      make(chan error),
 	}
 	go c.startBatchFetching()
 
@@ -189,13 +191,15 @@ func (c *Client) GetChainID() uint32 {
 }
 
 // Start starts the connection loop.
-func (c *Client) Start() {
+func (c *Client) Start() error {
 	c.TryJoinNetwork()
 
 	for {
 		select {
 		case <-c.ctx.Done():
-			return
+			return errors.New("the client is stopped")
+		case err := <-c.chErr:
+			return err
 		case <-time.After(c.pullInterval):
 			batch, err := c.TryGetBatch()
 			if err != nil {
@@ -240,7 +244,7 @@ func (c *Client) TryJoinNetwork() {
 			time.Sleep(5 * time.Second)
 			continue
 		}
-		logger.Infof("joined the network with the new token: %s\n", c.jwToken)
+		logger.Info("joined the network with the new token")
 		break
 	}
 }
@@ -278,7 +282,9 @@ func (c *Client) startBatchFetching() {
 	for {
 		batch, err := c.rpcClient.NextBatch()
 		if err != nil {
-			logger.Fatalf("failed to get the next batch: %v", err)
+			logger.Errorf("failed to get the next batch: %v", err)
+			c.chErr <- err
+			return
 		}
 		// block the writeBatchHeader if the batch is too far from the current block
 		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/2 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
@@ -286,6 +292,8 @@ func (c *Client) startBatchFetching() {
 		}
 		if err := c.writeBatchHeader(batch); err != nil {
 			logger.Errorf("failed to write the batch header: %v", err)
+			c.chErr <- err
+			return
 		}
 		if batch.L1BlockNumber > PruningBlocks {
 			prunedBlockNumber := batch.L1BlockNumber - PruningBlocks

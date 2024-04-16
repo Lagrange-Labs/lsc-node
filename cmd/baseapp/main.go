@@ -35,7 +35,7 @@ const DEBUG_MODE = false
 func main() {
 	// Start an HTTP server for pprof profiling data.
 	if DEBUG_MODE {
-		logger.Infof("Starting pprof server on 6060")
+		logger.Info("Starting pprof server on 6060")
 		go func() {
 			log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
 		}()
@@ -129,18 +129,16 @@ func runClient(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
-	logger.Infof("Starting client with config: %v", cfg.Client)
+	logger.Info("Starting client")
 	client, err := network.NewClient(&cfg.Client, &cfg.RpcClient)
 	if err != nil {
 		return err
 	}
 
-	go client.Start()
-
-	// Wait for an in interrupt.
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
-	<-ch
+	if err := client.Start(); err != nil {
+		logger.Errorf("Failed to start client: %v", err)
+		return err
+	}
 
 	return nil
 }
@@ -155,7 +153,7 @@ func runSequencer(ctx *cli.Context) error {
 	if err != nil {
 		return fmt.Errorf("failed to create storage: %w", err)
 	}
-	logger.Infof("Starting sequencer with config: %v", cfg.Sequencer)
+	logger.Info("Starting sequencer")
 	sequencer, err := sequencer.NewSequencer(&cfg.Sequencer, &cfg.RpcClient, storage)
 	if err != nil {
 		return fmt.Errorf("failed to create sequencer: %w", err)
@@ -163,11 +161,6 @@ func runSequencer(ctx *cli.Context) error {
 	if err := sequencer.Start(); err != nil {
 		return fmt.Errorf("failed to start sequencer: %w", err)
 	}
-
-	// Wait for an interrupt.
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
-	<-ch
 
 	return nil
 }

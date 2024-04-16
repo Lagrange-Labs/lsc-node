@@ -78,6 +78,9 @@ func (rs *RoundState) IsFinalized() bool {
 	rs.rwMutex.RLock()
 	defer rs.rwMutex.RUnlock()
 
+	if rs.proposedBatch == nil {
+		return false
+	}
 	return len(rs.proposedBatch.PubKeys) > 0
 }
 
@@ -86,6 +89,9 @@ func (rs *RoundState) GetCurrentBatchNumber() uint64 {
 	rs.rwMutex.RLock()
 	defer rs.rwMutex.RUnlock()
 
+	if rs.proposedBatch == nil {
+		return 0
+	}
 	return rs.proposedBatch.BatchNumber()
 }
 
@@ -119,6 +125,10 @@ func (rs *RoundState) CheckEnoughVotingPower(vs *ValidatorSet) bool {
 func (rs *RoundState) CheckAggregatedSignature() error {
 	rs.rwMutex.Lock()
 	defer rs.rwMutex.Unlock()
+
+	if rs.proposedBatch == nil {
+		return fmt.Errorf("the proposed batch is nil")
+	}
 
 	blsSignature := rs.proposedBatch.BlsSignature()
 	sigHash := blsSignature.Hash()
