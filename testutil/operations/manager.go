@@ -59,7 +59,9 @@ func (m *Manager) RunClient(clientCfg *network.ClientConfig) {
 	if err != nil {
 		panic(err)
 	}
-	go client.Start()
+	go func() {
+		_ = client.Start()
+	}()
 }
 
 // RunClients runs several client instances.

@@ -135,12 +135,10 @@ func runClient(ctx *cli.Context) error {
 		return err
 	}
 
-	go client.Start()
-
-	// Wait for an in interrupt.
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
-	<-ch
+	if err := client.Start(); err != nil {
+		logger.Errorf("Failed to start client: %v", err)
+		return err
+	}
 
 	return nil
 }
@@ -163,11 +161,6 @@ func runSequencer(ctx *cli.Context) error {
 	if err := sequencer.Start(); err != nil {
 		return fmt.Errorf("failed to start sequencer: %w", err)
 	}
-
-	// Wait for an interrupt.
-	ch := make(chan os.Signal, 1)
-	signal.Notify(ch, os.Interrupt)
-	<-ch
 
 	return nil
 }
