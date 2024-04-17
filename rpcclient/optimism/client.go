@@ -16,7 +16,6 @@ type Client struct {
 
 	ethClient *ethclient.Client
 	fetcher   *Fetcher
-	chErr     chan error
 }
 
 // NewClient creates a new Client instance.
@@ -42,7 +41,6 @@ func NewClient(cfg *Config) (*Client, error) {
 		Client:    *client,
 		ethClient: ethClient,
 		fetcher:   fetcher,
-		chErr:     make(chan error),
 	}, nil
 }
 
@@ -60,26 +58,19 @@ func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {
 	go func() {
 		if err := c.fetcher.Fetch(l1BlockNumber); err != nil {
 			logger.Errorf("failed to fetch L1 batch headers: %v", err)
-			c.chErr <- err
+			c.fetcher.Stop()
 		}
 	}()
 	// Fetch L2 block headers
 	go func() {
 		if err := c.fetcher.FetchL2Blocks(); err != nil {
 			logger.Errorf("failed to fetch L2 block headers: %v", err)
-			c.chErr <- err
+			c.fetcher.Stop()
 		}
 	}()
 }
 
 // NextBatch returns the next batch header after SetBeginBlockNumber.
 func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
-	// check if there is any error
-	select {
-	case err := <-c.chErr:
-		c.fetcher.Stop()
-		return nil, err
-	default:
-		return c.fetcher.nextBatchHeader()
-	}
+	return c.fetcher.nextBatchHeader()
 }
