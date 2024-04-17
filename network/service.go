@@ -23,6 +23,10 @@ var (
 	ErrWrongBlockNumber = errors.New("the block number is not matched")
 	// ErrInvalidToken is returned when the token is invalid.
 	ErrInvalidToken = errors.New("the token is invalid")
+	// ErrNotCommitteeMember is returned when the operator is not a committee member.
+	ErrNotCommitteeMember = errors.New("the given operator is not a member of the current committee")
+	// ErrCheckCommitteeMember is returned when the check committee member failed.
+	ErrCheckCommitteeMember = errors.New("failed to check the committee member")
 )
 
 type sequencerService struct {
@@ -62,11 +66,11 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.
 	// Check if the operator is a committee member
 	isMember, err := s.consensus.CheckCommitteeMember(utils.GetValidAddress(req.StakeAddress), strings.TrimPrefix(req.PublicKey, "0x"))
 	if err != nil {
-		return nil, err
+		return nil, errors.Join(ErrCheckCommitteeMember, err)
 	}
 	if !isMember {
-		logger.Warnf("The operator is not a committee member")
-		return &networkv2types.JoinNetworkResponse{}, fmt.Errorf("the operator is not a committee member")
+		logger.Warnf("The operator %s is not a committee member", req.StakeAddress)
+		return &networkv2types.JoinNetworkResponse{}, ErrNotCommitteeMember
 	}
 	// Register node
 	ip, err := getIPAddress(ctx)
@@ -75,7 +79,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.
 	}
 	if err := s.storage.AddNode(ctx,
 		&types.ClientNode{
-			StakeAddress: req.StakeAddress,
+			StakeAddress: utils.GetValidAddress(req.StakeAddress),
 			PublicKey:    req.PublicKey,
 			IPAddress:    ip,
 			ChainID:      s.chainID,

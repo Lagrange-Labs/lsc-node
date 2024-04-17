@@ -240,7 +240,12 @@ func (c *Client) Start() error {
 func (c *Client) TryJoinNetwork() {
 	for {
 		if err := c.joinNetwork(); err != nil {
-			logger.Errorf("failed to join the network: %v", err)
+			logger.Infof("failed to join the network: %v", err)
+			if strings.Contains(err.Error(), ErrNotCommitteeMember.Error()) {
+				logger.Warn("NOTE: If you just joined the network, please wait for the next committee rotation. If you have been observing this message for a long time, please check if the BLS public key and the operator address are set correctly in the config file or contact the Largrange team.")
+			} else if strings.Contains(err.Error(), ErrCheckCommitteeMember.Error()) {
+				logger.Warn("NOTE: The given round is not initialized yet. It may be because the sequencer is waiting for the next batch since it is almost caught up with the current block. Please wait for the next batch.")
+			}
 			time.Sleep(5 * time.Second)
 			continue
 		}
