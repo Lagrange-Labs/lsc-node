@@ -116,7 +116,7 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 
 	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg)
 	if err != nil {
-		logger.Fatalf("failed to create the rpc client: %v", err)
+		logger.Fatalf("failed to create the rpc client: %v, please check the chain name, the chain name should look like 'optimism', 'base'", err)
 	}
 	etherClient, err := ethclient.Dial(cfg.EthereumURL)
 	if err != nil {
