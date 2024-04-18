@@ -213,7 +213,7 @@ func (s *State) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr,
 	}
 
 	if s.validators.GetVotingPower(stakeAddr, pubKey) == 0 {
-		return fmt.Errorf("the stake address %s is not registered", stakeAddr)
+		return fmt.Errorf("the operator address %s is not registered", stakeAddr)
 	}
 
 	if s.round.GetCurrentBatchNumber() != commit.BatchNumber() {
