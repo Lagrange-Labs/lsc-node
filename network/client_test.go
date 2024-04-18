@@ -35,5 +35,5 @@ func TestECDSASignVerify(t *testing.T) {
 	isVerified, addr, err := utils.VerifyECDSASignature(reqMsg, sig)
 	require.NoError(t, err)
 	require.True(t, isVerified)
-	require.Equal(t, addr.Hex(), "0x516D6C27C23CEd21BF7930E2a01F0BcA9A141a0d") // 0x516D6C27C23CEd21BF7930E2a01F0BcA9A141a0d
+	require.Equal(t, addr.Hex(), "0x516D6C27C23CEd21BF7930E2a01F0BcA9A141a0d")
 }
