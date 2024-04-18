@@ -2,6 +2,7 @@ package optimism
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"math/big"
 	"sort"
@@ -79,6 +80,7 @@ type Fetcher struct {
 	chFramesRef chan *FramesRef
 	chainID     *big.Int
 
+	mtx    sync.Mutex
 	ctx    context.Context
 	cancel context.CancelFunc
 	done   chan struct{}
@@ -119,8 +121,8 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		l2BlockCache:      utils.NewCache(cacheLimit),
 		batchHeaders:      make(chan *BatchesRef, 64),
 
-		chErr: make(chan error),
-		done:  make(chan struct{}, 2),
+		chErr: make(chan error, 1),
+		done:  make(chan struct{}, 3),
 	}, nil
 }
 
@@ -273,15 +275,23 @@ func (f *Fetcher) FetchL2Blocks() error {
 
 // Stop stops the Fetcher.
 func (f *Fetcher) Stop() {
+	f.mtx.Lock()
+	defer f.mtx.Unlock()
+
 	if f.cancel == nil {
 		return
 	}
 
 	f.lastSyncedL1BlockNumber.Store(0)
+	// close L1 & L2 fetcher
 	f.cancel()
+	<-f.done
+	<-f.done
+	// close batch decoder
 	close(f.chFramesRef)
 	<-f.done
-	<-f.done
+	// close batch headers channel to notify the outside
+	close(f.batchHeaders)
 	f.cancel = nil
 	f.ctx = nil
 }
@@ -427,7 +437,7 @@ func (f *Fetcher) validTransaction(tx *coretypes.Transaction) bool {
 func (f *Fetcher) nextBatchHeader() (*sequencerv2types.BatchHeader, error) {
 	batchesRef, ok := <-f.batchHeaders
 	if !ok {
-		return nil, types.ErrBatchNotFound
+		return nil, errors.New("batch headers channel is closed")
 	}
 
 	header := sequencerv2types.BatchHeader{
