@@ -57,16 +57,16 @@ type Client struct {
 	committeeSC *committee.Committee
 	blsScheme   crypto.BLSScheme
 
-	chainID            uint32
-	blsPrivateKey      []byte
-	blsPublicKey       string
-	ecdsaPrivateKey    *ecdsa.PrivateKey
-	jwToken            string
-	stakeAddress       string
-	genesisBlockNumber uint64
-	pullInterval       time.Duration
-	committeeCache     *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
-	openL1BlockNumber  atomic.Uint64
+	chainID               uint32
+	blsPrivateKey         []byte
+	blsPublicKey          string
+	signerECDSAPrivateKey *ecdsa.PrivateKey
+	jwToken               string
+	stakeAddress          string
+	genesisBlockNumber    uint64
+	pullInterval          time.Duration
+	committeeCache        *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
+	openL1BlockNumber     atomic.Uint64
 
 	db         *goleveldb.DB
 	ctx        context.Context
@@ -108,13 +108,20 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	}
 
 	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
-	blsPriv := utils.Hex2Bytes(cfg.BLSPrivateKey)
+	blsPriv, err := crypto.LoadPrivateKey(crypto.CryptoCurve(cfg.BLSCurve), cfg.BLSKeystorePassword, cfg.BLSKeystorePath)
+	if err != nil {
+		logger.Fatalf("failed to load the bls keystore from %s: %v", cfg.BLSKeystorePath, err)
+	}
 	pubkey, err := blsScheme.GetPublicKey(blsPriv, false)
 	if err != nil {
 		logger.Fatalf("failed to get the bls public key: %v", err)
 	}
 
-	ecdsaPriv, err := ecrypto.HexToECDSA(strings.TrimPrefix(cfg.ECDSAPrivateKey, "0x"))
+	ecdsaPrivKey, err := crypto.LoadPrivateKey(crypto.CryptoCurve("ECDSA"), cfg.SignerECDSAKeystorePassword, cfg.SignerECDSAKeystorePath)
+	if err != nil {
+		logger.Fatalf("failed to load the ecdsa keystore from %s: %v", cfg.SignerECDSAKeystorePath, err)
+	}
+	ecdsaPriv, err := ecrypto.ToECDSA(ecdsaPrivKey)
 	if err != nil {
 		logger.Fatalf("failed to get the ecdsa private key: %v", err)
 	}
@@ -162,18 +169,18 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	c := &Client{
-		NetworkServiceClient: networkv2types.NewNetworkServiceClient(conn),
-		blsScheme:            blsScheme,
-		blsPrivateKey:        blsPriv,
-		blsPublicKey:         utils.Bytes2Hex(pubkey),
-		ecdsaPrivateKey:      ecdsaPriv,
-		stakeAddress:         cfg.OperatorAddress,
-		pullInterval:         time.Duration(cfg.PullInterval),
-		rpcClient:            rpcClient,
-		committeeSC:          committeeSC,
-		chainID:              chainID,
-		genesisBlockNumber:   uint64(params.GenesisBlock.Int64() - params.L1Bias.Int64()),
-		committeeCache:       lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
+		NetworkServiceClient:  networkv2types.NewNetworkServiceClient(conn),
+		blsScheme:             blsScheme,
+		blsPrivateKey:         blsPriv,
+		blsPublicKey:          utils.Bytes2Hex(pubkey),
+		signerECDSAPrivateKey: ecdsaPriv,
+		stakeAddress:          cfg.OperatorAddress,
+		pullInterval:          time.Duration(cfg.PullInterval),
+		rpcClient:             rpcClient,
+		committeeSC:           committeeSC,
+		chainID:               chainID,
+		genesisBlockNumber:    uint64(params.GenesisBlock.Int64() - params.L1Bias.Int64()),
+		committeeCache:        lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
 
 		db:         db,
 		ctx:        ctx,
@@ -504,7 +511,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 
 	// generate the ECDSA signature
 	msg := blsSignature.CommitHash()
-	sig, err := ecrypto.Sign(msg, c.ecdsaPrivateKey)
+	sig, err := ecrypto.Sign(msg, c.signerECDSAPrivateKey)
 	if err != nil {
 		return fmt.Errorf("failed to ecdsa sign the block: %v", err)
 	}

@@ -20,12 +20,29 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/store"
 )
 
+const (
+	flagClientSignerKeyPasswordPath = "client-signer-ecdsa-keystore-password-path"
+	flagClientBLSKeyPasswordPath    = "client-bls-keystore-password-path"
+)
+
 var (
 	configFileFlag = cli.StringFlag{
 		Name:     config.FlagCfg,
 		Aliases:  []string{"c"},
 		Usage:    "Configuration `FILE`",
 		Required: false,
+	}
+	clientSignerKeyPasswordFlagPath = cli.StringFlag{
+		Name:     flagClientSignerKeyPasswordPath,
+		Usage:    "Path to the file containing the password for the client signer ECDSA keystore",
+		Required: false,
+		Aliases:  []string{"ecdsa-pass-path"},
+	}
+	clientBLSKeyPasswordFlagPath = cli.StringFlag{
+		Name:     flagClientBLSKeyPasswordPath,
+		Usage:    "Path to the file containing the password for the client BLS keystore",
+		Required: false,
+		Aliases:  []string{"bls-pass-path"},
 	}
 )
 
@@ -47,7 +64,11 @@ func main() {
 	flags := []cli.Flag{
 		&configFileFlag,
 	}
-
+	clientFlags := []cli.Flag{
+		&configFileFlag,
+		&clientSignerKeyPasswordFlagPath,
+		&clientBLSKeyPasswordFlagPath,
+	}
 	app.Commands = []*cli.Command{
 		{
 			Name:    "version",
@@ -67,7 +88,7 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Run the lagrange client node",
 			Action:  runClient,
-			Flags:   flags,
+			Flags:   clientFlags,
 		},
 		{
 			Name:    "run-sequencer",
@@ -128,6 +149,22 @@ func runClient(ctx *cli.Context) error {
 	cfg, err := config.Load(ctx)
 	if err != nil {
 		return err
+	}
+	clientBLSKeyPasswordFlagPath := ctx.String(flagClientBLSKeyPasswordPath)
+	if len(clientBLSKeyPasswordFlagPath) > 0 {
+		data, err := os.ReadFile(clientBLSKeyPasswordFlagPath)
+		if err != nil {
+			return fmt.Errorf("failed to read client BLS keystore password file: %w", err)
+		}
+		cfg.Client.BLSKeystorePassword = string(data)
+	}
+	clientSignerKeyPasswordFlagPath := ctx.String(flagClientSignerKeyPasswordPath)
+	if len(clientSignerKeyPasswordFlagPath) > 0 {
+		data, err := os.ReadFile(clientSignerKeyPasswordFlagPath)
+		if err != nil {
+			return fmt.Errorf("failed to read client signer keystore password file: %w", err)
+		}
+		cfg.Client.SignerECDSAKeystorePassword = string(data)
 	}
 	logger.Info("Starting client")
 	client, err := network.NewClient(&cfg.Client, &cfg.RpcClient)

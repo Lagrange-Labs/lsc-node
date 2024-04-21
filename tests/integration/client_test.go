@@ -9,6 +9,7 @@ import (
 	"github.com/stretchr/testify/suite"
 
 	"github.com/Lagrange-Labs/lagrange-node/config"
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/testutil/operations"
@@ -26,16 +27,27 @@ type ClientTestSuite struct {
 func (suite *ClientTestSuite) SetupTest() {
 	cfg, err := config.Default()
 	suite.Require().NoError(err)
+
+	dir := suite.T().TempDir()
+	ecdsaKeyPath := dir + "/ecdsa.key"
+	err = crypto.SaveKey("ECDSA", utils.Hex2Bytes("0xb126ae5e3d88007081b76024477b854ca4f808d48be1e22fe763822bc0c17cb3"), "password", ecdsaKeyPath)
+	suite.Require().NoError(err)
+	blsKeyPath := dir + "/bls.key"
+	err = crypto.SaveKey("BN254", utils.Hex2Bytes("0x00000000000000000000000000000000000000000000000000000000499602d7"), "password", blsKeyPath)
+	suite.Require().NoError(err)
+
 	suite.cfg = network.ClientConfig{
-		GrpcURL:            "127.0.0.1:9090",
-		Chain:              "mock",
-		EthereumURL:        "http://localhost:8545",
-		BLSPrivateKey:      "0x00000000000000000000000000000000000000000000000000000000499602d7",
-		ECDSAPrivateKey:    "0xb126ae5e3d88007081b76024477b854ca4f808d48be1e22fe763822bc0c17cb3",
-		OperatorAddress:    "0x13cF11F76a08214A826355a1C8d661E41EA7Bf97",
-		CommitteeSCAddress: cfg.Client.CommitteeSCAddress,
-		PullInterval:       utils.TimeDuration(2 * time.Second),
-		BLSCurve:           "BN254",
+		GrpcURL:                     "127.0.0.1:9090",
+		Chain:                       "mock",
+		EthereumURL:                 "http://localhost:8545",
+		BLSKeystorePath:             blsKeyPath,
+		BLSKeystorePassword:         "password",
+		SignerECDSAKeystorePath:     ecdsaKeyPath,
+		SignerECDSAKeystorePassword: "password",
+		OperatorAddress:             "0x13cF11F76a08214A826355a1C8d661E41EA7Bf97",
+		CommitteeSCAddress:          cfg.Client.CommitteeSCAddress,
+		PullInterval:                utils.TimeDuration(2 * time.Second),
+		BLSCurve:                    "BN254",
 	}
 	suite.manager, err = operations.NewManager()
 	suite.Require().NoError(err)

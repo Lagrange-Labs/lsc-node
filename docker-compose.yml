@@ -51,134 +51,146 @@ services:
     environment:
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_STORE_DBPATH=mongodb://192.168.20.101:27017
-  simnode0:
+  simnode1:
     container_name: node0
     image: lagrange-node
     environment:
       - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.42s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x516D6C27C23CEd21BF7930E2a01F0BcA9A141a0d
-      - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x00000000000000000000000000000000000000000000000000000000499602d4
-      - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0x232d99bc62cf95c358fb496e9f820ec299f43417397cea32f9f365daf4748429
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_1.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_1.json
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.4
-    ports:
-      - 6060:6060
+    volumes:
+      - ./testutil/vector/config:/app/config
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
-  simnode1:
+      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+  simnode2:
     container_name: node1
     image: lagrange-node
     environment:
       - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.5s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x4d694DE17246086d6451D732Ea8EA2a9a76dC997
-      - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x00000000000000000000000000000000000000000000000000000000499602d5
-      - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0x25f536330df3a72fa381bfb5ea5552b2731523f08580e7a0e2e69618a9643faa
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_2.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_2.json
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.5
+    volumes:
+      - ./testutil/vector/config:/app/config
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
-  simnode2:
+      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+  simnode3:
     container_name: node2
     image: lagrange-node
     environment:
       - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.43s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x5d51B4c1fb0c67d0e1274EC96c1B895F45505a3D
-      - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x00000000000000000000000000000000000000000000000000000000499602d6
-      - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0xc262364335471942e02e79d760d1f5c5ad7a34463303851cacdd15d72e68b228
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_3.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_3.json
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.6
+    volumes:
+      - ./testutil/vector/config:/app/config
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
-  simnode3:
+      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+  simnode4:
     container_name: node3
     image: lagrange-node
     environment:
       - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.35s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x13cF11F76a08214A826355a1C8d661E41EA7Bf97
-      - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x00000000000000000000000000000000000000000000000000000000499602d7
-      - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0xb126ae5e3d88007081b76024477b854ca4f808d48be1e22fe763822bc0c17cb3
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_4.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_4.json
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.7
+    volumes:
+      - ./testutil/vector/config:/app/config
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
-  simnode4:
+      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+  simnode5:
     container_name: node4
     image: lagrange-node
     environment:
       - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.23s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0xBD2369a9535751004617bC47cB0BF8Ea5c35Ed7C
-      - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x00000000000000000000000000000000000000000000000000000000499602d8
-      - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0x220ecb0a36b61b15a3af292c4520a528395edc51c8d41db30c74382a4af4328d
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_5.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_5.json
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.8
+    volumes:
+      - ./testutil/vector/config:/app/config
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
-  simnode5:
+      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+  simnode6:
     container_name: node5
     image: lagrange-node
     environment:
       - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.38s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x83070c799c0d41526D4c71e462557CdbB2C750AC
-      - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x00000000000000000000000000000000000000000000000000000000499602d9
-      - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0x2a1b271106503777361139b2d28c3f360ce980e2dab0c18f4684d5b417ac46b3
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_6.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_6.json
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.9
+    volumes:
+      - ./testutil/vector/config:/app/config
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
-  simnode6:
+      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+  simnode7:
     container_name: node6
     image: lagrange-node
     environment:
       - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.47s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x7365666466f97E8aBBEE8900925521e0469A1f25
-      - LAGRANGE_NODE_CLIENT_BLSPRIVATEKEY=0x00000000000000000000000000000000000000000000000000000000499602da
-      - LAGRANGE_NODE_CLIENT_ECDSAPRIVATEKEY=0x311fb4aa77facbc0debb6d9d88d3b4047115d905a4ff7b4399fc164494a75e3c
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_7.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_7.json
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.10
+    volumes:
+      - ./testutil/vector/config:/app/config
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
+      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
   lagrangesc:
     container_name: lagrange-smart-contract
     image: lagrangelabs/lagrange-contracts:v2

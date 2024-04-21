@@ -73,6 +73,9 @@ benchmark:
 .PHONY: benchmark
 
 # Local testnet
+create-keystore:
+	go run ./testutil/chainconfig/cmd/...
+
 localnet-start: stop 
 	docker compose -f docker-compose.yml up -d mongo
 	docker compose -f docker-compose.yml up -d lagrangesc
@@ -81,18 +84,18 @@ localnet-start: stop
 	docker compose -f docker-compose.yml up -d simsequencer
 	docker compose -f docker-compose.yml up -d simavs-sync
 	sleep 3
-	docker compose -f docker-compose.yml up -d simnode0
 	docker compose -f docker-compose.yml up -d simnode1
 	docker compose -f docker-compose.yml up -d simnode2
 	docker compose -f docker-compose.yml up -d simnode3
 	docker compose -f docker-compose.yml up -d simnode4
 	docker compose -f docker-compose.yml up -d simnode5
 	docker compose -f docker-compose.yml up -d simnode6
+	docker compose -f docker-compose.yml up -d simnode7
 
 stop:
 	$(STOP)
 
-.PHONY: localnet-start stop
+.PHONY: create-keystore localnet-start stop
 
 # Useful and Test Scripts
 scgen: # Generate the go bindings for the smart contracts
