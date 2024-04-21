@@ -40,6 +40,11 @@ const (
 	PruningBlocks      = 1000
 )
 
+var (
+	// ErrBatchNotFinalized is returned when the current batch is not finalized yet.
+	ErrBatchNotFinalized = errors.New("the current batch is not finalized yet")
+)
+
 type PreviousBatchInfo struct {
 	NextCommitteeRoot string
 	L1BlockNumber     uint64
@@ -52,16 +57,16 @@ type Client struct {
 	committeeSC *committee.Committee
 	blsScheme   crypto.BLSScheme
 
-	chainID            uint32
-	blsPrivateKey      []byte
-	blsPublicKey       string
-	ecdsaPrivateKey    *ecdsa.PrivateKey
-	jwToken            string
-	stakeAddress       string
-	genesisBlockNumber uint64
-	pullInterval       time.Duration
-	committeeCache     *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
-	openL1BlockNumber  atomic.Uint64
+	chainID               uint32
+	blsPrivateKey         []byte
+	blsPublicKey          string
+	signerECDSAPrivateKey *ecdsa.PrivateKey
+	jwToken               string
+	stakeAddress          string
+	genesisBlockNumber    uint64
+	pullInterval          time.Duration
+	committeeCache        *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
+	openL1BlockNumber     atomic.Uint64
 
 	db         *goleveldb.DB
 	ctx        context.Context
@@ -103,13 +108,20 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	}
 
 	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
-	blsPriv := utils.Hex2Bytes(cfg.BLSPrivateKey)
+	blsPriv, err := crypto.LoadPrivateKey(crypto.CryptoCurve(cfg.BLSCurve), cfg.BLSKeystorePassword, cfg.BLSKeystorePath)
+	if err != nil {
+		logger.Fatalf("failed to load the bls keystore from %s: %v", cfg.BLSKeystorePath, err)
+	}
 	pubkey, err := blsScheme.GetPublicKey(blsPriv, false)
 	if err != nil {
 		logger.Fatalf("failed to get the bls public key: %v", err)
 	}
 
-	ecdsaPriv, err := ecrypto.HexToECDSA(strings.TrimPrefix(cfg.ECDSAPrivateKey, "0x"))
+	ecdsaPrivKey, err := crypto.LoadPrivateKey(crypto.CryptoCurve("ECDSA"), cfg.SignerECDSAKeystorePassword, cfg.SignerECDSAKeystorePath)
+	if err != nil {
+		logger.Fatalf("failed to load the ecdsa keystore from %s: %v", cfg.SignerECDSAKeystorePath, err)
+	}
+	ecdsaPriv, err := ecrypto.ToECDSA(ecdsaPrivKey)
 	if err != nil {
 		logger.Fatalf("failed to get the ecdsa private key: %v", err)
 	}
@@ -157,18 +169,18 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	ctx, cancel := context.WithCancel(context.Background())
 
 	c := &Client{
-		NetworkServiceClient: networkv2types.NewNetworkServiceClient(conn),
-		blsScheme:            blsScheme,
-		blsPrivateKey:        blsPriv,
-		blsPublicKey:         utils.Bytes2Hex(pubkey),
-		ecdsaPrivateKey:      ecdsaPriv,
-		stakeAddress:         cfg.OperatorAddress,
-		pullInterval:         time.Duration(cfg.PullInterval),
-		rpcClient:            rpcClient,
-		committeeSC:          committeeSC,
-		chainID:              chainID,
-		genesisBlockNumber:   uint64(params.GenesisBlock.Int64() - params.L1Bias.Int64()),
-		committeeCache:       lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
+		NetworkServiceClient:  networkv2types.NewNetworkServiceClient(conn),
+		blsScheme:             blsScheme,
+		blsPrivateKey:         blsPriv,
+		blsPublicKey:          utils.Bytes2Hex(pubkey),
+		signerECDSAPrivateKey: ecdsaPriv,
+		stakeAddress:          cfg.OperatorAddress,
+		pullInterval:          time.Duration(cfg.PullInterval),
+		rpcClient:             rpcClient,
+		committeeSC:           committeeSC,
+		chainID:               chainID,
+		genesisBlockNumber:    uint64(params.GenesisBlock.Int64() - params.L1Bias.Int64()),
+		committeeCache:        lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
 
 		db:         db,
 		ctx:        ctx,
@@ -209,29 +221,31 @@ func (c *Client) Start() error {
 				}
 				if errors.Is(err, ErrBatchNotFound) {
 					// if the batch is not found, set the begin block number to the L1 block number
-					logger.Infof("the batch is not found, set the begin block number to the L1 block number %d\n", batch.L1BlockNumber())
+					logger.Infof("the batch is not found, set the begin block number to the L1 block number %d", batch.L1BlockNumber())
 					c.rpcClient.SetBeginBlockNumber(batch.L1BlockNumber(), batch.BatchHeader.FromBlockNumber())
 					continue
 				}
 				if errors.Is(err, ErrBatchNotReady) {
-					logger.Infof("the batch is not ready yet\n")
+					logger.Infof("the batch is not ready yet")
 					continue
 				}
 
-				logger.Errorf("failed to get the current block: %v\n", err)
+				logger.Errorf("failed to get the current block: %v", err)
 				continue
 			}
 
 			if err := c.TryCommitBatch(batch); err != nil {
 				if errors.Is(err, ErrInvalidToken) {
 					c.TryJoinNetwork()
-					continue
+				} else if errors.Is(err, ErrBatchNotFinalized) {
+					logger.Infof("NOTE: the current batch is not finalized yet due to a lack of voting power. Please wait until getting enough voting power.")
+				} else {
+					logger.Errorf("failed to commit the batch: %v", err)
 				}
-				logger.Errorf("failed to commit the block: %v\n", err)
 				continue
 			}
 
-			logger.Infof("uploaded the signature up to block %d\n", batch.BatchHeader.ToBlockNumber())
+			logger.Infof("uploaded the signature up to block %d", batch.BatchHeader.ToBlockNumber())
 		}
 	}
 }
@@ -397,7 +411,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	fromBlockNumber := batch.BatchHeader.FromBlockNumber()
 	toBlockNumber := batch.BatchHeader.ToBlockNumber()
 	c.openL1BlockNumber.Store(batch.L1BlockNumber())
-	logger.Infof("got the batch the block number from %d to %d\n", fromBlockNumber, toBlockNumber)
+	logger.Infof("got the batch the block number from %d to %d", fromBlockNumber, toBlockNumber)
 
 	// verify the L1 block number
 	batchHeader, err := c.getBatchHeader(batch.L1BlockNumber(), fromBlockNumber)
@@ -497,7 +511,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 
 	// generate the ECDSA signature
 	msg := blsSignature.CommitHash()
-	sig, err := ecrypto.Sign(msg, c.ecdsaPrivateKey)
+	sig, err := ecrypto.Sign(msg, c.signerECDSAPrivateKey)
 	if err != nil {
 		return fmt.Errorf("failed to ecdsa sign the block: %v", err)
 	}
@@ -526,7 +540,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 		return fmt.Errorf("failed to get the response from the stream: %v", err)
 	}
 	if !res.Result {
-		return fmt.Errorf("the current batch is not finalized yet")
+		return ErrBatchNotFinalized
 	}
 
 	return nil

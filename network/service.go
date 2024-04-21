@@ -50,7 +50,7 @@ func NewSequencerService(storage storageInterface, consensus consensusInterface,
 
 // JoinNetwork is a method to join the attestation network.
 func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.JoinNetworkRequest) (*networkv2types.JoinNetworkResponse, error) {
-	logger.Infof("JoinNetwork request: %+v\n", req)
+	logger.Infof("JoinNetwork request: %+v", req)
 	// Verify signature
 	sigMessage := req.Signature
 	req.Signature = ""
@@ -94,7 +94,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.
 		return nil, err
 	}
 
-	logger.Infof("New node %v joined the network\n", req.StakeAddress)
+	logger.Infof("New node %v joined the network", req.StakeAddress)
 	prevBatch := s.consensus.GetPrevBatch()
 	return &networkv2types.JoinNetworkResponse{
 		Token:             token,
@@ -156,7 +156,9 @@ func (s *sequencerService) CommitBatch(req *networkv2types.CommitBatchRequest, s
 		select {
 		case <-timeoutCtx.Done():
 			logger.Warnf("Failed to commit the batch: %v err: %v", req.StakeAddress, timeoutCtx.Err())
-			return fmt.Errorf("failed to commit the batch: %v", timeoutCtx.Err())
+			return stream.Send(&networkv2types.CommitBatchResponse{
+				Result: false,
+			})
 		default:
 			if s.consensus.IsFinalized(batchNumber) {
 				return stream.Send(&networkv2types.CommitBatchResponse{

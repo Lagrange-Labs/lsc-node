@@ -10,3 +10,4 @@ __debug_bin
 
 # config
 config/output
+testutil/vector/config
