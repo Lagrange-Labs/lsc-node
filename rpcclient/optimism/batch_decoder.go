@@ -41,6 +41,10 @@ func (f *Fetcher) handleFrames() error {
 		})
 	)
 
+	defer func() {
+		f.done <- struct{}{}
+	}()
+
 	for framesRef := range f.chFramesRef {
 		blockRef := eth.L1BlockRef{Number: framesRef.L1BlockNumber}
 		for _, frame := range framesRef.Frames {

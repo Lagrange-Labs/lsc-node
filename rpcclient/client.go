@@ -1,6 +1,7 @@
 package rpcclient
 
 import (
+	"fmt"
 	"strings"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
@@ -27,6 +28,6 @@ func NewClient(chain string, cfg *Config) (types.RpcClient, error) {
 	case "mock":
 		return mock.NewClient(cfg.Mock)
 	default:
-		return nil, nil
+		return nil, fmt.Errorf("unsupported chain: %s", chain)
 	}
 }
