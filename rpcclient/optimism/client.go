@@ -20,8 +20,6 @@ type Client struct {
 
 // NewClient creates a new Client instance.
 func NewClient(cfg *Config) (*Client, error) {
-	logger.Infof("creating rpc client for confg: %+v", cfg)
-
 	client, err := evmclient.NewClient(cfg.RPCURL)
 	if err != nil {
 		return nil, err
