@@ -193,7 +193,7 @@ services:
       - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
   lagrangesc:
     container_name: lagrange-smart-contract
-    image: lagrangelabs/lagrange-contracts:v2
+    image: lagrangelabs/lagrange-contracts:local
     networks:
       localnet:
         ipv4_address: 192.168.20.100
