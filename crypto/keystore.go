@@ -39,14 +39,14 @@ func SaveKey(curve CryptoCurve, privKey []byte, password, filePath string) error
 }
 
 // LoadPrivateKey loads the private key from the keystore file.
-func LoadPrivateKey(curve CryptoCurve, filePath, password string) ([]byte, error) {
+func LoadPrivateKey(curve CryptoCurve, password, filePath string) ([]byte, error) {
 	switch curve {
 	case CryptoCurve(BLS12381):
-		return loadBLSPrivateKey(filePath, password)
+		return loadBLSPrivateKey(password, filePath)
 	case CryptoCurve(BN254):
-		return loadBLSPrivateKey(filePath, password)
+		return loadBLSPrivateKey(password, filePath)
 	case "ECDSA":
-		pk, err := loadECDSAPrivateKey(filePath, password)
+		pk, err := loadECDSAPrivateKey(password, filePath)
 		if err != nil {
 			return nil, err
 		}
