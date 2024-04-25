@@ -3,6 +3,7 @@ package consensus
 import (
 	"context"
 	"encoding/json"
+	"path/filepath"
 	"sync"
 	"testing"
 	"time"
@@ -10,18 +11,23 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
+	"github.com/Lagrange-Labs/lagrange-node/testutil"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/stretchr/testify/require"
 	"github.com/umbracle/go-eth-consensus/bls"
 )
 
 func createTestState(t *testing.T) (*State, chan *sequencertypes.BlsSignature) {
-	priv, _ := utils.RandomBlsKey()
+	keystorePassword := "password"
+	keystorePath := filepath.Join(t.TempDir(), "bls.json")
+	err := testutil.GenerateRandomKeystore(string(crypto.BN254), keystorePassword, keystorePath)
+	require.NoError(t, err)
 	cfg := &Config{
-		ProposerPrivateKey: utils.BlsPrivKeyToHex(priv),
-		RoundLimit:         utils.TimeDuration(5 * time.Second),
-		RoundInterval:      utils.TimeDuration(2 * time.Second),
-		BLSCurve:           string(crypto.BN254),
+		ProposerBLSKeystorePath:     keystorePath,
+		ProposerBLSKeystorePassword: keystorePassword,
+		RoundLimit:                  utils.TimeDuration(5 * time.Second),
+		RoundInterval:               utils.TimeDuration(2 * time.Second),
+		BLSCurve:                    string(crypto.BN254),
 	}
 
 	memDB, err := memdb.NewMemDB()
