@@ -76,7 +76,7 @@ benchmark:
 create-keystore:
 	go run ./testutil/chainconfig/cmd/...
 
-localnet-start: stop 
+localnet-start: stop create-keystore
 	docker compose -f docker-compose.yml up -d mongo
 	docker compose -f docker-compose.yml up -d lagrangesc
 	sleep 3
