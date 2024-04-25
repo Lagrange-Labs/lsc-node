@@ -27,9 +27,9 @@ type encryptedBLSKey struct {
 // SaveKey saves the private key to the keystore file.
 func SaveKey(curve CryptoCurve, privKey []byte, password, filePath string) error {
 	switch curve {
-	case "BLS12381":
+	case CryptoCurve(BLS12381):
 		return saveBLSKey(BLS12381, privKey, password, filePath)
-	case "BN254":
+	case CryptoCurve(BN254):
 		return saveBLSKey(BN254, privKey, password, filePath)
 	case "ECDSA":
 		return saveECDSAKey(privKey, password, filePath)
@@ -39,14 +39,14 @@ func SaveKey(curve CryptoCurve, privKey []byte, password, filePath string) error
 }
 
 // LoadPrivateKey loads the private key from the keystore file.
-func LoadPrivateKey(curve CryptoCurve, filePath, password string) ([]byte, error) {
+func LoadPrivateKey(curve CryptoCurve, password, filePath string) ([]byte, error) {
 	switch curve {
-	case "BLS12381":
-		return loadBLSPrivateKey(filePath, password)
-	case "BN254":
-		return loadBLSPrivateKey(filePath, password)
+	case CryptoCurve(BLS12381):
+		return loadBLSPrivateKey(password, filePath)
+	case CryptoCurve(BN254):
+		return loadBLSPrivateKey(password, filePath)
 	case "ECDSA":
-		pk, err := loadECDSAPrivateKey(filePath, password)
+		pk, err := loadECDSAPrivateKey(password, filePath)
 		if err != nil {
 			return nil, err
 		}
