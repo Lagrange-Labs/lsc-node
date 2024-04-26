@@ -3,6 +3,7 @@ package consensus
 import (
 	"context"
 	"fmt"
+	"os"
 	"sync"
 	"time"
 
@@ -40,7 +41,17 @@ type State struct {
 
 // NewState returns a new State.
 func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
-	privKey := utils.Hex2Bytes(cfg.ProposerPrivateKey)
+	if len(cfg.ProposerBLSKeystorePasswordPath) > 0 {
+		password, err := os.ReadFile(cfg.ProposerBLSKeystorePasswordPath)
+		if err != nil {
+			logger.Fatalf("failed to read the bls keystore password from %s: %v", cfg.ProposerBLSKeystorePasswordPath, err)
+		}
+		cfg.ProposerBLSKeystorePasswordPath = string(password)
+	}
+	privKey, err := crypto.LoadPrivateKey(crypto.CryptoCurve(cfg.BLSCurve), cfg.ProposerBLSKeystorePassword, cfg.ProposerBLSKeystorePath)
+	if err != nil {
+		logger.Fatalf("failed to load the bls keystore from %s: %v", cfg.ProposerBLSKeystorePath, err)
+	}
 	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
 	pubKey, err := blsScheme.GetPublicKey(privKey, true)
 	if err != nil {

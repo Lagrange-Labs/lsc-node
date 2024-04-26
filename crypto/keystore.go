@@ -16,6 +16,10 @@ import (
 
 type CryptoCurve string
 
+const (
+	ECDSA CryptoCurve = "ECDSA"
+)
+
 // The encryptedBLSKey struct is used to store the encrypted BLS key.
 // For compatibility with the Eigenlayer keystore, use the same struct.
 // https://github.com/Layr-Labs/eigensdk-go/blob/master/crypto/bls/attestation.go
