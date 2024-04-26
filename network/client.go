@@ -107,16 +107,30 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		}
 	}
 
-	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
+	if len(cfg.BLSKeystorePasswordPath) > 0 {
+		password, err := os.ReadFile(cfg.BLSKeystorePasswordPath)
+		if err != nil {
+			logger.Fatalf("failed to read the bls keystore password from %s: %v", cfg.BLSKeystorePasswordPath, err)
+		}
+		cfg.BLSKeystorePassword = string(password)
+	}
 	blsPriv, err := crypto.LoadPrivateKey(crypto.CryptoCurve(cfg.BLSCurve), cfg.BLSKeystorePassword, cfg.BLSKeystorePath)
 	if err != nil {
 		logger.Fatalf("failed to load the bls keystore from %s: %v", cfg.BLSKeystorePath, err)
 	}
+	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
 	pubkey, err := blsScheme.GetPublicKey(blsPriv, false)
 	if err != nil {
 		logger.Fatalf("failed to get the bls public key: %v", err)
 	}
 
+	if len(cfg.SignerECDSAKeystorePasswordPath) > 0 {
+		password, err := os.ReadFile(cfg.SignerECDSAKeystorePasswordPath)
+		if err != nil {
+			logger.Fatalf("failed to read the ecdsa keystore password from %s: %v", cfg.SignerECDSAKeystorePasswordPath, err)
+		}
+		cfg.SignerECDSAKeystorePassword = string(password)
+	}
 	ecdsaPrivKey, err := crypto.LoadPrivateKey(crypto.CryptoCurve("ECDSA"), cfg.SignerECDSAKeystorePassword, cfg.SignerECDSAKeystorePath)
 	if err != nil {
 		logger.Fatalf("failed to load the ecdsa keystore from %s: %v", cfg.SignerECDSAKeystorePath, err)

@@ -1,13 +1,18 @@
 package operations
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/Lagrange-Labs/lagrange-node/config"
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
+	"github.com/Lagrange-Labs/lagrange-node/testutil"
 )
 
 // Manager is a struct for test operations.
@@ -44,23 +49,17 @@ func NewManager() (*Manager, error) {
 
 // RunServer runs a new server instance.
 func (m *Manager) RunServer() {
+	keystorePath := filepath.Join(os.TempDir(), "bls.json")
+	if err := testutil.GenerateRandomKeystore(string(crypto.BN254), "password", keystorePath); err != nil {
+		panic(err)
+	}
+	m.cfg.Consensus.ProposerBLSKeystorePath = keystorePath
 	state := consensus.NewState(&m.cfg.Consensus, m.Storage, m.chainID)
 	go state.OnStart()
 	go func() {
 		if err := network.RunServer(&m.cfg.Server, m.Storage, state, m.chainID); err != nil {
 			panic(err)
 		}
-	}()
-}
-
-// RunClient runs a new client instance.
-func (m *Manager) RunClient(clientCfg *network.ClientConfig) {
-	client, err := network.NewClient(clientCfg, &m.cfg.RpcClient)
-	if err != nil {
-		panic(err)
-	}
-	go func() {
-		_ = client.Start()
 	}()
 }
 

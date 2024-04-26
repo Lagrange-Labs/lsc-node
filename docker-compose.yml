@@ -59,7 +59,9 @@ services:
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.42s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x516D6C27C23CEd21BF7930E2a01F0BcA9A141a0d
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_1.json
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPASSWORDPATH=/app/config/keystore_password
       - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_1.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPASSWORDPATH=/app/config/keystore_password
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
@@ -70,7 +72,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+      - "/app/lagrange-node run-client"
   simnode2:
     container_name: node1
     image: lagrange-node
@@ -79,7 +81,9 @@ services:
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.5s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x4d694DE17246086d6451D732Ea8EA2a9a76dC997
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_2.json
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPASSWORDPATH=/app/config/keystore_password
       - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_2.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPASSWORDPATH=/app/config/keystore_password
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
@@ -90,7 +94,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+      - "/app/lagrange-node run-client"
   simnode3:
     container_name: node2
     image: lagrange-node
@@ -99,7 +103,9 @@ services:
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.43s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x5d51B4c1fb0c67d0e1274EC96c1B895F45505a3D
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_3.json
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPASSWORDPATH=/app/config/keystore_password
       - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_3.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPASSWORDPATH=/app/config/keystore_password
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
@@ -110,7 +116,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+      - "/app/lagrange-node run-client"
   simnode4:
     container_name: node3
     image: lagrange-node
@@ -119,7 +125,9 @@ services:
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.35s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x13cF11F76a08214A826355a1C8d661E41EA7Bf97
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_4.json
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPASSWORDPATH=/app/config/keystore_password
       - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_4.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPASSWORDPATH=/app/config/keystore_password
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
@@ -130,7 +138,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+      - "/app/lagrange-node run-client"
   simnode5:
     container_name: node4
     image: lagrange-node
@@ -139,7 +147,9 @@ services:
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.23s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0xBD2369a9535751004617bC47cB0BF8Ea5c35Ed7C
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_5.json
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPASSWORDPATH=/app/config/keystore_password
       - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_5.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPASSWORDPATH=/app/config/keystore_password
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
@@ -150,7 +160,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+      - "/app/lagrange-node run-client"
   simnode6:
     container_name: node5
     image: lagrange-node
@@ -159,7 +169,10 @@ services:
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.38s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x83070c799c0d41526D4c71e462557CdbB2C750AC
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_6.json
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPASSWORD=password
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPASSWORDPATH=/app/config/keystore_password
       - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_6.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPASSWORDPATH=/app/config/keystore_password
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
@@ -170,7 +183,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+      - "/app/lagrange-node run-client"
   simnode7:
     container_name: node6
     image: lagrange-node
@@ -179,7 +192,9 @@ services:
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.47s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x7365666466f97E8aBBEE8900925521e0469A1f25
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_7.json
+      - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPASSWORD=password_localtest
       - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPATH=/app/config/ecdsa_7.json
+      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPASSWORD=password_localtest
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
@@ -190,7 +205,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client --ecdsa-pass-path /app/config/keystore_password --bls-pass-path /app/config/keystore_password"
+      - "/app/lagrange-node run-client"
   lagrangesc:
     container_name: lagrange-smart-contract
     image: lagrangelabs/lagrange-contracts:local

@@ -26,10 +26,14 @@ type ClientConfig struct {
 	BLSKeystorePath string `mapstructure:"BLSKeystorePath"`
 	// BLSKeystorePassword is the password of the BLS keystore file
 	BLSKeystorePassword string `mapstructure:"BLSKeystorePassword"`
+	// BLSKeystorePasswordPath is the path of the password file of the BLS keystore file
+	BLSKeystorePasswordPath string `mapstructure:"BLSKeystorePasswordPath"`
 	// SignerECDSAKeystorePath is the path of the ECDSA keystore file
 	SignerECDSAKeystorePath string `mapstructure:"SignerECDSAKeystorePath"`
 	// SignerECDSAKeystorePassword is the password of the ECDSA keystore file
 	SignerECDSAKeystorePassword string `mapstructure:"SignerECDSAKeystorePassword"`
+	// SignerECDSAKeystorePasswordPath is the path of the password file of the ECDSA keystore file
+	SignerECDSAKeystorePasswordPath string `mapstructure:"SignerECDSAKeystorePasswordPath"`
 	// PullInterval is the interval to pull the latest proof
 	PullInterval utils.TimeDuration `mapstructure:"PullInterval"`
 	// BLSCurve is the curve used for BLS signature
