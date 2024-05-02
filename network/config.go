@@ -22,10 +22,18 @@ type ClientConfig struct {
 	EthereumURL string `mapstructure:"EthereumURL"`
 	// CommitteeSCAddress is the address of the committee smart contract
 	CommitteeSCAddress string `mapstructure:"CommitteeSCAddress"`
-	// BLSPrivateKey is the private key of the client node
-	BLSPrivateKey string `mapstructure:"BLSPrivateKey"`
-	// ECDSAPrivateKey is the private key of the client node
-	ECDSAPrivateKey string `mapstructure:"ECDSAPrivateKey"`
+	// BLSPrivateKeyPath is the path of the BLS keystore file
+	BLSKeystorePath string `mapstructure:"BLSKeystorePath"`
+	// BLSKeystorePassword is the password of the BLS keystore file
+	BLSKeystorePassword string `mapstructure:"BLSKeystorePassword"`
+	// BLSKeystorePasswordPath is the path of the password file of the BLS keystore file
+	BLSKeystorePasswordPath string `mapstructure:"BLSKeystorePasswordPath"`
+	// SignerECDSAKeystorePath is the path of the ECDSA keystore file
+	SignerECDSAKeystorePath string `mapstructure:"SignerECDSAKeystorePath"`
+	// SignerECDSAKeystorePassword is the password of the ECDSA keystore file
+	SignerECDSAKeystorePassword string `mapstructure:"SignerECDSAKeystorePassword"`
+	// SignerECDSAKeystorePasswordPath is the path of the password file of the ECDSA keystore file
+	SignerECDSAKeystorePasswordPath string `mapstructure:"SignerECDSAKeystorePasswordPath"`
 	// PullInterval is the interval to pull the latest proof
 	PullInterval utils.TimeDuration `mapstructure:"PullInterval"`
 	// BLSCurve is the curve used for BLS signature

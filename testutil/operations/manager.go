@@ -1,13 +1,18 @@
 package operations
 
 import (
+	"os"
+	"path/filepath"
+
 	"github.com/Lagrange-Labs/lagrange-node/config"
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
+	"github.com/Lagrange-Labs/lagrange-node/testutil"
 )
 
 // Manager is a struct for test operations.
@@ -44,6 +49,11 @@ func NewManager() (*Manager, error) {
 
 // RunServer runs a new server instance.
 func (m *Manager) RunServer() {
+	keystorePath := filepath.Join(os.TempDir(), "bls.json")
+	if err := testutil.GenerateRandomKeystore(string(crypto.BN254), "password", keystorePath); err != nil {
+		panic(err)
+	}
+	m.cfg.Consensus.ProposerBLSKeystorePath = keystorePath
 	state := consensus.NewState(&m.cfg.Consensus, m.Storage, m.chainID)
 	go state.OnStart()
 	go func() {
@@ -51,36 +61,6 @@ func (m *Manager) RunServer() {
 			panic(err)
 		}
 	}()
-}
-
-// RunClient runs a new client instance.
-func (m *Manager) RunClient(clientCfg *network.ClientConfig) {
-	client, err := network.NewClient(clientCfg, &m.cfg.RpcClient)
-	if err != nil {
-		panic(err)
-	}
-	go func() {
-		_ = client.Start()
-	}()
-}
-
-// RunClients runs several client instances.
-func (m *Manager) RunClients() {
-	// client1
-	clientCfg1 := m.cfg.Client
-	clientCfg1.BLSPrivateKey = "0x0642cf177a12c962938366d7c2d286f49806625831aaed8e861405bfdd1f654a"
-	clientCfg1.ECDSAPrivateKey = "0x220ecb0a36b61b15a3af292c4520a528395edc51c8d41db30c74382a4af4328d"
-	m.RunClient(&clientCfg1)
-	// client2
-	clientCfg2 := m.cfg.Client
-	clientCfg2.BLSPrivateKey = "0x475e7dc95f40ba8e5af29adb745ae3ac5d3404575b0f853c73ed1efa46943fc2"
-	clientCfg2.ECDSAPrivateKey = "0x25f536330df3a72fa381bfb5ea5552b2731523f08580e7a0e2e69618a9643faa"
-	m.RunClient(&clientCfg2)
-	// client3
-	clientCfg3 := m.cfg.Client
-	clientCfg3.BLSPrivateKey = "0x59ec5a675fa5a9805d791c58c97a3dcc0bc8def2029bd53aa33dc035f2b81404"
-	clientCfg3.ECDSAPrivateKey = "0xc262364335471942e02e79d760d1f5c5ad7a34463303851cacdd15d72e68b228"
-	m.RunClient(&clientCfg3)
 }
 
 // RunSequencer runs a new sequencer instance.

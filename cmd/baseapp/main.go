@@ -47,7 +47,9 @@ func main() {
 	flags := []cli.Flag{
 		&configFileFlag,
 	}
-
+	clientFlags := []cli.Flag{
+		&configFileFlag,
+	}
 	app.Commands = []*cli.Command{
 		{
 			Name:    "version",
@@ -67,7 +69,7 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Run the lagrange client node",
 			Action:  runClient,
-			Flags:   flags,
+			Flags:   clientFlags,
 		},
 		{
 			Name:    "run-sequencer",
@@ -129,7 +131,9 @@ func runClient(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
 	logger.Info("Starting client")
+
 	client, err := network.NewClient(&cfg.Client, &cfg.RpcClient)
 	if err != nil {
 		return err

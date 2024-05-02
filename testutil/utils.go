@@ -1,48 +1,39 @@
 package testutil
 
 import (
-	"context"
-	"math/big"
+	"fmt"
 
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
+	ecrypto "github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
 )
 
-const (
-	optintoSig = "0xf73b7519"
-)
-
-// RegisterOperator registers an operator to the lagrange service.
-func RegisterOperator(client *ethclient.Client, auth *bind.TransactOpts, stakeAddr, slasherAddr common.Address) error {
-	nonce, err := client.PendingNonceAt(context.Background(), auth.From)
-	if err != nil {
-		return err
-	}
-	gasLimit := uint64(3000000)
-	gasPrice, err := client.SuggestGasPrice(context.Background())
-	if err != nil {
-		return err
-	}
-	addrHex := stakeAddr.Hex()
-	callData := append(common.FromHex(optintoSig), addrHex[:]...)
-
-	tx := types.NewTransaction(
-		nonce,
-		slasherAddr,
-		big.NewInt(0),
-		gasLimit,
-		gasPrice,
-		callData,
+// GenerateRandomKeystore generates a random keystore.
+func GenerateRandomKeystore(curve string, password string, path string) error {
+	var (
+		privKey []byte
+		err     error
 	)
-	signedTx, err := auth.Signer(auth.From, tx)
-	if err != nil {
-		return err
-	}
-	if err := client.SendTransaction(context.Background(), signedTx); err != nil {
-		return err
+	switch curve {
+	case string(crypto.BN254):
+		blsScheme := crypto.NewBLSScheme(crypto.BN254)
+		privKey, err = blsScheme.GenerateRandomKey()
+		if err != nil {
+			return err
+		}
+	case string(crypto.BLS12381):
+		blsScheme := crypto.NewBLSScheme(crypto.BLS12381)
+		privKey, err = blsScheme.GenerateRandomKey()
+		if err != nil {
+			return err
+		}
+	case string(crypto.ECDSA):
+		privateKey, err := ecrypto.GenerateKey()
+		if err != nil {
+			return fmt.Errorf("failed to generate ECDSA key: %w", err)
+		}
+		privKey = ecrypto.FromECDSA(privateKey)
 	}
 
-	return nil
+	return crypto.SaveKey(crypto.CryptoCurve(curve), privKey, password, path)
 }
