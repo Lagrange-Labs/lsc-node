@@ -6,6 +6,7 @@ import (
 	"errors"
 	"os"
 	"path/filepath"
+	"strings"
 
 	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
@@ -58,6 +59,15 @@ func LoadPrivateKey(curve CryptoCurve, password, filePath string) ([]byte, error
 	default:
 		return nil, errors.New("invalid curve")
 	}
+}
+
+// ReadKeystorePasswordFromFile reads the password from the password file.
+func ReadKeystorePasswordFromFile(passwordFilePath string) (string, error) {
+	password, err := os.ReadFile(passwordFilePath)
+	if err != nil {
+		return "", err
+	}
+	return strings.TrimSpace(string(password)), nil
 }
 
 func saveBLSKey(curve BLSCurve, privKey []byte, password, filePath string) error {
