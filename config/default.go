@@ -56,6 +56,7 @@ StakingCheckInterval = "2s"
 [Consensus]
 ProposerBLSKeystorePath = "./testutil/vector/config/bls_0.json"
 ProposerBLSKeystorePassword = "password"
+ProposerBLSKeystorePasswordPath = ""
 RoundInterval = "500ms"
 RoundLimit = "30s"
 BLSCurve = "BN254"
