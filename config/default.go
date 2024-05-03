@@ -60,4 +60,8 @@ ProposerBLSKeystorePasswordPath = ""
 RoundInterval = "500ms"
 RoundLimit = "30s"
 BLSCurve = "BN254"
+
+[Telemetry]
+ServiceName = "lagrange-node"
+PrometheusRetentionTime = "60s"
 `

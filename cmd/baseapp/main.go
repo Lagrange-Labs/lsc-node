@@ -9,6 +9,7 @@ import (
 	"os/signal"
 	"runtime"
 
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli/v2"
 
 	"github.com/Lagrange-Labs/lagrange-node/config"
@@ -18,6 +19,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/store"
+	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 )
 
 var (
@@ -31,13 +33,23 @@ var (
 
 // TODO: use an environment variable to enable/disable debug mode
 const DEBUG_MODE = false
+const METRICS_ENABLED = true
 
 func main() {
 	// Start an HTTP server for pprof profiling data.
 	if DEBUG_MODE {
 		logger.Info("Starting pprof server on 6060")
 		go func() {
-			log.Println(http.ListenAndServe("0.0.0.0:6060", nil))
+			log.Println(http.ListenAndServe(":6060", nil))
+		}()
+	}
+
+	// Start an HTTP server for prometheus metrics.
+	if METRICS_ENABLED {
+		logger.Info("Starting prometheus server on 8080")
+		go func() {
+			http.Handle("/metrics", promhttp.Handler())
+			log.Println(http.ListenAndServe(":8080", nil))
 		}()
 	}
 
@@ -93,7 +105,13 @@ func runServer(ctx *cli.Context) error {
 	if err != nil {
 		return err
 	}
+
+	if err := initMetrics(cfg.Telemetry, "server"); err != nil {
+		return fmt.Errorf("failed to initialize metrics: %w", err)
+	}
+
 	logger.Infof("Starting server with config: %v", cfg.Server)
+
 	storage, err := store.NewStorage(&cfg.Store)
 	if err != nil {
 		return err
@@ -132,6 +150,10 @@ func runClient(ctx *cli.Context) error {
 		return err
 	}
 
+	if err := initMetrics(cfg.Telemetry, "client"); err != nil {
+		return fmt.Errorf("failed to initialize metrics: %w", err)
+	}
+
 	logger.Info("Starting client")
 
 	client, err := network.NewClient(&cfg.Client, &cfg.RpcClient)
@@ -153,11 +175,17 @@ func runSequencer(ctx *cli.Context) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
+	if err := initMetrics(cfg.Telemetry, "sequencer"); err != nil {
+		return fmt.Errorf("failed to initialize metrics: %w", err)
+	}
+
+	logger.Info("Starting sequencer")
+
 	storage, err := store.NewStorage(&cfg.Store)
 	if err != nil {
 		return fmt.Errorf("failed to create storage: %w", err)
 	}
-	logger.Info("Starting sequencer")
+
 	sequencer, err := sequencer.NewSequencer(&cfg.Sequencer, &cfg.RpcClient, storage)
 	if err != nil {
 		return fmt.Errorf("failed to create sequencer: %w", err)
@@ -166,6 +194,17 @@ func runSequencer(ctx *cli.Context) error {
 		return fmt.Errorf("failed to start sequencer: %w", err)
 	}
 
+	return nil
+}
+
+func initMetrics(cfg telemetry.Config, module string) error {
+	logger.Infof("Initializing metrics with config: %+v", cfg)
+	if cfg.PrometheusRetentionTime > 0 {
+		if err := telemetry.NewGlobal(cfg); err != nil {
+			return err
+		}
+		telemetry.SetLabel(telemetry.NewLabel("module", module))
+	}
 	return nil
 }
 
