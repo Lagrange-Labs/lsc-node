@@ -284,9 +284,6 @@ func (c *Client) TryJoinNetwork() {
 }
 
 func (c *Client) joinNetwork() error {
-	now := time.Now()
-	defer telemetry.MeasureSince(now, "client", "join_network")
-
 	req := &networkv2types.JoinNetworkRequest{
 		PublicKey:    c.blsPublicKey,
 		StakeAddress: c.stakeAddress,
@@ -300,6 +297,7 @@ func (c *Client) joinNetwork() error {
 		return fmt.Errorf("failed to sign the request: %v", err)
 	}
 	req.Signature = utils.Bytes2Hex(sig)
+	now := time.Now()
 	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
 	if err != nil {
 		return fmt.Errorf("failed to join the network: %v", err)
@@ -307,6 +305,7 @@ func (c *Client) joinNetwork() error {
 	if len(res.Token) == 0 {
 		return fmt.Errorf("the token is empty")
 	}
+	telemetry.MeasureSince(now, "client", "join_network_request")
 
 	c.jwToken = res.Token
 
@@ -418,8 +417,6 @@ func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 // TryGetBatch tries to get the batch from the network.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	now := time.Now()
-	defer telemetry.MeasureSince(now, "client", "try_get_batch")
-
 	res, err := c.GetBatch(context.Background(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
@@ -427,10 +424,11 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 		}
 		return nil, err
 	}
-
 	if res.Batch == nil {
 		return nil, ErrBatchNotReady
 	}
+	telemetry.MeasureSince(now, "client", "get_batch_request")
+
 	batch := res.Batch
 	fromBlockNumber := batch.BatchHeader.FromBlockNumber()
 	toBlockNumber := batch.BatchHeader.ToBlockNumber()
