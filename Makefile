@@ -68,6 +68,14 @@ run-avs-sync:
 	docker compose -f docker-compose.yml up -d simavs-sync
 .PHONY: run-avs-sync
 
+run-prometheus:
+	docker compose -f docker-compose.yml up -d prometheus
+.PHONY: run-prometheus
+
+run-grafana:
+	docker compose -f docker-compose.yml up -d grafana
+.PHONY: run-grafana
+
 benchmark: 
 	go test -run=NOTEST -timeout=30m -benchmem  -bench=. ./...
 .PHONY: benchmark
@@ -91,6 +99,9 @@ localnet-start: stop create-keystore
 	docker compose -f docker-compose.yml up -d simnode5
 	docker compose -f docker-compose.yml up -d simnode6
 	docker compose -f docker-compose.yml up -d simnode7
+	sleep 3
+	docker compose -f docker-compose.yml up -d prometheus
+	docker compose -f docker-compose.yml up -d grafana
 
 stop:
 	$(STOP)
