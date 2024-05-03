@@ -7,6 +7,8 @@ services:
     networks:
       localnet:
         ipv4_address: 192.168.20.2
+    ports:
+      - 8082:8080
     command:
       - "/bin/sh"
       - "-c"
@@ -41,9 +43,12 @@ services:
     networks:
       localnet:
         ipv4_address: 192.168.20.3
+    volumes:
+      - ./testutil/vector/config:/app/config
     ports:
       - 9090:9090
       - 6061:6060
+      - 8083:8080
     command:
       - "/bin/sh"
       - "-c"
@@ -51,6 +56,8 @@ services:
     environment:
       - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
       - LAGRANGE_NODE_STORE_DBPATH=mongodb://192.168.20.101:27017
+      - LAGRANGE_NODE_CONSENSUS_PROPOSERBLSKEYSTOREPATH=/app/config/bls_0.json
+      - LAGRANGE_NODE_CONSENSUS_PROPOSERBLSKEYSTOREPASSWORD=password_localtest
   simnode1:
     container_name: node0
     image: lagrange-node
@@ -69,6 +76,8 @@ services:
         ipv4_address: 192.168.20.4
     volumes:
       - ./testutil/vector/config:/app/config
+    ports:
+      - 8084:8080
     command:
       - "/bin/sh"
       - "-c"
@@ -222,6 +231,26 @@ services:
         ipv4_address: 192.168.20.101
     ports:
       - "27017:27017"
+  prometheus:
+    container_name: prometheus
+    image: prom/prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    command:
+      - "--config.file=/etc/prometheus/prometheus.yml"
+    ports:
+      - "9091:9090"
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.102
+  grafana:
+    container_name: grafana
+    image: grafana/grafana-enterprise
+    ports:
+      - "3000:3000"
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.103
 
 networks:
   localnet:

@@ -31,6 +31,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/store/goleveldb"
+	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -283,6 +284,9 @@ func (c *Client) TryJoinNetwork() {
 }
 
 func (c *Client) joinNetwork() error {
+	now := time.Now()
+	defer telemetry.MeasureSince(now, "client", "join_network")
+
 	req := &networkv2types.JoinNetworkRequest{
 		PublicKey:    c.blsPublicKey,
 		StakeAddress: c.stakeAddress,
@@ -373,6 +377,9 @@ func (c *Client) getPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (u
 
 // getBatchHeader gets the batch header from the database.
 func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
+	now := time.Now()
+	defer telemetry.MeasureSince(now, "client", "get_batch_header")
+
 	prefix := make([]byte, 8)
 	binary.BigEndian.PutUint64(prefix, l1BlockNumber)
 
@@ -410,6 +417,9 @@ func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 
 // TryGetBatch tries to get the batch from the network.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
+	now := time.Now()
+	defer telemetry.MeasureSince(now, "client", "try_get_batch")
+
 	res, err := c.GetBatch(context.Background(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
@@ -516,6 +526,9 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 
 // TryCommitBatch tries to commit the signature to the network.
 func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
+	now := time.Now()
+	defer telemetry.MeasureSince(now, "client", "try_commit_batch")
+
 	blsSignature := batch.BlsSignature()
 	blsSig, err := c.blsScheme.Sign(c.blsPrivateKey, blsSignature.Hash())
 	if err != nil {
