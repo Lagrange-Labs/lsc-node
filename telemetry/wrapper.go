@@ -25,14 +25,26 @@ func IncrCounterWithLabels(keys []string, val float32, labels []metrics.Label) {
 
 // SetGauge provides a wrapper functionality for emitting a gauge metric with
 // global labels (if any).
-func SetGauge(val float32, keys ...string) {
-	metrics.SetGaugeWithLabels(keys, val, globalLabels)
+func SetGauge(val float64, keys ...string) {
+	metrics.SetPrecisionGaugeWithLabels(keys, val, globalLabels)
 }
 
 // SetGaugeWithLabels provides a wrapper functionality for emitting a gauge
 // metric with global labels (if any) along with the provided labels.
-func SetGaugeWithLabels(keys []string, val float32, labels []metrics.Label) {
-	metrics.SetGaugeWithLabels(keys, val, append(labels, globalLabels...))
+func SetGaugeWithLabels(keys []string, val float64, labels []metrics.Label) {
+	metrics.SetPrecisionGaugeWithLabels(keys, val, append(labels, globalLabels...))
+}
+
+// AddSample provides a wrapper functionality for emitting a sample metric with
+// global labels (if any).
+func AddSample(val float32, keys ...string) {
+	metrics.AddSampleWithLabels(keys, val, globalLabels)
+}
+
+// AddSampleWithLabels provides a wrapper functionality for emitting a sample
+// metric with global labels (if any) along with the provided labels.
+func AddSampleWithLabels(keys []string, val float32, labels []metrics.Label) {
+	metrics.AddSampleWithLabels(keys, val, append(labels, globalLabels...))
 }
 
 // MeasureSince provides a wrapper functionality for emitting a a time measure
