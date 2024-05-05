@@ -471,6 +471,8 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 		return nil, fmt.Errorf("failed to verify the proposer signature: %v", err)
 	}
 
+	telemetry.SetGauge(float64(batch.BatchNumber()), "client", "current_batch_number")
+
 	return batch, nil
 }
 
@@ -565,6 +567,9 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 	if !res.Result {
 		return ErrBatchNotFinalized
 	}
+
+	telemetry.SetGauge(float64(batch.BatchNumber()), "client", "commit_batch_number")
+	telemetry.AddSample(float32(batch.BatchNumber()), "client", "commit_batch_number_sample")
 
 	return nil
 }

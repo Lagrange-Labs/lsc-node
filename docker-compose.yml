@@ -248,6 +248,9 @@ services:
     image: grafana/grafana-enterprise
     ports:
       - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+      - GF_AUTH_ANONYMOUS_ENABLED=true
     networks:
       localnet:
         ipv4_address: 192.168.20.103

@@ -106,7 +106,7 @@ func runServer(ctx *cli.Context) error {
 		return err
 	}
 
-	if err := initMetrics(cfg.Telemetry, "server"); err != nil {
+	if err := initMetrics(cfg.Telemetry, fmt.Sprintf("server_%s", cfg.Sequencer.Chain)); err != nil {
 		return fmt.Errorf("failed to initialize metrics: %w", err)
 	}
 
@@ -150,7 +150,7 @@ func runClient(ctx *cli.Context) error {
 		return err
 	}
 
-	if err := initMetrics(cfg.Telemetry, "client"); err != nil {
+	if err := initMetrics(cfg.Telemetry, fmt.Sprintf("client_%s", cfg.Client.Chain)); err != nil {
 		return fmt.Errorf("failed to initialize metrics: %w", err)
 	}
 
@@ -175,7 +175,7 @@ func runSequencer(ctx *cli.Context) error {
 		return fmt.Errorf("failed to load config: %w", err)
 	}
 
-	if err := initMetrics(cfg.Telemetry, "sequencer"); err != nil {
+	if err := initMetrics(cfg.Telemetry, fmt.Sprintf("sequencer_%s", cfg.Sequencer.Chain)); err != nil {
 		return fmt.Errorf("failed to initialize metrics: %w", err)
 	}
 
@@ -198,8 +198,8 @@ func runSequencer(ctx *cli.Context) error {
 }
 
 func initMetrics(cfg telemetry.Config, module string) error {
-	logger.Infof("Initializing metrics with config: %+v", cfg)
 	if cfg.PrometheusRetentionTime > 0 {
+		logger.Info("Initializing metrics")
 		if err := telemetry.NewGlobal(cfg); err != nil {
 			return err
 		}
