@@ -124,7 +124,7 @@ func (rs *RoundState) CheckEnoughVotingPower(vs *ValidatorSet) bool {
 	if !result {
 		telemetry.SetGauge(float64(vs.GetValidatorCount()-votingCount), "consensus", "missing_count")
 	}
-	telemetry.SetGauge(float64(votingPower)/float64(vs.GetCommitteeVotingPower()), "consensus", "committed_voting_power_ratio")
+	telemetry.AddSample(float32(votingPower)/float32(vs.GetCommitteeVotingPower()), "consensus", "committed_voting_power_ratio")
 
 	return result
 }
