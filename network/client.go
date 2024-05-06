@@ -295,7 +295,7 @@ func (c *Client) joinNetwork() error {
 		return fmt.Errorf("failed to sign the request: %v", err)
 	}
 	req.Signature = utils.Bytes2Hex(sig)
-	now := time.Now()
+	ti := time.Now()
 	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
 	if err != nil {
 		return fmt.Errorf("failed to join the network: %v", err)
@@ -303,7 +303,7 @@ func (c *Client) joinNetwork() error {
 	if len(res.Token) == 0 {
 		return fmt.Errorf("the token is empty")
 	}
-	telemetry.MeasureSince(now, "client", "join_network_request")
+	telemetry.MeasureSince(ti, "client", "join_network_request")
 
 	c.jwToken = res.Token
 
@@ -374,8 +374,8 @@ func (c *Client) getPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (u
 
 // getBatchHeader gets the batch header from the database.
 func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
-	now := time.Now()
-	defer telemetry.MeasureSince(now, "client", "get_batch_header")
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "client", "get_batch_header")
 
 	prefix := make([]byte, 8)
 	binary.BigEndian.PutUint64(prefix, l1BlockNumber)
@@ -414,7 +414,7 @@ func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 
 // TryGetBatch tries to get the batch from the network.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
-	now := time.Now()
+	ti := time.Now()
 	res, err := c.GetBatch(context.Background(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
@@ -425,7 +425,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	if res.Batch == nil {
 		return nil, ErrBatchNotReady
 	}
-	telemetry.MeasureSince(now, "client", "get_batch_request")
+	telemetry.MeasureSince(ti, "client", "get_batch_request")
 
 	batch := res.Batch
 	fromBlockNumber := batch.BatchHeader.FromBlockNumber()
@@ -481,6 +481,9 @@ func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommi
 		return committeeData, nil
 	}
 
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "client", "get_committee")
+
 	committeeData, err := c.committeeSC.GetCommittee(nil, c.chainID, big.NewInt(int64(blockNumber)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the committee data: %v", err)
@@ -524,8 +527,8 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 
 // TryCommitBatch tries to commit the signature to the network.
 func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
-	now := time.Now()
-	defer telemetry.MeasureSince(now, "client", "try_commit_batch")
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "client", "try_commit_batch")
 
 	blsSignature := batch.BlsSignature()
 	blsSig, err := c.blsScheme.Sign(c.blsPrivateKey, blsSignature.Hash())
