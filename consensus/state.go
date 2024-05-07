@@ -165,6 +165,7 @@ func (s *State) OnStart() {
 				logger.Errorf("failed to update the batch %d: %v", s.fromBatchNumber, err)
 				return
 			}
+			telemetry.SetGauge(float64(len(batch.PubKeys)), "consensus", "committed_node_count")
 			logger.Infof("the batch number %d, L1 block number %d, upto L2 block number %d  is finalized", batch.BatchNumber(), batch.L1BlockNumber(), batch.BatchHeader.ToBlockNumber())
 		}
 
@@ -194,6 +195,7 @@ func (s *State) OnStart() {
 				s.blockedOperators[evidence.Operator] = struct{}{}
 			}
 		}
+		telemetry.SetGauge(float64(len(evidences)), "consensus", "evidence_count")
 
 		s.rwMutex.Lock()
 		telemetry.SetGauge(float64(s.fromBatchNumber), "consensus", "finalized_batch_number")
@@ -318,6 +320,8 @@ func (s *State) startRound(batchNumber uint64) error {
 
 	batch.CommitteeHeader.TotalVotingPower = currentCommittee.TotalVotingPower
 	s.validators = types.NewValidatorSet(currentCommittee.Operators, currentCommittee.TotalVotingPower)
+	telemetry.SetGauge(float64(len(currentCommittee.Operators)), "consensus", "committee_size")
+	telemetry.SetGauge(float64(currentCommittee.TotalVotingPower), "consensus", "committee_voting_power")
 
 	// generate a proposer signature
 	blsSigHash := batch.BlsSignature().Hash()
