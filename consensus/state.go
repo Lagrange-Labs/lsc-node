@@ -3,7 +3,6 @@ package consensus
 import (
 	"context"
 	"fmt"
-	"os"
 	"sync"
 	"time"
 
@@ -12,6 +11,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
+	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -42,11 +42,11 @@ type State struct {
 // NewState returns a new State.
 func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 	if len(cfg.ProposerBLSKeystorePasswordPath) > 0 {
-		password, err := os.ReadFile(cfg.ProposerBLSKeystorePasswordPath)
+		var err error
+		cfg.ProposerBLSKeystorePasswordPath, err = crypto.ReadKeystorePasswordFromFile(cfg.ProposerBLSKeystorePasswordPath)
 		if err != nil {
 			logger.Fatalf("failed to read the bls keystore password from %s: %v", cfg.ProposerBLSKeystorePasswordPath, err)
 		}
-		cfg.ProposerBLSKeystorePasswordPath = string(password)
 	}
 	privKey, err := crypto.LoadPrivateKey(crypto.CryptoCurve(cfg.BLSCurve), cfg.ProposerBLSKeystorePassword, cfg.ProposerBLSKeystorePath)
 	if err != nil {
@@ -142,7 +142,7 @@ func (s *State) OnStart() {
 			return
 		default:
 		}
-
+		ti := time.Now()
 		logger.Infof("start the round with batch number %v", s.fromBatchNumber)
 		if err := s.startRound(s.fromBatchNumber); err != nil {
 			logger.Errorf("failed to start the round: %v", err)
@@ -165,6 +165,7 @@ func (s *State) OnStart() {
 				logger.Errorf("failed to update the batch %d: %v", s.fromBatchNumber, err)
 				return
 			}
+			telemetry.SetGauge(float64(len(batch.PubKeys)), "consensus", "committed_node_count")
 			logger.Infof("the batch number %d, L1 block number %d, upto L2 block number %d  is finalized", batch.BatchNumber(), batch.L1BlockNumber(), batch.BatchHeader.ToBlockNumber())
 		}
 
@@ -194,11 +195,14 @@ func (s *State) OnStart() {
 				s.blockedOperators[evidence.Operator] = struct{}{}
 			}
 		}
+		telemetry.SetGauge(float64(len(evidences)), "consensus", "evidence_count")
 
 		s.rwMutex.Lock()
+		telemetry.SetGauge(float64(s.fromBatchNumber), "consensus", "finalized_batch_number")
 		s.previousBatch = s.round.GetCurrentBatch()
 		s.fromBatchNumber++
 		s.rwMutex.Unlock()
+		telemetry.MeasureSince(ti, "consensus", "round_duration")
 	}
 }
 
@@ -264,6 +268,9 @@ func (s *State) IsFinalized(batchNumber uint64) bool {
 
 // startRound loads the next batch and initializes the round state.
 func (s *State) startRound(batchNumber uint64) error {
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "consensus", "start_round")
+
 	s.rwMutex.Lock()
 	s.round = types.NewEmptyRoundState(s.blsScheme)
 	s.rwMutex.Unlock()
@@ -313,6 +320,8 @@ func (s *State) startRound(batchNumber uint64) error {
 
 	batch.CommitteeHeader.TotalVotingPower = currentCommittee.TotalVotingPower
 	s.validators = types.NewValidatorSet(currentCommittee.Operators, currentCommittee.TotalVotingPower)
+	telemetry.SetGauge(float64(len(currentCommittee.Operators)), "consensus", "committee_size")
+	telemetry.SetGauge(float64(currentCommittee.TotalVotingPower), "consensus", "committee_voting_power")
 
 	// generate a proposer signature
 	blsSigHash := batch.BlsSignature().Hash()
@@ -333,6 +342,9 @@ func (s *State) startRound(batchNumber uint64) error {
 
 // getNextBatch returns the next batch from the storage.
 func (s *State) getNextBatch(ctx context.Context, batchNumber uint64) (*sequencerv2types.Batch, error) {
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "consensus", "get_next_batch")
+
 	getBatch := func(batchNumber uint64) (*sequencerv2types.Batch, error) {
 		batch, err := s.storage.GetBatch(ctx, uint32(s.chainID), batchNumber)
 		if err == storetypes.ErrBatchNotFound {
@@ -372,6 +384,9 @@ func (s *State) getNextBatch(ctx context.Context, batchNumber uint64) (*sequence
 
 // processRound processes the round.
 func (s *State) processRound(ctx context.Context) bool {
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "consensus", "process_round")
+
 	checkCommit := func(round *types.RoundState) (bool, error) {
 		if round.CheckEnoughVotingPower(s.validators) {
 			round.BlockCommit()

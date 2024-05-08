@@ -8,6 +8,10 @@ import (
 	"math/big"
 	"time"
 
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
@@ -15,10 +19,8 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	v2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
+	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/ethereum/go-ethereum/accounts/abi/bind"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 const (
@@ -189,6 +191,7 @@ func (s *Sequencer) Start() error {
 		case <-s.ctx.Done():
 			return nil
 		default:
+			ti := time.Now()
 			batchHeader, err := s.rpcClient.NextBatch()
 			if err != nil {
 				logger.Errorf("failed to get batch header: %v", err)
@@ -201,6 +204,7 @@ func (s *Sequencer) Start() error {
 					continue
 				}
 			}
+			telemetry.MeasureSince(ti, "sequencer", "next_batch")
 
 			s.lastBatchNumber++
 			batchHeader.BatchNumber = s.lastBatchNumber
@@ -297,6 +301,9 @@ func (s *Sequencer) updateCommittee() error {
 
 // fetch the committee root from the committee smart contract.
 func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRoot, error) {
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "sequencer", "fetch_committee_root")
+
 	epochEndBlockNumber := (epochNumber+1)*s.committeeParams.Duration + s.committeeParams.StartBlock - 1
 	epochEndBlockNumber = uint64(int64(epochEndBlockNumber) - s.committeeParams.L1Bias)
 	committeeData, err := s.committeeSC.GetCommittee(nil, s.chainID, big.NewInt(int64(epochEndBlockNumber)))

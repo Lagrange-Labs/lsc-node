@@ -24,6 +24,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -179,6 +180,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 				time.Sleep(FetchInterval)
 				continue
 			}
+			ti := time.Now()
 			m := sync.Map{}
 			for i := lastSyncedL1BlockNumber; i < nextBlockNumber; i++ {
 				if err := ctx.Err(); err != nil {
@@ -201,6 +203,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			if err := g.Wait(); err != nil {
 				return err
 			}
+			telemetry.MeasureSince(ti, "rpc_optimism", "fetch_l1_blocks")
 			framesRefs := make([]*FramesRef, 0)
 			m.Range(func(_, ref interface{}) bool {
 				framesRefs = append(framesRefs, ref.(*FramesRef))
@@ -267,6 +270,7 @@ func (f *Fetcher) FetchL2Blocks() error {
 			if err := g.Wait(); err != nil {
 				return err
 			}
+			telemetry.MeasureSince(ti, "rpc_optimism", "fetch_l2_blocks")
 			logger.Infof("L2 blocks are fetched from %d to %d in %v milliseconds", l2BeginBlockNumber, nextBlockNumber, time.Since(ti).Milliseconds())
 			l2BeginBlockNumber = nextBlockNumber
 		}
@@ -349,11 +353,13 @@ func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64) ([]*Frames
 			ParentHash: block.ParentHash(),
 			Time:       block.Time(),
 		}
+		ti := time.Now()
 		blobs, err := f.l1BlobFetcher.GetBlobs(ctx, blockRef, hashes)
 		if err != nil {
 			logger.Errorf("failed to get blobs: %v", err)
 			return nil, err
 		}
+		telemetry.MeasureSince(ti, "rpc_optimism", "fetch_beacon_blobs")
 		if len(blobs) != len(hashes) {
 			logger.Errorf("blobs length is not matched: %d, %d", len(blobs), len(hashes))
 			return nil, fmt.Errorf("blobs length is not matched: %d, %d", len(blobs), len(hashes))

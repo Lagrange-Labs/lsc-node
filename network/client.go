@@ -31,6 +31,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/store/goleveldb"
+	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -108,11 +109,10 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	}
 
 	if len(cfg.BLSKeystorePasswordPath) > 0 {
-		password, err := os.ReadFile(cfg.BLSKeystorePasswordPath)
+		cfg.BLSKeystorePassword, err = crypto.ReadKeystorePasswordFromFile(cfg.BLSKeystorePasswordPath)
 		if err != nil {
 			logger.Fatalf("failed to read the bls keystore password from %s: %v", cfg.BLSKeystorePasswordPath, err)
 		}
-		cfg.BLSKeystorePassword = string(password)
 	}
 	blsPriv, err := crypto.LoadPrivateKey(crypto.CryptoCurve(cfg.BLSCurve), cfg.BLSKeystorePassword, cfg.BLSKeystorePath)
 	if err != nil {
@@ -125,11 +125,10 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	}
 
 	if len(cfg.SignerECDSAKeystorePasswordPath) > 0 {
-		password, err := os.ReadFile(cfg.SignerECDSAKeystorePasswordPath)
+		cfg.SignerECDSAKeystorePassword, err = crypto.ReadKeystorePasswordFromFile(cfg.SignerECDSAKeystorePasswordPath)
 		if err != nil {
 			logger.Fatalf("failed to read the ecdsa keystore password from %s: %v", cfg.SignerECDSAKeystorePasswordPath, err)
 		}
-		cfg.SignerECDSAKeystorePassword = string(password)
 	}
 	ecdsaPrivKey, err := crypto.LoadPrivateKey(crypto.CryptoCurve("ECDSA"), cfg.SignerECDSAKeystorePassword, cfg.SignerECDSAKeystorePath)
 	if err != nil {
@@ -296,6 +295,7 @@ func (c *Client) joinNetwork() error {
 		return fmt.Errorf("failed to sign the request: %v", err)
 	}
 	req.Signature = utils.Bytes2Hex(sig)
+	ti := time.Now()
 	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
 	if err != nil {
 		return fmt.Errorf("failed to join the network: %v", err)
@@ -303,6 +303,7 @@ func (c *Client) joinNetwork() error {
 	if len(res.Token) == 0 {
 		return fmt.Errorf("the token is empty")
 	}
+	telemetry.MeasureSince(ti, "client", "join_network_request")
 
 	c.jwToken = res.Token
 
@@ -373,6 +374,9 @@ func (c *Client) getPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (u
 
 // getBatchHeader gets the batch header from the database.
 func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "client", "get_batch_header")
+
 	prefix := make([]byte, 8)
 	binary.BigEndian.PutUint64(prefix, l1BlockNumber)
 
@@ -410,6 +414,7 @@ func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 
 // TryGetBatch tries to get the batch from the network.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
+	ti := time.Now()
 	res, err := c.GetBatch(context.Background(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
@@ -417,10 +422,11 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 		}
 		return nil, err
 	}
-
 	if res.Batch == nil {
 		return nil, ErrBatchNotReady
 	}
+	telemetry.MeasureSince(ti, "client", "get_batch_request")
+
 	batch := res.Batch
 	fromBlockNumber := batch.BatchHeader.FromBlockNumber()
 	toBlockNumber := batch.BatchHeader.ToBlockNumber()
@@ -465,6 +471,8 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 		return nil, fmt.Errorf("failed to verify the proposer signature: %v", err)
 	}
 
+	telemetry.SetGauge(float64(batch.BatchNumber()), "client", "current_batch_number")
+
 	return batch, nil
 }
 
@@ -472,6 +480,9 @@ func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommi
 	if committeeData, ok := c.committeeCache.Get(blockNumber); ok {
 		return committeeData, nil
 	}
+
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "client", "get_committee")
 
 	committeeData, err := c.committeeSC.GetCommittee(nil, c.chainID, big.NewInt(int64(blockNumber)))
 	if err != nil {
@@ -516,6 +527,9 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 
 // TryCommitBatch tries to commit the signature to the network.
 func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "client", "try_commit_batch")
+
 	blsSignature := batch.BlsSignature()
 	blsSig, err := c.blsScheme.Sign(c.blsPrivateKey, blsSignature.Hash())
 	if err != nil {
@@ -556,6 +570,9 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 	if !res.Result {
 		return ErrBatchNotFinalized
 	}
+
+	telemetry.SetGauge(float64(batch.BatchNumber()), "client", "commit_batch_number")
+	telemetry.AddSample(float32(batch.BatchNumber()), "client", "commit_batch_number_sample")
 
 	return nil
 }

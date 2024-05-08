@@ -2,17 +2,20 @@ package config
 
 import (
 	"bytes"
+	"fmt"
 	"path/filepath"
 	"strings"
+
+	"github.com/mitchellh/mapstructure"
+	"github.com/spf13/viper"
+	"github.com/urfave/cli/v2"
 
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
 	"github.com/Lagrange-Labs/lagrange-node/network"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/store"
-	"github.com/mitchellh/mapstructure"
-	"github.com/spf13/viper"
-	"github.com/urfave/cli/v2"
+	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 )
 
 const (
@@ -28,6 +31,7 @@ type Config struct {
 	Sequencer sequencer.Config
 	Consensus consensus.Config
 	RpcClient rpcclient.Config
+	Telemetry telemetry.Config
 }
 
 // Default parses the default configuration values.
@@ -71,6 +75,8 @@ func Load(ctx *cli.Context) (*Config, error) {
 		_, ok := err.(viper.ConfigFileNotFoundError)
 		if !ok {
 			return nil, err
+		} else if len(configFilePath) > 0 {
+			return nil, fmt.Errorf("config file not found: %s", configFilePath)
 		}
 	}
 
