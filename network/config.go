@@ -12,8 +12,8 @@ type ServerConfig struct {
 
 // ClientConfig is the configuration for the client node.
 type ClientConfig struct {
-	// GrpcURL is the URL of the gRPC server
-	GrpcURL string `mapstructure:"GrpcURL"`
+	// GrpcURLs is the list of gRPC URLs
+	GrpcURLs []string `mapstructure:"GrpcURLs"`
 	// Chain is the chain name of the blockchain
 	Chain string `mapstructure:"Chain"`
 	// OperatorAddress is the address of the operator
