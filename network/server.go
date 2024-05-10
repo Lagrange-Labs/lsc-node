@@ -21,7 +21,7 @@ func RunServer(cfg *ServerConfig, storage storageInterface, consensus consensusI
 		return fmt.Errorf("invalid TCP port for gRPC server: '%s'", cfg.GRPCPort)
 	}
 
-	sequencerService, err := NewSequencerService(storage, consensus, consensus.GetBLSScheme(), chainID)
+	sequencerService, err := NewSequencerService(storage, consensus, consensus.GetBLSScheme(), chainID, cfg.AdminAddress)
 	if err != nil {
 		return err
 	}
