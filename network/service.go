@@ -88,12 +88,14 @@ func (s *sequencerService) InitConsensus(ctx context.Context, req *networkv2type
 	s.initiatedTime = requestTime
 
 	// initialize the consensus
+	isInitialized := false
 	if s.consensus.IsStopped() {
 		s.consensus.OnStart()
 		logger.Infof("The consensus is initialized")
+		isInitialized = true
 	}
 
-	return &networkv2types.InitConsensusResponse{}, nil
+	return &networkv2types.InitConsensusResponse{Result: isInitialized}, nil
 }
 
 // JoinNetwork is a method to join the attestation network.
