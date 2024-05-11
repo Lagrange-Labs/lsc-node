@@ -294,8 +294,11 @@ func (f *Fetcher) Stop() {
 	// close batch decoder
 	close(f.chFramesRef)
 	<-f.done
-	// close batch headers channel to notify the outside
+	// release retains and close batch headers channel to notify the outside
 	close(f.batchHeaders)
+	for range f.batchHeaders {
+	}
+
 	f.cancel = nil
 	f.ctx = nil
 }
@@ -441,6 +444,9 @@ func (f *Fetcher) validTransaction(tx *coretypes.Transaction) bool {
 
 // nextBatchHeader returns the L2 batch header.
 func (f *Fetcher) nextBatchHeader() (*sequencerv2types.BatchHeader, error) {
+	f.mtx.Lock()
+	defer f.mtx.Unlock()
+
 	batchesRef, ok := <-f.batchHeaders
 	if !ok {
 		return nil, errors.New("batch headers channel is closed")

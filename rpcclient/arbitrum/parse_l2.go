@@ -8,7 +8,6 @@ import (
 	"io"
 	"math/big"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -36,17 +35,14 @@ func parseL2Message(msg []byte, requestId *common.Hash, chainId *big.Int, depth 
 
 	switch l2KindBuf[0] {
 	case L2MessageKind_UnsignedUserTx:
-		logger.Infof("UnsignedUserTx")
 		// do nothing
 		return nil, nil
 	case L2MessageKind_ContractTx:
-		logger.Infof("ContractTx")
 		// do nothing
 		return nil, nil
 	case L2MessageKind_NonmutatingCall:
 		return nil, errors.New("L2 message kind NonmutatingCall is unimplemented")
 	case L2MessageKind_Batch:
-		logger.Infof("Batch")
 		if depth >= 16 {
 			return nil, errors.New("L2 message batches have a max depth of 16")
 		}

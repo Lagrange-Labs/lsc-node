@@ -13,7 +13,6 @@ import (
 	"github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/arbinbox"
 )
 
@@ -266,9 +265,7 @@ func (s *SequencerInbox) parseL2Transactions(batch *SequencerBatch) ([]*types.Tr
 	}
 
 	batch.txes = make([]*types.Transaction, 0)
-	logger.Warnf("batch block number: %v tx hash: %v", batch.BlockNumber, batch.TxHash)
-	for p, segment := range batch.segments {
-		logger.Warnf("segment: %v", p)
+	for _, segment := range batch.segments {
 		kind := segment[0]
 		segment = segment[1:]
 		if kind == BatchSegmentKindL2Message || kind == BatchSegmentKindL2MessageBrotli {

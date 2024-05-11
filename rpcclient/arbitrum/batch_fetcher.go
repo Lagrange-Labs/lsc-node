@@ -28,7 +28,7 @@ import (
 )
 
 const (
-	ParallelBlocks = 8
+	ParallelBlocks = 32
 	cacheLimit     = 1024
 	maxTxBlobCount = 10000
 	FetchInterval  = 5 * time.Second
@@ -63,7 +63,6 @@ type Fetcher struct {
 	ctx    context.Context
 	cancel context.CancelFunc
 	done   chan struct{}
-	chErr  chan error
 }
 
 // NewFetcher creates a new Fetcher instance.
@@ -110,8 +109,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		l2BlockCache:      utils.NewCache(cacheLimit),
 		batchHeaders:      make(chan *BatchesRef, 64),
 
-		chErr: make(chan error, 1),
-		done:  make(chan struct{}, 2),
+		done: make(chan struct{}, 2),
 	}, nil
 }
 
@@ -130,6 +128,7 @@ func (f *Fetcher) InitFetch(l2BlockNumber uint64) {
 // transactions which are sent to the BatchSequencer Contractor.
 func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 	defer func() {
+		logger.Infof("l1 fetcher is stopped")
 		f.done <- struct{}{}
 	}()
 
@@ -138,10 +137,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 	for {
 		select {
 		case <-f.ctx.Done():
-			logger.Infof("fetcher is stopped")
 			return nil
-		case err := <-f.chErr:
-			return err
 		default:
 			// Fetch the latest finalized block number.
 			blockNumber, err := f.l1EvmClient.GetFinalizedBlockNumber()
@@ -186,7 +182,12 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 				if err != nil {
 					return err
 				}
-
+				batchesRef, err := f.getBatchRef(batch)
+				if err != nil {
+					return err
+				}
+				logger.Infof("batch reference is fetched: %+v", batchesRef)
+				f.batchHeaders <- batchesRef
 			}
 
 			f.lastSyncedL1BlockNumber.Store(nextBlockNumber + 1)
@@ -197,6 +198,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 // FetchL2Blocks fetches the L2 blocks from the given L2 block number.
 func (f *Fetcher) FetchL2Blocks() error {
 	defer func() {
+		logger.Info("l2 fetcher is stopped")
 		f.done <- struct{}{}
 	}()
 
@@ -204,7 +206,6 @@ func (f *Fetcher) FetchL2Blocks() error {
 	for {
 		select {
 		case <-f.ctx.Done():
-			logger.Infof("l2 fetcher is stopped")
 			return nil
 		default:
 			// Fetch the latest finalized block number.
@@ -262,8 +263,11 @@ func (f *Fetcher) Stop() {
 	f.cancel()
 	<-f.done
 	<-f.done
-	// close batch headers channel to notify the outside
+	// release retains and close batch headers channel to notify the outside
 	close(f.batchHeaders)
+	for range f.batchHeaders {
+	}
+
 	f.cancel = nil
 	f.ctx = nil
 }
@@ -367,6 +371,9 @@ func (f *Fetcher) getBatchRef(batch *SequencerBatch) (*BatchesRef, error) {
 
 // nextBatchHeader returns the L2 batch header.
 func (f *Fetcher) nextBatchHeader() (*sequencerv2types.BatchHeader, error) {
+	f.mtx.Lock()
+	defer f.mtx.Unlock()
+
 	batchesRef, ok := <-f.batchHeaders
 	if !ok {
 		return nil, errors.New("batch headers channel is closed")

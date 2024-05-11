@@ -44,6 +44,10 @@ StakingCheckInterval = "2s"
 	
 	[RpcClient.Arbitrum]
 	RPCURL = "http://localhost:8545"
+	L1RPCURL = "http://localhost:8545"
+	BeaconURL = "http://localhost:8545"
+	BatchInbox = "0x1c479675ad559DC151F6Ec7ed3FbF8ceE79582B6"
+	ConcurrentFetchers = 8
 
 	[RpcClient.Mantle]
 	RPCURL = "http://localhost:8545"
