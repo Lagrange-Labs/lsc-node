@@ -25,19 +25,9 @@ func TestKeystoreFile(t *testing.T) {
 			exact:    "",
 		},
 		{
-			desc:     "alphanumeric password 1",
-			password: "password",
-			exact:    "password",
-		},
-		{
-			desc:     "alphanumeric password 2",
-			password: "password123",
-			exact:    "password123",
-		},
-		{
-			desc:     "alphanumeric password 2",
-			password: "012password123",
-			exact:    "012password123",
+			desc:     "alphanumeric password",
+			password: "01pass2wor3d45",
+			exact:    "01pass2wor3d45",
 		},
 		{
 			desc:     "special characters password",
@@ -45,9 +35,15 @@ func TestKeystoreFile(t *testing.T) {
 			exact:    "!@#$%^&*()_+",
 		},
 		{
-			desc:     "whitespace password",
+			desc:     "whitespace password 1",
 			password: "  password\t \n",
 			exact:    "password",
+		},
+		{
+			desc: "whitespace password 2",
+			password: `  password   
+			`,
+			exact: "password",
 		},
 	}
 
