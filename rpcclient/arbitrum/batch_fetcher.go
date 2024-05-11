@@ -178,6 +178,9 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 					rawMsg = batch.serialized
 				}
 				batch.segments, err = decompress(rawMsg)
+				if err != nil {
+					return err
+				}
 				_, err := f.sequencerInbox.parseL2Transactions(batch)
 				if err != nil {
 					return err
@@ -291,13 +294,11 @@ func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64, txHash com
 		if tx.Type() != coretypes.BlobTxType {
 			return nil, fmt.Errorf("unexpected tx type: %v", tx.Type())
 		}
-		blobIndices := make([]int, 0)
 		for _, hash := range tx.BlobHashes() {
 			hashes = append(hashes, eth.IndexedBlobHash{
 				Index: uint64(blobIndex),
 				Hash:  hash,
 			})
-			blobIndices = append(blobIndices, blobIndex)
 			blobIndex++
 		}
 		break
