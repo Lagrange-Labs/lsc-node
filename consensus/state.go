@@ -36,7 +36,8 @@ type State struct {
 	lastCommittee    *sequencerv2types.CommitteeRoot
 	blockedOperators map[string]struct{}
 
-	chStop chan struct{}
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewState returns a new State.
@@ -58,8 +59,6 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		logger.Fatalf("failed to get the public key: %v", err)
 	}
 
-	chStop := make(chan struct{})
-
 	return &State{
 		blsScheme:        blsScheme,
 		proposerPrivKey:  privKey,
@@ -68,7 +67,6 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		roundLimit:       time.Duration(cfg.RoundLimit),
 		roundInterval:    time.Duration(cfg.RoundInterval),
 		chainID:          chainID,
-		chStop:           chStop,
 		rwMutex:          &sync.RWMutex{},
 		blockedOperators: make(map[string]struct{}),
 	}
@@ -101,11 +99,13 @@ func (s *State) GetPrevBatch() *sequencerv2types.Batch {
 // OnStart loads the first unverified block and starts the round.
 func (s *State) OnStart() {
 	logger.Info("Consensus process is started")
+	s.ctx, s.cancel = context.WithCancel(context.Background())
 
 	for {
-		// check if chStop is triggered
+		// check if OnStop is triggered
 		select {
-		case <-s.chStop:
+		case <-s.ctx.Done():
+			s.ctx = nil
 			return
 		default:
 		}
@@ -136,9 +136,10 @@ func (s *State) OnStart() {
 	}
 
 	for {
-		// check if chStop is triggered
+		// check if OnStop is triggered
 		select {
-		case <-s.chStop:
+		case <-s.ctx.Done():
+			s.ctx = nil
 			return
 		default:
 		}
@@ -209,8 +210,14 @@ func (s *State) OnStart() {
 // OnStop stops the consensus process.
 func (s *State) OnStop() {
 	logger.Infof("OnStop() called")
-	s.chStop <- struct{}{}
-	close(s.chStop)
+	if s != nil && s.ctx != nil {
+		s.cancel()
+	}
+}
+
+// IsStopped returns true if the consensus process is stopped.
+func (s *State) IsStopped() bool {
+	return s.ctx == nil
 }
 
 // AddBatchCommit adds the commit to the round state.

@@ -129,7 +129,6 @@ func runServer(ctx *cli.Context) error {
 
 	// Start the consensus state.
 	state := consensus.NewState(&cfg.Consensus, storage, chainID)
-	go state.OnStart()
 
 	// Start the server.
 	if err = network.RunServer(&cfg.Server, storage, state, chainID); err != nil {
