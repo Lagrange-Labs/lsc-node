@@ -8,6 +8,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -118,7 +119,14 @@ func (rs *RoundState) CheckEnoughVotingPower(vs *ValidatorSet) bool {
 	}
 
 	logger.Infof("committed count: %d, committed voting power: %v, total voting power: %v", votingCount, votingPower, vs.GetCommitteeVotingPower())
-	return votingCount*3 > vs.GetValidatorCount() && votingPower*3 > vs.GetCommitteeVotingPower()*2
+
+	result := votingCount*3 > vs.GetValidatorCount() && votingPower*3 > vs.GetCommitteeVotingPower()*2
+	if !result {
+		telemetry.SetGauge(float64(vs.GetValidatorCount()-votingCount), "consensus", "missing_count")
+	}
+	telemetry.AddSample(float32(votingPower)/float32(vs.GetCommitteeVotingPower()), "consensus", "committed_voting_power_ratio")
+
+	return result
 }
 
 // CheckAggregatedSignature checks if the aggregated signature is valid.

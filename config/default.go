@@ -6,7 +6,7 @@ const DefaultValues = `
 GRPCPort = "9090"
 
 [Client]
-GrpcURL = "127.0.0.1:9090"
+GrpcURLs = ["127.0.0.1:9090"]
 Chain = "mock"
 EthereumURL = "http://localhost:8545"
 OperatorAddress = "0x6E654b122377EA7f592bf3FD5bcdE9e8c1B1cEb9"

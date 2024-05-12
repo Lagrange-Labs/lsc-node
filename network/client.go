@@ -18,9 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/lru"
 	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
@@ -54,6 +51,7 @@ type PreviousBatchInfo struct {
 // Client is a gRPC client to join the network
 type Client struct {
 	networkv2types.NetworkServiceClient
+	healthMgr   *healthManager
 	rpcClient   rpctypes.RpcClient
 	committeeSC *committee.Committee
 	blsScheme   crypto.BLSScheme
@@ -69,46 +67,14 @@ type Client struct {
 	committeeCache        *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
 	openL1BlockNumber     atomic.Uint64
 
-	db         *goleveldb.DB
-	ctx        context.Context
-	cancelFunc context.CancelFunc
-	chErr      chan error
+	db    *goleveldb.DB
+	chErr chan error
 }
 
 // NewClient creates a new client.
 func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-	conn, err := grpc.NewClient(cfg.GrpcURL, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	healthClient := grpc_health_v1.NewHealthClient(conn)
-	hctx, hcancel := context.WithTimeout(context.Background(), 100*time.Second)
-	defer hcancel()
-
-	watcher, err := healthClient.Watch(hctx, &grpc_health_v1.HealthCheckRequest{})
-	if err != nil {
-		logger.Error("Failed to check gRPC health:", err)
-		return nil, err
-	}
-
-	for {
-		response, err := watcher.Recv()
-		if err != nil {
-			logger.Info("Failed to get gRPC health response:", err)
-		}
-		if response.Status == grpc_health_v1.HealthCheckResponse_SERVING {
-			logger.Info("gRPC server is healthy")
-			break
-		} else {
-			logger.Info("gRPC server is not healthy")
-		}
-	}
-
 	if len(cfg.BLSKeystorePasswordPath) > 0 {
+		var err error
 		cfg.BLSKeystorePassword, err = crypto.ReadKeystorePasswordFromFile(cfg.BLSKeystorePasswordPath)
 		if err != nil {
 			logger.Fatalf("failed to read the bls keystore password from %s: %v", cfg.BLSKeystorePasswordPath, err)
@@ -179,10 +145,19 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	if err != nil {
 		logger.Fatalf("failed to create the database: %v", err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+
+	healthMgr, err := newHealthManager(cfg.GrpcURLs)
+	if err != nil {
+		logger.Fatalf("failed to create the health manager: %v", err)
+	}
+	healthClient, err := healthMgr.getHealthClient()
+	if err != nil {
+		logger.Fatalf("failed to get the health client: %v", err)
+	}
 
 	c := &Client{
-		NetworkServiceClient:  networkv2types.NewNetworkServiceClient(conn),
+		NetworkServiceClient:  healthClient,
+		healthMgr:             healthMgr,
 		blsScheme:             blsScheme,
 		blsPrivateKey:         blsPriv,
 		blsPublicKey:          utils.Bytes2Hex(pubkey),
@@ -195,10 +170,8 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		genesisBlockNumber:    uint64(params.GenesisBlock.Int64() - params.L1Bias.Int64()),
 		committeeCache:        lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
 
-		db:         db,
-		ctx:        ctx,
-		cancelFunc: cancel,
-		chErr:      make(chan error),
+		db:    db,
+		chErr: make(chan error),
 	}
 	go c.startBatchFetching()
 
@@ -221,8 +194,15 @@ func (c *Client) Start() error {
 
 	for {
 		select {
-		case <-c.ctx.Done():
-			return errors.New("the client is stopped")
+		case err := <-c.healthMgr.chErr:
+			if errors.Is(err, ErrCurrentServerNotServing) {
+				c.NetworkServiceClient, err = c.healthMgr.getHealthClient()
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			return err
 		case err := <-c.chErr:
 			return err
 		case <-time.After(c.pullInterval):
@@ -295,7 +275,7 @@ func (c *Client) joinNetwork() error {
 		return fmt.Errorf("failed to sign the request: %v", err)
 	}
 	req.Signature = utils.Bytes2Hex(sig)
-	now := time.Now()
+	ti := time.Now()
 	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
 	if err != nil {
 		return fmt.Errorf("failed to join the network: %v", err)
@@ -303,7 +283,7 @@ func (c *Client) joinNetwork() error {
 	if len(res.Token) == 0 {
 		return fmt.Errorf("the token is empty")
 	}
-	telemetry.MeasureSince(now, "client", "join_network_request")
+	telemetry.MeasureSince(ti, "client", "join_network_request")
 
 	c.jwToken = res.Token
 
@@ -374,8 +354,8 @@ func (c *Client) getPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (u
 
 // getBatchHeader gets the batch header from the database.
 func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
-	now := time.Now()
-	defer telemetry.MeasureSince(now, "client", "get_batch_header")
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "client", "get_batch_header")
 
 	prefix := make([]byte, 8)
 	binary.BigEndian.PutUint64(prefix, l1BlockNumber)
@@ -414,7 +394,7 @@ func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 
 // TryGetBatch tries to get the batch from the network.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
-	now := time.Now()
+	ti := time.Now()
 	res, err := c.GetBatch(context.Background(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
@@ -425,7 +405,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	if res.Batch == nil {
 		return nil, ErrBatchNotReady
 	}
-	telemetry.MeasureSince(now, "client", "get_batch_request")
+	telemetry.MeasureSince(ti, "client", "get_batch_request")
 
 	batch := res.Batch
 	fromBlockNumber := batch.BatchHeader.FromBlockNumber()
@@ -481,6 +461,9 @@ func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommi
 		return committeeData, nil
 	}
 
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "client", "get_committee")
+
 	committeeData, err := c.committeeSC.GetCommittee(nil, c.chainID, big.NewInt(int64(blockNumber)))
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the committee data: %v", err)
@@ -524,8 +507,8 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 
 // TryCommitBatch tries to commit the signature to the network.
 func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
-	now := time.Now()
-	defer telemetry.MeasureSince(now, "client", "try_commit_batch")
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "client", "try_commit_batch")
 
 	blsSignature := batch.BlsSignature()
 	blsSig, err := c.blsScheme.Sign(c.blsPrivateKey, blsSignature.Hash())
@@ -577,7 +560,9 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 // Stop function stops the client node.
 func (c *Client) Stop() {
 	if c != nil {
-		c.cancelFunc()
+		if c.healthMgr != nil {
+			c.healthMgr.cancel()
+		}
 	}
 }
 

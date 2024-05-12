@@ -37,7 +37,7 @@ func (suite *ClientTestSuite) SetupTest() {
 	suite.Require().NoError(err)
 
 	suite.cfg = network.ClientConfig{
-		GrpcURL:                     "127.0.0.1:9090",
+		GrpcURLs:                    []string{"127.0.0.1:9090"},
 		Chain:                       "mock",
 		EthereumURL:                 "http://localhost:8545",
 		BLSKeystorePath:             blsKeyPath,

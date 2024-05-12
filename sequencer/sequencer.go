@@ -347,7 +347,7 @@ func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRo
 
 // Stop stops the sequencer.
 func (s *Sequencer) Stop() {
-	if s != nil {
+	if s != nil && s.ctx != nil {
 		s.cancel()
 	}
 }

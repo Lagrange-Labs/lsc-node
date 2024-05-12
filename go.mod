@@ -12,7 +12,7 @@ require (
 	github.com/hermeznetwork/tracerr v0.3.2
 	github.com/iden3/go-iden3-crypto v0.0.16
 	github.com/mitchellh/mapstructure v1.5.0
-	github.com/prometheus/client_golang v1.19.0
+	github.com/prometheus/client_golang v1.19.1
 	github.com/sirupsen/logrus v1.9.3
 	github.com/spf13/viper v1.18.2
 	github.com/stretchr/testify v1.9.0
@@ -24,7 +24,7 @@ require (
 	golang.org/x/crypto v0.23.0
 	golang.org/x/sync v0.7.0
 	google.golang.org/grpc v1.63.2
-	google.golang.org/protobuf v1.34.0
+	google.golang.org/protobuf v1.34.1
 )
 
 require (
