@@ -36,7 +36,8 @@ type State struct {
 	lastCommittee    *sequencerv2types.CommitteeRoot
 	blockedOperators map[string]struct{}
 
-	chStop chan struct{}
+	ctx    context.Context
+	cancel context.CancelFunc
 }
 
 // NewState returns a new State.
@@ -58,8 +59,6 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		logger.Fatalf("failed to get the public key: %v", err)
 	}
 
-	chStop := make(chan struct{})
-
 	return &State{
 		blsScheme:        blsScheme,
 		proposerPrivKey:  privKey,
@@ -68,7 +67,6 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		roundLimit:       time.Duration(cfg.RoundLimit),
 		roundInterval:    time.Duration(cfg.RoundInterval),
 		chainID:          chainID,
-		chStop:           chStop,
 		rwMutex:          &sync.RWMutex{},
 		blockedOperators: make(map[string]struct{}),
 	}
@@ -101,11 +99,13 @@ func (s *State) GetPrevBatch() *sequencerv2types.Batch {
 // OnStart loads the first unverified block and starts the round.
 func (s *State) OnStart() {
 	logger.Info("Consensus process is started")
+	s.ctx, s.cancel = context.WithCancel(context.Background())
 
 	for {
-		// check if chStop is triggered
+		// check if OnStop is triggered
 		select {
-		case <-s.chStop:
+		case <-s.ctx.Done():
+			s.ctx = nil
 			return
 		default:
 		}
@@ -136,9 +136,10 @@ func (s *State) OnStart() {
 	}
 
 	for {
-		// check if chStop is triggered
+		// check if OnStop is triggered
 		select {
-		case <-s.chStop:
+		case <-s.ctx.Done():
+			s.ctx = nil
 			return
 		default:
 		}
@@ -165,6 +166,7 @@ func (s *State) OnStart() {
 				logger.Errorf("failed to update the batch %d: %v", s.fromBatchNumber, err)
 				return
 			}
+			telemetry.SetGauge(float64(len(batch.PubKeys)), "consensus", "committed_node_count")
 			logger.Infof("the batch number %d, L1 block number %d, upto L2 block number %d  is finalized", batch.BatchNumber(), batch.L1BlockNumber(), batch.BatchHeader.ToBlockNumber())
 		}
 
@@ -194,6 +196,7 @@ func (s *State) OnStart() {
 				s.blockedOperators[evidence.Operator] = struct{}{}
 			}
 		}
+		telemetry.SetGauge(float64(len(evidences)), "consensus", "evidence_count")
 
 		s.rwMutex.Lock()
 		telemetry.SetGauge(float64(s.fromBatchNumber), "consensus", "finalized_batch_number")
@@ -207,8 +210,14 @@ func (s *State) OnStart() {
 // OnStop stops the consensus process.
 func (s *State) OnStop() {
 	logger.Infof("OnStop() called")
-	s.chStop <- struct{}{}
-	close(s.chStop)
+	if s != nil && s.ctx != nil {
+		s.cancel()
+	}
+}
+
+// IsStopped returns true if the consensus process is stopped.
+func (s *State) IsStopped() bool {
+	return s.ctx == nil
 }
 
 // AddBatchCommit adds the commit to the round state.
@@ -318,6 +327,8 @@ func (s *State) startRound(batchNumber uint64) error {
 
 	batch.CommitteeHeader.TotalVotingPower = currentCommittee.TotalVotingPower
 	s.validators = types.NewValidatorSet(currentCommittee.Operators, currentCommittee.TotalVotingPower)
+	telemetry.SetGauge(float64(len(currentCommittee.Operators)), "consensus", "committee_size")
+	telemetry.SetGauge(float64(currentCommittee.TotalVotingPower), "consensus", "committee_voting_power")
 
 	// generate a proposer signature
 	blsSigHash := batch.BlsSignature().Hash()

@@ -2,6 +2,7 @@ package config
 
 import (
 	"bytes"
+	"fmt"
 	"path/filepath"
 	"strings"
 
@@ -74,6 +75,8 @@ func Load(ctx *cli.Context) (*Config, error) {
 		_, ok := err.(viper.ConfigFileNotFoundError)
 		if !ok {
 			return nil, err
+		} else if len(configFilePath) > 0 {
+			return nil, fmt.Errorf("config file not found: %s", configFilePath)
 		}
 	}
 
