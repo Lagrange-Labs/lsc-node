@@ -2,7 +2,7 @@ package arbitrum
 
 // Config is the configuration for the Arbitrum client.
 type Config struct {
-	// RPCURL is the URL of the Optimism RPC node
+	// RPCURL is the URL of the Arbitrum RPC node
 	RPCURL string `mapstructure:"RPCURL"`
 	// L1RPCURL is the URL of the L1 Ethereum RPC node
 	L1RPCURL string `mapstructure:"L1RPCURL"`
