@@ -5,7 +5,6 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 var _ types.RpcClient = (*Client)(nil)
@@ -14,20 +13,12 @@ var _ types.RpcClient = (*Client)(nil)
 type Client struct {
 	evmclient.Client
 
-	ethClient *ethclient.Client
-	fetcher   *Fetcher
+	fetcher *Fetcher
 }
 
 // NewClient creates a new Client instance.
 func NewClient(cfg *Config) (*Client, error) {
-	logger.Infof("creating rpc client for confg: %+v", cfg)
-
 	client, err := evmclient.NewClient(cfg.RPCURL)
-	if err != nil {
-		return nil, err
-	}
-
-	ethClient, err := ethclient.Dial(cfg.L1RPCURL)
 	if err != nil {
 		return nil, err
 	}
@@ -38,9 +29,8 @@ func NewClient(cfg *Config) (*Client, error) {
 	}
 
 	return &Client{
-		Client:    *client,
-		ethClient: ethClient,
-		fetcher:   fetcher,
+		Client:  *client,
+		fetcher: fetcher,
 	}, nil
 }
 
