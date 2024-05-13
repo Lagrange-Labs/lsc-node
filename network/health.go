@@ -34,9 +34,9 @@ var (
 type healthManager struct {
 	serverURLs []string
 
-	index   int
-	conn    *grpc.ClientConn
-	watcher grpc_health_v1.Health_WatchClient
+	index        int
+	conn         *grpc.ClientConn
+	healthClient grpc_health_v1.HealthClient
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -51,6 +51,7 @@ func newHealthManager(serverURLs []string) (*healthManager, error) {
 		index:      -1,
 		ctx:        ctx,
 		cancel:     cancel,
+		chErr:      make(chan error, 1), // buffered channel
 	}
 
 	return hm, nil
@@ -69,10 +70,15 @@ func (hm *healthManager) getHealthClient() (networkv2types.NetworkServiceClient,
 
 // loadHealthClient loads the health client.
 func (hm *healthManager) loadHealthClient() error {
+	if hm.conn != nil {
+		if err := hm.conn.Close(); err != nil {
+			logger.Warnf("failed to close the connection: %v", err)
+		}
+	}
+
 	opts := []grpc.DialOption{
 		grpc.WithTransportCredentials(insecure.NewCredentials()),
 	}
-
 	for index, serverURL := range hm.serverURLs {
 		if index == hm.index {
 			continue
@@ -84,14 +90,12 @@ func (hm *healthManager) loadHealthClient() error {
 			continue
 		}
 		if loaded := func() bool {
-			ctx, cancel := context.WithTimeout(context.Background(), time.Second*DefaultHealthCheckTimeout)
-			defer cancel()
-			watcher, err := grpc_health_v1.NewHealthClient(conn).Watch(ctx, &grpc_health_v1.HealthCheckRequest{})
+			healthClient := grpc_health_v1.NewHealthClient(conn)
 			if err != nil {
 				logger.Warnf("failed to watch the health of the server %s: %v", serverURL, err)
 			}
 			for i := 0; i < DefaultHealthCheckRetry; i++ {
-				resp, err := watcher.Recv()
+				resp, err := healthClient.Check(hm.ctx, &grpc_health_v1.HealthCheckRequest{})
 				if err != nil {
 					logger.Warnf("failed to receive the health of the server %s: %v", serverURL, err)
 					continue
@@ -99,11 +103,8 @@ func (hm *healthManager) loadHealthClient() error {
 				if resp.Status == grpc_health_v1.HealthCheckResponse_SERVING {
 					hm.index = index
 					hm.conn = conn
-					hm.watcher, err = grpc_health_v1.NewHealthClient(conn).Watch(hm.ctx, &grpc_health_v1.HealthCheckRequest{})
-					if err != nil {
-						logger.Warnf("failed to watch the health of the server %s: %v", serverURL, err)
-						continue
-					}
+					hm.healthClient = healthClient
+					logger.Infof("connected to the server %s", serverURL)
 					return true
 				}
 				time.Sleep(time.Second * DefaultHealthCheckInterval)
@@ -131,20 +132,18 @@ func (hm *healthManager) healthCheck() {
 			hm.chErr <- hm.ctx.Err()
 			return
 		case <-ticker.C:
-			for i := 0; i < DefaultHealthCheckRetry; i++ {
-				ti := time.Now()
-				resp, err := hm.watcher.Recv()
-				if err == nil && resp.Status == grpc_health_v1.HealthCheckResponse_SERVING {
-					telemetry.MeasureSince(ti, "network", "health_check")
-					telemetry.SetGauge(1, "network", "current_health_server_index")
-					continue
-				}
-				logger.Warnf("the server is not serving: %v", err)
-				retry++
-				if retry >= DefaultHealthCheckRetry {
-					hm.chErr <- ErrCurrentServerNotServing
-					return
-				}
+			ti := time.Now()
+			resp, err := hm.healthClient.Check(hm.ctx, &grpc_health_v1.HealthCheckRequest{})
+			if err == nil && resp.Status == grpc_health_v1.HealthCheckResponse_SERVING {
+				telemetry.MeasureSince(ti, "network", "health_check")
+				telemetry.SetGauge(float64(hm.index), "network", "current_health_server_index")
+				continue
+			}
+			logger.Warnf("the server %s is not serving: %v", hm.serverURLs[hm.index], err)
+			retry++
+			if retry >= DefaultHealthCheckRetry {
+				hm.chErr <- ErrCurrentServerNotServing
+				return
 			}
 		}
 	}

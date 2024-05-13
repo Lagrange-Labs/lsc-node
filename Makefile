@@ -89,6 +89,7 @@ localnet-start: stop create-keystore
 	docker compose -f docker-compose.yml up -d lagrangesc
 	sleep 3
 	docker compose -f docker-compose.yml up -d simserver
+	docker compose -f docker-compose.yml up -d simserver1
 	docker compose -f docker-compose.yml up -d simsequencer
 	docker compose -f docker-compose.yml up -d simavs-sync
 	sleep 3

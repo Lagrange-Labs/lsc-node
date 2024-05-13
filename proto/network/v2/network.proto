@@ -8,25 +8,12 @@ option go_package = "github.com/Lagrange-Labs/lagrange-node/network/types/v2";
 
 // NetworkService is the service for the attestation network
 service NetworkService {
-    // InitConsensus is the admin rpc endpoint for initializing the consensus
-    rpc InitConsensus(InitConsensusRequest) returns (InitConsensusResponse);
     // JoinNetwork is the rpc endpoint for joining the network
     rpc JoinNetwork(JoinNetworkRequest) returns (JoinNetworkResponse);
     // GetBatch is the rpc endpoint for getting the given block batch
     rpc GetBatch(GetBatchRequest) returns (GetBatchResponse);
     // CommitBatch is the rpc endpoint for committing the given block batch with signature at the client node
     rpc CommitBatch(CommitBatchRequest) returns (stream CommitBatchResponse);
-}
-
-// InitConsensusRequest is the request to initialize the consensus
-message InitConsensusRequest {
-    uint64 timestamp = 1;
-    string signature = 2;
-}
-
-// InitConsensusResponse is the response for initializing the consensus
-message InitConsensusResponse {
-    bool result = 1;
 }
 
 // JoinNetworkRequest is the request to join the network

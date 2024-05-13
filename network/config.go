@@ -8,8 +8,6 @@ import (
 type ServerConfig struct {
 	// GRPCPort is TCP port to listen by gRPC server
 	GRPCPort string `mapstructure:"GRPCPort"`
-	// AdminAddress is the address of the admin to verify the admin signature
-	AdminAddress string `mapstructure:"AdminAddress"`
 }
 
 // ClientConfig is the configuration for the client node.

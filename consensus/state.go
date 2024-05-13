@@ -215,11 +215,6 @@ func (s *State) OnStop() {
 	}
 }
 
-// IsStopped returns true if the consensus process is stopped.
-func (s *State) IsStopped() bool {
-	return s.ctx == nil
-}
-
 // AddBatchCommit adds the commit to the round state.
 func (s *State) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr, pubKey string) error {
 	s.rwMutex.Lock()

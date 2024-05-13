@@ -30,7 +30,7 @@ func TestConfigLoad(t *testing.T) {
 
 func TestEnvrionmentConfig(t *testing.T) {
 	// set environment variables
-	require.NoError(t, os.Setenv("LAGRANGE_NODE_CLIENT_GRPCURLS", "[127.0.0.1:9090,127.0.0.1:9091]"))
+	require.NoError(t, os.Setenv("LAGRANGE_NODE_CLIENT_GRPCURLS", "127.0.0.1:9090,127.0.0.1:9091"))
 	cfg, err := Load(nil)
 	require.NoError(t, err)
 	require.NotNil(t, cfg)
