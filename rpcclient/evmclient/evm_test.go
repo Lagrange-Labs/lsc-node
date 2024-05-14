@@ -63,8 +63,8 @@ func TestBlocksByRange(t *testing.T) {
 	c, err := NewClient("http://localhost:8545")
 	require.NoError(t, err)
 
-	start := uint64(100)
-	end := uint64(110)
+	start := uint64(1)
+	end := uint64(10)
 	hashes, err := c.GetBlockHashesByRange(start, end)
 	require.NoError(t, err)
 	require.Len(t, hashes, int(end-start))

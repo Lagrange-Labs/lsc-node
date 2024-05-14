@@ -55,7 +55,6 @@ type Fetcher struct {
 
 	chainID                 *big.Int
 	lastSyncedL1BlockNumber atomic.Uint64
-	lastSyncedL2BlockNumber uint64
 
 	mtx    sync.Mutex
 	ctx    context.Context
