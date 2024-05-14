@@ -19,18 +19,15 @@ import (
 const _ = grpc.SupportPackageIsVersion7
 
 const (
-	NetworkService_InitConsensus_FullMethodName = "/network.v2.NetworkService/InitConsensus"
-	NetworkService_JoinNetwork_FullMethodName   = "/network.v2.NetworkService/JoinNetwork"
-	NetworkService_GetBatch_FullMethodName      = "/network.v2.NetworkService/GetBatch"
-	NetworkService_CommitBatch_FullMethodName   = "/network.v2.NetworkService/CommitBatch"
+	NetworkService_JoinNetwork_FullMethodName = "/network.v2.NetworkService/JoinNetwork"
+	NetworkService_GetBatch_FullMethodName    = "/network.v2.NetworkService/GetBatch"
+	NetworkService_CommitBatch_FullMethodName = "/network.v2.NetworkService/CommitBatch"
 )
 
 // NetworkServiceClient is the client API for NetworkService service.
 //
 // For semantics around ctx use and closing/ending streaming RPCs, please refer to https://pkg.go.dev/google.golang.org/grpc/?tab=doc#ClientConn.NewStream.
 type NetworkServiceClient interface {
-	// InitConsensus is the admin rpc endpoint for initializing the consensus
-	InitConsensus(ctx context.Context, in *InitConsensusRequest, opts ...grpc.CallOption) (*InitConsensusResponse, error)
 	// JoinNetwork is the rpc endpoint for joining the network
 	JoinNetwork(ctx context.Context, in *JoinNetworkRequest, opts ...grpc.CallOption) (*JoinNetworkResponse, error)
 	// GetBatch is the rpc endpoint for getting the given block batch
@@ -45,15 +42,6 @@ type networkServiceClient struct {
 
 func NewNetworkServiceClient(cc grpc.ClientConnInterface) NetworkServiceClient {
 	return &networkServiceClient{cc}
-}
-
-func (c *networkServiceClient) InitConsensus(ctx context.Context, in *InitConsensusRequest, opts ...grpc.CallOption) (*InitConsensusResponse, error) {
-	out := new(InitConsensusResponse)
-	err := c.cc.Invoke(ctx, NetworkService_InitConsensus_FullMethodName, in, out, opts...)
-	if err != nil {
-		return nil, err
-	}
-	return out, nil
 }
 
 func (c *networkServiceClient) JoinNetwork(ctx context.Context, in *JoinNetworkRequest, opts ...grpc.CallOption) (*JoinNetworkResponse, error) {
@@ -110,8 +98,6 @@ func (x *networkServiceCommitBatchClient) Recv() (*CommitBatchResponse, error) {
 // All implementations must embed UnimplementedNetworkServiceServer
 // for forward compatibility
 type NetworkServiceServer interface {
-	// InitConsensus is the admin rpc endpoint for initializing the consensus
-	InitConsensus(context.Context, *InitConsensusRequest) (*InitConsensusResponse, error)
 	// JoinNetwork is the rpc endpoint for joining the network
 	JoinNetwork(context.Context, *JoinNetworkRequest) (*JoinNetworkResponse, error)
 	// GetBatch is the rpc endpoint for getting the given block batch
@@ -125,9 +111,6 @@ type NetworkServiceServer interface {
 type UnimplementedNetworkServiceServer struct {
 }
 
-func (UnimplementedNetworkServiceServer) InitConsensus(context.Context, *InitConsensusRequest) (*InitConsensusResponse, error) {
-	return nil, status.Errorf(codes.Unimplemented, "method InitConsensus not implemented")
-}
 func (UnimplementedNetworkServiceServer) JoinNetwork(context.Context, *JoinNetworkRequest) (*JoinNetworkResponse, error) {
 	return nil, status.Errorf(codes.Unimplemented, "method JoinNetwork not implemented")
 }
@@ -148,24 +131,6 @@ type UnsafeNetworkServiceServer interface {
 
 func RegisterNetworkServiceServer(s grpc.ServiceRegistrar, srv NetworkServiceServer) {
 	s.RegisterService(&NetworkService_ServiceDesc, srv)
-}
-
-func _NetworkService_InitConsensus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
-	in := new(InitConsensusRequest)
-	if err := dec(in); err != nil {
-		return nil, err
-	}
-	if interceptor == nil {
-		return srv.(NetworkServiceServer).InitConsensus(ctx, in)
-	}
-	info := &grpc.UnaryServerInfo{
-		Server:     srv,
-		FullMethod: NetworkService_InitConsensus_FullMethodName,
-	}
-	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
-		return srv.(NetworkServiceServer).InitConsensus(ctx, req.(*InitConsensusRequest))
-	}
-	return interceptor(ctx, in, info, handler)
 }
 
 func _NetworkService_JoinNetwork_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
@@ -232,10 +197,6 @@ var NetworkService_ServiceDesc = grpc.ServiceDesc{
 	ServiceName: "network.v2.NetworkService",
 	HandlerType: (*NetworkServiceServer)(nil),
 	Methods: []grpc.MethodDesc{
-		{
-			MethodName: "InitConsensus",
-			Handler:    _NetworkService_InitConsensus_Handler,
-		},
 		{
 			MethodName: "JoinNetwork",
 			Handler:    _NetworkService_JoinNetwork_Handler,

@@ -5,6 +5,7 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -17,11 +18,6 @@ import (
 	networkv2types "github.com/Lagrange-Labs/lagrange-node/network/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
-)
-
-const (
-	// InitRequestValidDuration is the duration of the valid request.
-	InitRequestValidDuration = 3 * time.Second
 )
 
 var (
@@ -43,63 +39,31 @@ type sequencerService struct {
 	blsScheme crypto.BLSScheme
 	chainID   uint32
 
-	initiatedTime time.Time
-	adminAddress  string
+	mtx               sync.Mutex
+	isConsenusStarted bool
 }
 
 // NewSequencerService creates the sequencer service.
-func NewSequencerService(storage storageInterface, consensus consensusInterface, blsScheme crypto.BLSScheme, chainID uint32, adminAddr string) (networkv2types.NetworkServiceServer, error) {
+func NewSequencerService(storage storageInterface, consensus consensusInterface, blsScheme crypto.BLSScheme, chainID uint32) (networkv2types.NetworkServiceServer, error) {
 	return &sequencerService{
-		storage:      storage,
-		consensus:    consensus,
-		blsScheme:    blsScheme,
-		chainID:      chainID,
-		adminAddress: adminAddr,
+		storage:   storage,
+		consensus: consensus,
+		blsScheme: blsScheme,
+		chainID:   chainID,
 	}, nil
-}
-
-// InitConsensus is a method to initialize the consensus.
-//
-// NOTE: This method is only for the admin to initialize the consensus.
-func (s *sequencerService) InitConsensus(ctx context.Context, req *networkv2types.InitConsensusRequest) (*networkv2types.InitConsensusResponse, error) {
-	// verify the admin signature
-	sig := req.Signature
-	req.Signature = ""
-	msg, err := proto.Marshal(req)
-	if err != nil {
-		logger.Warnf("failed to marshal the init consensus request: %v", err)
-		return nil, err
-	}
-	isValid, addr, err := utils.VerifyECDSASignature(msg, utils.Hex2Bytes(sig))
-	if err != nil || !isValid {
-		return nil, fmt.Errorf("failed to verify the admin signature: %v, %v", err, isValid)
-	}
-	if addr != common.HexToAddress(s.adminAddress) {
-		return nil, fmt.Errorf("the admin address is not matched: %v, %v", addr, s.adminAddress)
-	}
-	// check the request time
-	requestTime := time.Unix(0, int64(req.Timestamp))
-	if time.Since(requestTime) > InitRequestValidDuration {
-		return nil, fmt.Errorf("the request is expired: %v", time.Since(s.initiatedTime))
-	}
-	if requestTime.Sub(s.initiatedTime) < InitRequestValidDuration {
-		return nil, fmt.Errorf("the request is too frequent: %v", requestTime.Sub(s.initiatedTime))
-	}
-	s.initiatedTime = requestTime
-
-	// initialize the consensus
-	isInitialized := false
-	if s.consensus.IsStopped() {
-		s.consensus.OnStart()
-		logger.Infof("The consensus is initialized")
-		isInitialized = true
-	}
-
-	return &networkv2types.InitConsensusResponse{Result: isInitialized}, nil
 }
 
 // JoinNetwork is a method to join the attestation network.
 func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.JoinNetworkRequest) (*networkv2types.JoinNetworkResponse, error) {
+	// Check if the consensus is initialized
+	s.mtx.Lock()
+	if !s.isConsenusStarted {
+		s.isConsenusStarted = true
+		go s.consensus.OnStart()
+		logger.Infof("The consensus is initialized")
+	}
+	s.mtx.Unlock()
+
 	logger.Infof("JoinNetwork request: %+v", req)
 	ti := time.Now()
 	defer telemetry.MeasureSince(ti, "server", "join_network")

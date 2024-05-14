@@ -21,7 +21,6 @@ type storageInterface interface {
 
 type consensusInterface interface {
 	OnStart()
-	IsStopped() bool
 	GetOpenBatch() *sequencerv2types.Batch
 	GetPrevBatch() *sequencerv2types.Batch
 	GetRoundInterval() time.Duration
