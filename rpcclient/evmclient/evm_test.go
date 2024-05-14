@@ -58,3 +58,14 @@ func TestFinalizedL2BlockNumber(t *testing.T) {
 	require.Greater(t, num, uint64(0))
 	require.True(t, num < cNum)
 }
+
+func TestBlocksByRange(t *testing.T) {
+	c, err := NewClient("http://localhost:8545")
+	require.NoError(t, err)
+
+	start := uint64(100)
+	end := uint64(110)
+	hashes, err := c.GetBlockHashesByRange(start, end)
+	require.NoError(t, err)
+	require.Len(t, hashes, int(end-start))
+}

@@ -218,7 +218,7 @@ func (s *Sequencer) Start() error {
 
 			s.fromL1BlockNumber = batchHeader.L1BlockNumber
 			s.fromL1TxIndex = batchHeader.L1TxIndex
-			logger.Infof("batch block sequenced up to %d", batchHeader.ToBlockNumber())
+			logger.Infof("batch L2 block sequenced up to %d, count: %d", batchHeader.ToBlockNumber(), batchHeader.ToBlockNumber()-batchHeader.FromBlockNumber()+1)
 			time.Sleep(1 * time.Millisecond)
 		}
 	}
