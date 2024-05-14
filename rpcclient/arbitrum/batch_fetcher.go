@@ -24,7 +24,6 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 const (
@@ -52,12 +51,10 @@ type Fetcher struct {
 	sequencerInbox    *SequencerInbox
 	concurrentFetcher int
 	signer            coretypes.Signer
-	l2BlockCache      *utils.Cache
 	batchHeaders      chan *BatchesRef
 
 	chainID                 *big.Int
 	lastSyncedL1BlockNumber atomic.Uint64
-	lastSyncedL2BlockNumber uint64
 
 	mtx    sync.Mutex
 	ctx    context.Context
@@ -106,7 +103,6 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		chainID:           big.NewInt(int64(l2ChainID)),
 		concurrentFetcher: cfg.ConcurrentFetchers,
 		signer:            coretypes.LatestSignerForChainID(chainID),
-		l2BlockCache:      utils.NewCache(cacheLimit),
 		batchHeaders:      make(chan *BatchesRef, 64),
 
 		done: make(chan struct{}, 2),
@@ -119,9 +115,8 @@ func (f *Fetcher) GetFetchedBlockNumber() uint64 {
 }
 
 // InitFetch inits the fetcher context.
-func (f *Fetcher) InitFetch(l2BlockNumber uint64) {
+func (f *Fetcher) InitFetch() {
 	f.ctx, f.cancel = context.WithCancel(context.Background())
-	f.lastSyncedL2BlockNumber = l2BlockNumber
 }
 
 // Fetch fetches the block data from the Ethereum and analyzes the
@@ -198,58 +193,51 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 	}
 }
 
-// FetchL2Blocks fetches the L2 blocks from the given L2 block number.
-func (f *Fetcher) FetchL2Blocks() error {
-	defer func() {
-		logger.Info("l2 fetcher is stopped")
-		f.done <- struct{}{}
-	}()
+// getL2BlockHashes gets the L2 block hashes for the given range.
+// The range is [start, end].
+func (f *Fetcher) getL2BlockHashes(start, end uint64) ([]*sequencerv2types.BlockHeader, error) {
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "rpc_arbitrum", "fetch_l2_block_hashes")
 
-	l2BeginBlockNumber := f.lastSyncedL2BlockNumber
-	for {
-		select {
-		case <-f.ctx.Done():
-			return nil
-		default:
-			// Fetch the latest finalized block number.
-			blockNumber, err := f.l2Client.GetFinalizedBlockNumber()
+	g, ctx := errgroup.WithContext(context.Background())
+	g.SetLimit(f.concurrentFetcher)
+	hashesMap := sync.Map{}
+	for i := start; i <= end; i += ParallelBlocks {
+		if err := ctx.Err(); err != nil {
+			logger.Errorf("fetch l2 block context error: %v", err)
+			return nil, err
+		}
+		startBlockNumber := i
+		endBlockNumber := i + ParallelBlocks
+		if endBlockNumber > end {
+			endBlockNumber = (end + 1)
+		}
+		g.Go(func() error {
+			blockHashes, err := f.l2Client.GetBlockHashesByRange(startBlockNumber, endBlockNumber)
 			if err != nil {
 				return err
 			}
-			if l2BeginBlockNumber >= blockNumber {
-				time.Sleep(FetchInterval)
-				continue
+			for i, hash := range blockHashes {
+				hashesMap.Store(startBlockNumber+uint64(i), hash)
 			}
-			g, ctx := errgroup.WithContext(context.Background())
-			g.SetLimit(f.concurrentFetcher)
-			nextBlockNumber := l2BeginBlockNumber + ParallelBlocks
-			if blockNumber < nextBlockNumber {
-				nextBlockNumber = blockNumber
-			}
-			ti := time.Now()
-			for i := l2BeginBlockNumber; i < nextBlockNumber; i++ {
-				if err := ctx.Err(); err != nil {
-					logger.Errorf("fetch l2 block context error: %v", err)
-					return err
-				}
-				number := i
-				g.Go(func() error {
-					blockHash, err := f.l2Client.GetBlockHashByNumber(number)
-					if err != nil {
-						return err
-					}
-					f.l2BlockCache.Set(number, blockHash)
-					return nil
-				})
-			}
-			if err := g.Wait(); err != nil {
-				return err
-			}
-			telemetry.MeasureSince(ti, "rpc_optimism", "fetch_l2_blocks")
-			logger.Infof("L2 blocks are fetched from %d to %d in %v milliseconds", l2BeginBlockNumber, nextBlockNumber, time.Since(ti).Milliseconds())
-			l2BeginBlockNumber = nextBlockNumber
-		}
+			return nil
+		})
 	}
+	if err := g.Wait(); err != nil {
+		return nil, err
+	}
+	blockHashes := make([]*sequencerv2types.BlockHeader, 0, end-start+1)
+	for i := start; i <= end; i++ {
+		hash, ok := hashesMap.Load(i)
+		if !ok {
+			return nil, errors.New("block hash is not found")
+		}
+		blockHashes = append(blockHashes, &sequencerv2types.BlockHeader{
+			BlockNumber: i,
+			BlockHash:   hash.(common.Hash).Hex(),
+		})
+	}
+	return blockHashes, nil
 }
 
 // Stop stops the Fetcher.
@@ -262,9 +250,8 @@ func (f *Fetcher) Stop() {
 	}
 
 	f.lastSyncedL1BlockNumber.Store(0)
-	// close L1 & L2 fetcher
+	// close L1 fetcher
 	f.cancel()
-	<-f.done
 	<-f.done
 	// release retains and close batch headers channel to notify the outside
 	close(f.batchHeaders)
@@ -332,20 +319,6 @@ func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64, txHash com
 	return res, nil
 }
 
-// getL2BlockHash returns the L2 block hash for the given block number.
-func (f *Fetcher) getL2BlockHash(blockNumber uint64) (common.Hash, error) {
-	hash, ok := f.l2BlockCache.Get(blockNumber)
-	if ok {
-		return hash.(common.Hash), nil
-	}
-	blockHash, err := f.l2Client.GetBlockHashByNumber(blockNumber)
-	if err != nil {
-		return common.Hash{}, err
-	}
-	f.l2BlockCache.Set(blockNumber, blockHash)
-	return blockHash, nil
-}
-
 // getBatchRef returns the batch reference from the SequencerBatch.
 func (f *Fetcher) getBatchRef(batch *SequencerBatch) (*BatchesRef, error) {
 	if len(batch.txes) == 0 {
@@ -386,18 +359,9 @@ func (f *Fetcher) nextBatchHeader() (*sequencerv2types.BatchHeader, error) {
 		L1TxIndex:     uint32(batchesRef.L1TxIndex),
 		ChainId:       uint32(f.chainID.Uint64()),
 	}
-
-	l2Blocks := make([]*sequencerv2types.BlockHeader, 0)
-	for i := batchesRef.FromL2BlockNumber; i <= batchesRef.ToL2BlockNumber; i++ {
-		blockHash, err := f.getL2BlockHash(i)
-		if err != nil {
-			return nil, err
-		}
-		l2Blocks = append(l2Blocks, &sequencerv2types.BlockHeader{
-			BlockNumber: i,
-			BlockHash:   blockHash.Hex(),
-		})
-
+	l2Blocks, err := f.getL2BlockHashes(batchesRef.FromL2BlockNumber, batchesRef.ToL2BlockNumber)
+	if err != nil {
+		return nil, err
 	}
 	header.L2Blocks = l2Blocks
 

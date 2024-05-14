@@ -43,18 +43,11 @@ func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {
 	c.fetcher.Stop()
 	logger.Infof("last synced L1 block number: %d, begin L1 block number: %d", lastSyncedL1BlockNumber, l1BlockNumber)
 
-	c.fetcher.InitFetch(l2BlockNumber)
+	c.fetcher.InitFetch()
 	// Fetch L1 batch headers
 	go func() {
 		if err := c.fetcher.Fetch(l1BlockNumber); err != nil {
 			logger.Errorf("failed to fetch L1 batch headers: %v", err)
-			c.fetcher.Stop()
-		}
-	}()
-	// Fetch L2 block headers
-	go func() {
-		if err := c.fetcher.FetchL2Blocks(); err != nil {
-			logger.Errorf("failed to fetch L2 block headers: %v", err)
 			c.fetcher.Stop()
 		}
 	}()
