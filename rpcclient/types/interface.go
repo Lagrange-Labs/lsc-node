@@ -41,4 +41,6 @@ type EvmClient interface {
 	GetBlockNumberByTxHash(txHash common.Hash) (uint64, error)
 	// GetFinalizedBlockNumber returns the finalized block number.
 	GetFinalizedBlockNumber() (uint64, error)
+	// GetBlockHashesByRange returns the block hashes by the given range.
+	GetBlockHashesByRange(startBlockNumber, endBlockNumber uint64) ([]common.Hash, error)
 }

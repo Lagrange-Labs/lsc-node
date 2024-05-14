@@ -58,6 +58,13 @@ func (c *MockEvmClient) GetFinalizedBlockNumber() (uint64, error) {
 	return math.MaxUint64, nil
 }
 
+func (c *MockEvmClient) GetBlockHashesByRange(startBlockNumber, endBlockNumber uint64) ([]common.Hash, error) {
+	if time.Now().After(c.triggerTimeErr) {
+		return nil, errors.New("error")
+	}
+	return nil, nil
+}
+
 func TestErrorHandling(t *testing.T) {
 	cfg := &Config{
 		RPCURL:             "http://localhost:8545",

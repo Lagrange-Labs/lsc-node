@@ -64,7 +64,10 @@ func (c *Client) GetBlockHashByNumber(blockNumber uint64) (common.Hash, error) {
 		logger.Errorf("failed to get the raw header error: %v", err)
 		return common.Hash{}, fmt.Errorf("failed to get the raw header error: %w", err)
 	}
+	return getHashFromRawHeader(rawHeader)
+}
 
+func getHashFromRawHeader(rawHeader json.RawMessage) (common.Hash, error) {
 	result := &struct {
 		Hash common.Hash `json:"hash"`
 	}{}
@@ -100,6 +103,37 @@ func (c *Client) GetChainID() (uint32, error) {
 		return 0, err
 	}
 	return uint32(chainID.Int64()), err
+}
+
+// GetBlockHashesByRange returns the block hashes by the given block number range.
+// The range is [start, end).
+func (c *Client) GetBlockHashesByRange(start, end uint64) ([]common.Hash, error) {
+	batchElems := make([]rpc.BatchElem, 0, int(end-start))
+	for i := start; i < end; i++ {
+		batchElems = append(batchElems, rpc.BatchElem{
+			Method: "eth_getBlockByNumber",
+			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(i))), false},
+			Result: &json.RawMessage{},
+		})
+	}
+	err := c.rpcClient.BatchCallContext(context.Background(), batchElems)
+	if err != nil {
+		return nil, err
+	}
+	hashes := make([]common.Hash, 0, len(batchElems))
+	for i, batch := range batchElems {
+		if batch.Error != nil {
+			return nil, batch.Error
+		}
+		rawHeader := batch.Result.(*json.RawMessage)
+		c.cache.Add(start+uint64(i), *rawHeader)
+		hash, err := getHashFromRawHeader(*rawHeader)
+		if err != nil {
+			return nil, err
+		}
+		hashes = append(hashes, hash)
+	}
+	return hashes, nil
 }
 
 // GetFinalizedBlockNumber returns the finalized block number.
