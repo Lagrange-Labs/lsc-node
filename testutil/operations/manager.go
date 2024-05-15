@@ -55,7 +55,7 @@ func (m *Manager) RunServer() {
 	}
 	m.cfg.Consensus.ProposerBLSKeystorePath = keystorePath
 	state := consensus.NewState(&m.cfg.Consensus, m.Storage, m.chainID)
-	go state.OnStart()
+	state.Start()
 	go func() {
 		if err := network.RunServer(&m.cfg.Server, m.Storage, state, m.chainID); err != nil {
 			panic(err)

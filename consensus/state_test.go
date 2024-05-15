@@ -4,7 +4,6 @@ import (
 	"context"
 	"encoding/json"
 	"path/filepath"
-	"sync"
 	"testing"
 	"time"
 
@@ -41,19 +40,11 @@ func createTestState(t *testing.T) (*State, chan *sequencertypes.BlsSignature) {
 func TestState_OnStart(t *testing.T) {
 	s, _ := createTestState(t)
 
-	var wg sync.WaitGroup
-	wg.Add(1)
-
-	go func() {
-		defer wg.Done()
-		s.OnStart()
-	}()
+	s.Start()
 
 	time.Sleep(1 * time.Second)
 
-	s.OnStop()
-
-	wg.Wait()
+	s.Stop()
 }
 
 func TestStateAggSignatur(t *testing.T) {

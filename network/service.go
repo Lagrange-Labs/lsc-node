@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"strings"
-	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -38,9 +37,6 @@ type sequencerService struct {
 
 	blsScheme crypto.BLSScheme
 	chainID   uint32
-
-	mtx               sync.Mutex
-	isConsenusStarted bool
 }
 
 // NewSequencerService creates the sequencer service.
@@ -56,13 +52,7 @@ func NewSequencerService(storage storageInterface, consensus consensusInterface,
 // JoinNetwork is a method to join the attestation network.
 func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.JoinNetworkRequest) (*networkv2types.JoinNetworkResponse, error) {
 	// Check if the consensus is initialized
-	s.mtx.Lock()
-	if !s.isConsenusStarted {
-		s.isConsenusStarted = true
-		go s.consensus.OnStart()
-		logger.Infof("The consensus is initialized")
-	}
-	s.mtx.Unlock()
+	s.consensus.Start()
 
 	logger.Infof("JoinNetwork request: %+v", req)
 	ti := time.Now()
