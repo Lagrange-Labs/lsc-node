@@ -20,7 +20,7 @@ import (
 
 type mockConsensus struct{}
 
-func (m *mockConsensus) OnStart() {}
+func (m *mockConsensus) Start() {}
 
 func (m *mockConsensus) IsStopped() bool {
 	return false

@@ -20,7 +20,7 @@ type storageInterface interface {
 }
 
 type consensusInterface interface {
-	OnStart()
+	Start()
 	GetOpenBatch() *sequencerv2types.Batch
 	GetPrevBatch() *sequencerv2types.Batch
 	GetRoundInterval() time.Duration

@@ -89,6 +89,9 @@ func (s *State) GetOpenBatch() *sequencerv2types.Batch {
 
 // GetPrevBatch returns the previous batch.
 func (s *State) GetPrevBatch() *sequencerv2types.Batch {
+	s.rwMutex.RLock()
+	defer s.rwMutex.RUnlock()
+
 	if s.previousBatch == nil {
 		return s.round.GetCurrentBatch()
 	}
@@ -96,11 +99,8 @@ func (s *State) GetPrevBatch() *sequencerv2types.Batch {
 	return s.previousBatch
 }
 
-// OnStart loads the first unverified block and starts the round.
-func (s *State) OnStart() {
-	logger.Info("Consensus process is started")
-	s.ctx, s.cancel = context.WithCancel(context.Background())
-
+// onStart loads the first unverified block and starts the round.
+func (s *State) onStart() {
 	for {
 		// check if OnStop is triggered
 		select {
@@ -207,12 +207,28 @@ func (s *State) OnStart() {
 	}
 }
 
-// OnStop stops the consensus process.
-func (s *State) OnStop() {
+// Stop stops the consensus process.
+func (s *State) Stop() {
 	logger.Infof("OnStop() called")
 	if s != nil && s.ctx != nil {
 		s.cancel()
 	}
+}
+
+// Start starts the consensus process.
+//
+// NOTE: it is idempotent.
+func (s *State) Start() {
+	s.rwMutex.Lock()
+	defer s.rwMutex.Unlock()
+
+	if s.ctx != nil {
+		return
+	}
+
+	logger.Info("Consensus process is started")
+	s.ctx, s.cancel = context.WithCancel(context.Background())
+	go s.onStart()
 }
 
 // AddBatchCommit adds the commit to the round state.
@@ -242,6 +258,9 @@ func (s *State) AddBatchCommit(commit *sequencerv2types.BlsSignature, stakeAddr,
 
 // CheckCommitteeMember checks if the operator is a committee member.
 func (s *State) CheckCommitteeMember(stakeAddr, pubKey string) (bool, error) {
+	s.rwMutex.RLock()
+	defer s.rwMutex.RUnlock()
+
 	if s.validators == nil {
 		return false, fmt.Errorf("the validator set is not initialized")
 	}
@@ -250,6 +269,9 @@ func (s *State) CheckCommitteeMember(stakeAddr, pubKey string) (bool, error) {
 
 // CheckSignAddress checks if the sign address is valid.
 func (s *State) CheckSignAddress(stakeAddr, signAddr string) bool {
+	s.rwMutex.RLock()
+	defer s.rwMutex.RUnlock()
+
 	if s.validators == nil {
 		return false
 	}
