@@ -56,7 +56,6 @@ type Fetcher struct {
 	chainID                 *big.Int
 	lastSyncedL1BlockNumber atomic.Uint64
 
-	mtx    sync.Mutex
 	ctx    context.Context
 	cancel context.CancelFunc
 	done   chan struct{}
@@ -242,9 +241,6 @@ func (f *Fetcher) getL2BlockHashes(start, end uint64) ([]*sequencerv2types.Block
 
 // Stop stops the Fetcher.
 func (f *Fetcher) Stop() {
-	f.mtx.Lock()
-	defer f.mtx.Unlock()
-
 	if f.cancel == nil {
 		return
 	}
@@ -345,9 +341,6 @@ func (f *Fetcher) getBatchRef(batch *SequencerBatch) (*BatchesRef, error) {
 
 // nextBatchHeader returns the L2 batch header.
 func (f *Fetcher) nextBatchHeader() (*sequencerv2types.BatchHeader, error) {
-	f.mtx.Lock()
-	defer f.mtx.Unlock()
-
 	batchesRef, ok := <-f.batchHeaders
 	if !ok {
 		return nil, errors.New("batch headers channel is closed")
