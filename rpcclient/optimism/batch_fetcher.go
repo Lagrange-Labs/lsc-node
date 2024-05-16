@@ -81,7 +81,6 @@ type Fetcher struct {
 	chFramesRef chan *FramesRef
 	chainID     *big.Int
 
-	mtx    sync.Mutex
 	ctx    context.Context
 	cancel context.CancelFunc
 	done   chan struct{}
@@ -279,9 +278,6 @@ func (f *Fetcher) FetchL2Blocks() error {
 
 // Stop stops the Fetcher.
 func (f *Fetcher) Stop() {
-	f.mtx.Lock()
-	defer f.mtx.Unlock()
-
 	if f.cancel == nil {
 		return
 	}
@@ -444,9 +440,6 @@ func (f *Fetcher) validTransaction(tx *coretypes.Transaction) bool {
 
 // nextBatchHeader returns the L2 batch header.
 func (f *Fetcher) nextBatchHeader() (*sequencerv2types.BatchHeader, error) {
-	f.mtx.Lock()
-	defer f.mtx.Unlock()
-
 	batchesRef, ok := <-f.batchHeaders
 	if !ok {
 		return nil, errors.New("batch headers channel is closed")
