@@ -27,7 +27,6 @@ DBPath = "mongodb://127.0.0.1:27017"
 [Sequencer]
 Chain = "mock"
 FromL1BlockNumber = 20
-FromL2BlockNumber = 20
 EthereumURL = "http://localhost:8545"
 CommitteeSCAddress = "0xBF4E09354df24900e3d2A1e9057a9F7601fbDD06"
 StakingCheckInterval = "2s"

@@ -214,12 +214,12 @@ func (c *Client) Start() error {
 				}
 				if errors.Is(err, ErrBatchNotFound) {
 					// if the batch is not found, set the begin block number to the L1 block number
-					logger.Infof("the batch is not found, set the begin block number to the L1 block number %d", batch.L1BlockNumber())
-					c.rpcClient.SetBeginBlockNumber(batch.L1BlockNumber(), batch.BatchHeader.FromBlockNumber())
+					logger.Warnf("The batch is not found, set the begin block number to the L1 block number %d", batch.L1BlockNumber())
+					c.rpcClient.SetBeginBlockNumber(batch.L1BlockNumber())
 					continue
 				}
 				if errors.Is(err, ErrBatchNotReady) {
-					logger.Infof("the batch is not ready yet")
+					logger.Warn("NOTE: The given round is not initialized yet. It may be because the sequencer is waiting for the next batch since it is almost caught up with the current block. Please wait for the next batch.")
 					continue
 				}
 
@@ -287,7 +287,7 @@ func (c *Client) joinNetwork() error {
 
 	c.jwToken = res.Token
 
-	c.rpcClient.SetBeginBlockNumber(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
+	c.rpcClient.SetBeginBlockNumber(res.PrevL1BlockNumber)
 	return c.verifyPrevBatch(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
 }
 
@@ -431,7 +431,8 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 
 	// verify the committee root
 	if err := c.verifyCommitteeRoot(batch); err != nil {
-		return nil, fmt.Errorf("failed to verify the committee root: %v", err)
+		logger.Warnf("failed to verify the committee root: %v", err)
+		return nil, err
 	}
 
 	// verify if the batch hash is correct
@@ -483,6 +484,9 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 		prevBatchL1Number, err = c.getPrevBatchL1Number(batch.L1BlockNumber(), batch.BatchHeader.L1TxIndex)
 		if err != nil {
 			return fmt.Errorf("failed to get the previous batch L1 number: %v", err)
+		}
+		if prevBatchL1Number == 0 {
+			return ErrBatchNotFound
 		}
 	}
 	prevCommitteeData, err := c.getCommitteeRoot(prevBatchL1Number)
