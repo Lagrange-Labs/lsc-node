@@ -7,6 +7,7 @@ import (
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -213,9 +214,10 @@ func (c *Client) Start() error {
 					continue
 				}
 				if errors.Is(err, ErrBatchNotFound) {
-					// if the batch is not found, set the begin block number to the L1 block number
-					logger.Warnf("The batch is not found, set the begin block number to the L1 block number %d", batch.L1BlockNumber())
-					c.rpcClient.SetBeginBlockNumber(batch.L1BlockNumber())
+					logger.Warnf("The batch is not found, please check the metrics for the RPC provider. There may be a delay or a performance issue.")
+					if err := c.initBeginBlockNumber(batch.L1BlockNumber()); err != nil {
+						logger.Errorf("failed to initialize the begin block number: %v", err)
+					}
 					continue
 				}
 				if errors.Is(err, ErrBatchNotReady) {
@@ -287,8 +289,31 @@ func (c *Client) joinNetwork() error {
 
 	c.jwToken = res.Token
 
-	c.rpcClient.SetBeginBlockNumber(res.PrevL1BlockNumber)
+	if err := c.initBeginBlockNumber(res.PrevL1BlockNumber); err != nil {
+		return fmt.Errorf("failed to initialize the begin block number: %v", err)
+	}
+
 	return c.verifyPrevBatch(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
+}
+
+// initBeginBlockNumber initializes the begin block number for the RPC client.
+func (c *Client) initBeginBlockNumber(blockNumber uint64) error {
+	lastStoredBlockNumber := uint64(0)
+	// get the last stored block number
+	key := make([]byte, 8)
+	binary.BigEndian.PutUint64(key, math.MaxUint64)
+	pKey, _, err := c.db.Prev(key)
+	if err != nil {
+		return fmt.Errorf("failed to get the previous key: %v", err)
+	}
+	if pKey != nil {
+		lastStoredBlockNumber = binary.BigEndian.Uint64(pKey)
+	}
+	if lastStoredBlockNumber > blockNumber {
+		blockNumber = lastStoredBlockNumber
+	}
+	c.rpcClient.SetBeginBlockNumber(blockNumber)
+	return nil
 }
 
 // startBatchFetching starts the batch fetching loop.

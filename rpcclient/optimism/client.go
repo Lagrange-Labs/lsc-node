@@ -37,7 +37,7 @@ func NewClient(cfg *Config) (*Client, error) {
 // SetBeginBlockNumber sets the begin L1 & L2 block number.
 func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) {
 	lastSyncedL1BlockNumber := c.fetcher.GetFetchedBlockNumber()
-	if lastSyncedL1BlockNumber > 0 && lastSyncedL1BlockNumber+ParallelBlocks > l1BlockNumber {
+	if lastSyncedL1BlockNumber > 0 && lastSyncedL1BlockNumber+ParallelBlocks > l1BlockNumber && l1BlockNumber > lastSyncedL1BlockNumber-ParallelBlocks {
 		return
 	}
 	c.fetcher.Stop()

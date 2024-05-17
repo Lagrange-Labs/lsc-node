@@ -28,11 +28,10 @@ import (
 )
 
 const (
-	EthereumFinalityDepth = 64
-	ParallelBlocks        = 32
-	searchLimit           = 1024
-	maxTxBlobCount        = 10000
-	FetchInterval         = 5 * time.Second
+	ParallelBlocks = 32
+	searchLimit    = 1024
+	maxTxBlobCount = 10000
+	fetchInterval  = 5 * time.Second
 )
 
 // TxDataRef is a the list of transaction data with tx metadata.
@@ -64,6 +63,7 @@ type FramesRef struct {
 // Fetcher is a synchronizer for the BatchInbox EOA.
 type Fetcher struct {
 	l1Client          *ethclient.Client
+	l1EvmClient       types.EvmClient
 	l2Client          types.EvmClient
 	l1BlobFetcher     *sources.L1BeaconClient
 	batchInboxAddress common.Address
@@ -91,6 +91,10 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 	if err != nil {
 		return nil, err
 	}
+	l1EvmClient, err := evmclient.NewClient(cfg.L1RPCURL)
+	if err != nil {
+		return nil, err
+	}
 	l2Client, err := evmclient.NewClient(cfg.RPCURL)
 	if err != nil {
 		return nil, err
@@ -109,6 +113,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 
 	return &Fetcher{
 		l1Client:          l1Client,
+		l1EvmClient:       l1EvmClient,
 		l2Client:          l2Client,
 		l1BlobFetcher:     l1BlobFetcher,
 		chainID:           big.NewInt(int64(l2ChainID)),
@@ -162,17 +167,17 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			g, ctx := errgroup.WithContext(context.Background())
 			g.SetLimit(f.concurrentFetcher)
 			// Fetch the latest finalized block number.
-			blockNumber, err := f.l1Client.BlockNumber(ctx)
+			blockNumber, err := f.l1EvmClient.GetFinalizedBlockNumber()
 			if err != nil {
 				return err
 			}
 			lastSyncedL1BlockNumber := f.lastSyncedL1BlockNumber.Load()
 			nextBlockNumber := lastSyncedL1BlockNumber + ParallelBlocks
-			if blockNumber-EthereumFinalityDepth < nextBlockNumber {
-				nextBlockNumber = blockNumber - EthereumFinalityDepth
+			if blockNumber < nextBlockNumber {
+				nextBlockNumber = blockNumber + 1
 			}
 			if lastSyncedL1BlockNumber >= nextBlockNumber {
-				time.Sleep(FetchInterval)
+				time.Sleep(fetchInterval)
 				continue
 			}
 			ti := time.Now()
