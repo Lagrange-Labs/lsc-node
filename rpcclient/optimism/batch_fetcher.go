@@ -79,7 +79,6 @@ type Fetcher struct {
 	chFramesRef chan *FramesRef
 	chainID     *big.Int
 
-	mtx    sync.Mutex
 	ctx    context.Context
 	cancel context.CancelFunc
 	done   chan struct{}
