@@ -1,7 +1,6 @@
 package evmclient
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -17,9 +16,12 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 const CacheSize = 2048
+
+var _ types.EvmClient = (*Client)(nil)
 
 // Client is an EVM client.
 type Client struct {
@@ -32,7 +34,7 @@ type Client struct {
 
 // NewClient creates a new EvmClient instance.
 func NewClient(rpcURL string) (*Client, error) {
-	client, err := rpc.DialContext(context.Background(), rpcURL)
+	client, err := rpc.DialContext(utils.GetContext(), rpcURL)
 	if err != nil {
 		return nil, err
 	}
@@ -45,9 +47,14 @@ func NewClient(rpcURL string) (*Client, error) {
 	}, nil
 }
 
+// GetEthClient returns the ethclient.Client.
+func (c *Client) GetEthClient() *ethclient.Client {
+	return c.ethClient
+}
+
 // GetCurrentBlockNumber returns the current block number.
 func (c *Client) GetCurrentBlockNumber() (uint64, error) {
-	header, err := c.ethClient.HeaderByNumber(context.Background(), nil)
+	header, err := c.ethClient.HeaderByNumber(utils.GetContext(), nil)
 	if err != nil {
 		return 0, err
 	}
@@ -80,7 +87,7 @@ func getHashFromRawHeader(rawHeader json.RawMessage) (common.Hash, error) {
 
 // GetBlockNumberByHash returns the block number by the given block hash.
 func (c *Client) GetBlockNumberByHash(blockHash common.Hash) (uint64, error) {
-	header, err := c.ethClient.HeaderByHash(context.Background(), blockHash)
+	header, err := c.ethClient.HeaderByHash(utils.GetContext(), blockHash)
 	if err != nil {
 		return 0, err
 	}
@@ -89,7 +96,7 @@ func (c *Client) GetBlockNumberByHash(blockHash common.Hash) (uint64, error) {
 
 // GetBlockNumberByTxHash returns the block number by the given transaction hash.
 func (c *Client) GetBlockNumberByTxHash(txHash common.Hash) (uint64, error) {
-	receipt, err := c.ethClient.TransactionReceipt(context.Background(), txHash)
+	receipt, err := c.ethClient.TransactionReceipt(utils.GetContext(), txHash)
 	if err != nil {
 		return 0, err
 	}
@@ -98,7 +105,7 @@ func (c *Client) GetBlockNumberByTxHash(txHash common.Hash) (uint64, error) {
 
 // GetChainID returns the chain ID.
 func (c *Client) GetChainID() (uint32, error) {
-	chainID, err := c.ethClient.ChainID(context.Background())
+	chainID, err := c.ethClient.ChainID(utils.GetContext())
 	if err != nil {
 		return 0, err
 	}
@@ -116,7 +123,7 @@ func (c *Client) GetBlockHashesByRange(start, end uint64) ([]common.Hash, error)
 			Result: &json.RawMessage{},
 		})
 	}
-	err := c.rpcClient.BatchCallContext(context.Background(), batchElems)
+	err := c.rpcClient.BatchCallContext(utils.GetContext(), batchElems)
 	if err != nil {
 		return nil, err
 	}
@@ -139,9 +146,9 @@ func (c *Client) GetBlockHashesByRange(start, end uint64) ([]common.Hash, error)
 // GetFinalizedBlockNumber returns the finalized block number.
 func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 	var header *ethtypes.Header
-	if err := c.rpcClient.CallContext(context.Background(), &header, "eth_getBlockByNumber", "finalized", false); err != nil {
+	if err := c.rpcClient.CallContext(utils.GetContext(), &header, "eth_getBlockByNumber", "finalized", false); err != nil {
 		if strings.Contains(err.Error(), "'finalized' tag not supported on pre-merge network") {
-			err := c.rpcClient.CallContext(context.Background(), &header, "eth_getBlockByNumber", "latest", false)
+			err := c.rpcClient.CallContext(utils.GetContext(), &header, "eth_getBlockByNumber", "latest", false)
 			if err != nil {
 				logger.Errorf("failed to get latest block number error: %v", err)
 				return 0, err
@@ -161,7 +168,7 @@ func (c *Client) GetRawHeaderByNumber(blockNumber uint64) (json.RawMessage, erro
 	}
 
 	var rawHeader json.RawMessage
-	if err := c.rpcClient.CallContext(context.Background(), &rawHeader, "eth_getBlockByNumber",
+	if err := c.rpcClient.CallContext(utils.GetContext(), &rawHeader, "eth_getBlockByNumber",
 		hexutil.EncodeBig(big.NewInt(int64(blockNumber))), false); err != nil {
 		if errors.Is(err, rpc.ErrNoResult) {
 			return nil, types.ErrNoResult
@@ -175,4 +182,9 @@ func (c *Client) GetRawHeaderByNumber(blockNumber uint64) (json.RawMessage, erro
 	c.cache.Add(blockNumber, rawHeader)
 
 	return rawHeader, nil
+}
+
+// GetBlockByNumber returns the block header by the given block number.
+func (c *Client) GetBlockByNumber(blockNumber uint64) (*ethtypes.Block, error) {
+	return c.ethClient.BlockByNumber(utils.GetContext(), big.NewInt(int64(blockNumber)))
 }

@@ -15,7 +15,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/sources"
 	"github.com/ethereum/go-ethereum/common"
 	coretypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"golang.org/x/sync/errgroup"
 
@@ -24,6 +23,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 const (
@@ -44,13 +44,11 @@ type BatchesRef struct {
 
 // Fetcher is a synchronizer for the BatchInbox EOA.
 type Fetcher struct {
-	l1Client          *ethclient.Client
-	l1EvmClient       types.EvmClient
+	l1Client          types.EvmClient
 	l2Client          types.EvmClient
 	l1BlobFetcher     *sources.L1BeaconClient
 	sequencerInbox    *SequencerInbox
 	concurrentFetcher int
-	signer            coretypes.Signer
 	batchHeaders      chan *BatchesRef
 
 	chainID                 *big.Int
@@ -63,20 +61,12 @@ type Fetcher struct {
 
 // NewFetcher creates a new Fetcher instance.
 func NewFetcher(cfg *Config) (*Fetcher, error) {
-	l1Client, err := ethclient.Dial(cfg.L1RPCURL)
-	if err != nil {
-		return nil, err
-	}
-	l1EvmClient, err := evmclient.NewClient(cfg.L1RPCURL)
+	l1Client, err := evmclient.NewClient(cfg.L1RPCURL)
 	if err != nil {
 		return nil, err
 	}
 
 	l2Client, err := evmclient.NewClient(cfg.RPCURL)
-	if err != nil {
-		return nil, err
-	}
-	chainID, err := l1Client.ChainID(context.Background())
 	if err != nil {
 		return nil, err
 	}
@@ -95,13 +85,11 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 
 	return &Fetcher{
 		l1Client:          l1Client,
-		l1EvmClient:       l1EvmClient,
 		l2Client:          l2Client,
 		l1BlobFetcher:     l1BlobFetcher,
 		sequencerInbox:    sequencerInbox,
 		chainID:           big.NewInt(int64(l2ChainID)),
 		concurrentFetcher: cfg.ConcurrentFetchers,
-		signer:            coretypes.LatestSignerForChainID(chainID),
 		batchHeaders:      make(chan *BatchesRef, 64),
 
 		done: make(chan struct{}, 2),
@@ -134,7 +122,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			return nil
 		default:
 			// Fetch the latest finalized block number.
-			blockNumber, err := f.l1EvmClient.GetFinalizedBlockNumber()
+			blockNumber, err := f.l1Client.GetFinalizedBlockNumber()
 			if err != nil {
 				return err
 			}
@@ -148,7 +136,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 				continue
 			}
 			ti := time.Now()
-			batches, err := f.sequencerInbox.fetchBatchTransactions(f.ctx, big.NewInt(int64(lastSyncedL1BlockNumber)), big.NewInt(int64(nextBlockNumber)))
+			batches, err := f.sequencerInbox.fetchBatchTransactions(big.NewInt(int64(lastSyncedL1BlockNumber)), big.NewInt(int64(nextBlockNumber)))
 			if err != nil {
 				return err
 			}
@@ -261,7 +249,7 @@ func (f *Fetcher) Stop() {
 // fetchBlock fetches the given block and analyzes the transactions
 // which are sent to the BatchInbox EOA.
 func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64, txHash common.Hash) ([]byte, error) {
-	block, err := f.l1Client.BlockByNumber(ctx, big.NewInt(int64(blockNumber)))
+	block, err := f.l1Client.GetBlockByNumber(blockNumber)
 	if err != nil {
 		return nil, err
 	}
@@ -295,7 +283,7 @@ func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64, txHash com
 			Time:       block.Time(),
 		}
 		ti := time.Now()
-		blobs, err := f.l1BlobFetcher.GetBlobs(ctx, blockRef, hashes)
+		blobs, err := f.l1BlobFetcher.GetBlobs(utils.GetContext(), blockRef, hashes)
 		if err != nil {
 			logger.Errorf("failed to get blobs: %v", err)
 			return nil, err

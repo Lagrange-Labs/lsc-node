@@ -4,6 +4,8 @@ import (
 	"fmt"
 
 	"github.com/ethereum/go-ethereum/common"
+	coretypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/ethclient"
 
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 )
@@ -31,8 +33,12 @@ type RpcClient interface {
 }
 
 type EvmClient interface {
+	// GetEthClient returns the eth client.
+	GetEthClient() *ethclient.Client
 	// GetChainID returns the chain ID.
 	GetChainID() (uint32, error)
+	// GetBlockByNumber returns the block by the given block number.
+	GetBlockByNumber(blockNumber uint64) (*coretypes.Block, error)
 	// GetBlockHashByNumber returns the block hash by the given block number.
 	GetBlockHashByNumber(blockNumber uint64) (common.Hash, error)
 	// GetBlockNumberByHash returns the block number by the given block hash.
