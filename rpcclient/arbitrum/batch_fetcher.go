@@ -30,7 +30,7 @@ const (
 	ParallelBlocks = 32
 	cacheLimit     = 1024
 	maxTxBlobCount = 10000
-	FetchInterval  = 5 * time.Second
+	fetchInterval  = 5 * time.Second
 )
 
 // BatchesRef is a struct to represent the batch reference.
@@ -144,7 +144,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 				nextBlockNumber = blockNumber
 			}
 			if lastSyncedL1BlockNumber > nextBlockNumber {
-				time.Sleep(FetchInterval)
+				time.Sleep(fetchInterval)
 				continue
 			}
 			ti := time.Now()
