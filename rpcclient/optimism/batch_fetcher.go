@@ -130,7 +130,7 @@ func (f *Fetcher) GetFetchedBlockNumber() uint64 {
 //
 // NOTE: This should be called before calling Fetch after the Stop.
 func (f *Fetcher) InitFetch() {
-	f.chFramesRef = make(chan *FramesRef, 64)
+	f.chFramesRef = make(chan *FramesRef, ParallelBlocks)
 	f.ctx, f.cancel = context.WithCancel(context.Background())
 }
 
@@ -142,11 +142,11 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			logger.Errorf("failed to handle frames: %v", err)
 			f.chErr <- err
 		}
-		logger.Infof("decoder is stopped")
 	}()
 
 	defer func() {
 		f.done <- struct{}{}
+		logger.Infof("fetcher is stopped")
 	}()
 
 	f.lastSyncedL1BlockNumber.Store(l1BeginBlockNumber)
@@ -154,7 +154,6 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 	for {
 		select {
 		case <-f.ctx.Done():
-			logger.Infof("fetcher is stopped")
 			return nil
 		case err := <-f.chErr:
 			return err
@@ -169,7 +168,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			lastSyncedL1BlockNumber := f.lastSyncedL1BlockNumber.Load()
 			nextBlockNumber := lastSyncedL1BlockNumber + ParallelBlocks
 			if blockNumber < nextBlockNumber {
-				nextBlockNumber = blockNumber + 1
+				nextBlockNumber = blockNumber
 			}
 			if lastSyncedL1BlockNumber >= nextBlockNumber {
 				time.Sleep(fetchInterval)
@@ -177,7 +176,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			}
 			ti := time.Now()
 			m := sync.Map{}
-			for i := lastSyncedL1BlockNumber; i < nextBlockNumber; i++ {
+			for i := lastSyncedL1BlockNumber; i <= nextBlockNumber; i++ {
 				if err := ctx.Err(); err != nil {
 					logger.Errorf("fetch context error: %v", err)
 					return err
@@ -213,7 +212,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			for _, framesRef := range framesRefs {
 				f.chFramesRef <- framesRef
 			}
-			f.lastSyncedL1BlockNumber.Store(nextBlockNumber)
+			f.lastSyncedL1BlockNumber.Store(nextBlockNumber + 1)
 		}
 	}
 }
@@ -267,6 +266,16 @@ func (f *Fetcher) getL2BlockHashes(start, end uint64) ([]*sequencerv2types.Block
 
 // Stop stops the Fetcher.
 func (f *Fetcher) Stop() {
+	f.StopFetch()
+
+	// close the batch headers channel to notify the outside
+	close(f.batchHeaders)
+	close(f.done)
+	close(f.chErr)
+}
+
+// StopFetch stops the fetching logic.
+func (f *Fetcher) StopFetch() {
 	if f.cancel == nil {
 		return
 	}
@@ -280,9 +289,9 @@ func (f *Fetcher) Stop() {
 	for range f.chFramesRef {
 	}
 	<-f.done
-	// release retains and close batch headers channel to notify the outside
-	close(f.batchHeaders)
-	for range f.batchHeaders {
+	// drain channel
+	for len(f.batchHeaders) > 0 {
+		<-f.batchHeaders
 	}
 
 	f.cancel = nil

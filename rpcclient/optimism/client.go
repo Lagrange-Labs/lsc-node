@@ -40,7 +40,7 @@ func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) {
 	if lastSyncedL1BlockNumber > 0 && lastSyncedL1BlockNumber+ParallelBlocks > l1BlockNumber && l1BlockNumber > lastSyncedL1BlockNumber-ParallelBlocks {
 		return
 	}
-	c.fetcher.Stop()
+	c.fetcher.StopFetch()
 	logger.Infof("last synced L1 block number: %d, begin L1 block number: %d", lastSyncedL1BlockNumber, l1BlockNumber)
 
 	c.fetcher.InitFetch()

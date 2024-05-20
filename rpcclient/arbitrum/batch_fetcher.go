@@ -92,7 +92,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		concurrentFetcher: cfg.ConcurrentFetchers,
 		batchHeaders:      make(chan *BatchesRef, 64),
 
-		done: make(chan struct{}, 2),
+		done: make(chan struct{}),
 	}, nil
 }
 
@@ -229,6 +229,14 @@ func (f *Fetcher) getL2BlockHashes(start, end uint64) ([]*sequencerv2types.Block
 
 // Stop stops the Fetcher.
 func (f *Fetcher) Stop() {
+	f.StopFetch()
+	// close the batch headers channel to notify the outside
+	close(f.batchHeaders)
+	close(f.done)
+}
+
+// StopFetch stops the Fetching logic.
+func (f *Fetcher) StopFetch() {
 	if f.cancel == nil {
 		return
 	}
@@ -237,9 +245,9 @@ func (f *Fetcher) Stop() {
 	// close L1 fetcher
 	f.cancel()
 	<-f.done
-	// release retains and close batch headers channel to notify the outside
-	close(f.batchHeaders)
-	for range f.batchHeaders {
+	// drain channel
+	for len(f.batchHeaders) > 0 {
+		<-f.batchHeaders
 	}
 
 	f.cancel = nil

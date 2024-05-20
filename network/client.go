@@ -299,8 +299,9 @@ func (c *Client) joinNetwork() error {
 func (c *Client) initBeginBlockNumber(blockNumber uint64) error {
 	lastStoredBlockNumber := uint64(0)
 	// get the last stored block number
-	key := make([]byte, 8)
+	key := make([]byte, 12)
 	binary.BigEndian.PutUint64(key, math.MaxUint64)
+	binary.BigEndian.PutUint32(key[8:], math.MaxUint32)
 	pKey, _, err := c.db.Prev(key)
 	if err != nil {
 		return fmt.Errorf("failed to get the previous key: %v", err)
@@ -309,7 +310,20 @@ func (c *Client) initBeginBlockNumber(blockNumber uint64) error {
 		lastStoredBlockNumber = binary.BigEndian.Uint64(pKey)
 	}
 	if lastStoredBlockNumber > blockNumber {
-		blockNumber = lastStoredBlockNumber
+		// check if the block number exists in the database
+		prefix := make([]byte, 12)
+		storedBlockNumber := uint64(0)
+		binary.BigEndian.PutUint64(prefix, blockNumber+1)
+		pKey, _, err := c.db.Prev(prefix)
+		if err != nil {
+			return fmt.Errorf("failed to get the previous key: %v", err)
+		}
+		if pKey != nil {
+			storedBlockNumber = binary.BigEndian.Uint64(pKey)
+		}
+		if storedBlockNumber == blockNumber {
+			blockNumber = lastStoredBlockNumber
+		}
 	}
 	c.rpcClient.SetBeginBlockNumber(blockNumber)
 	return nil
@@ -328,7 +342,7 @@ func (c *Client) startBatchFetching() {
 		logger.Infof("got the batch the L1 block number %d", batch.L1BlockNumber)
 
 		// block the writeBatchHeader if the batch is too far from the current block
-		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/2 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
+		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/4 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
 			time.Sleep(1 * time.Second)
 		}
 		if err := c.writeBatchHeader(batch); err != nil {
