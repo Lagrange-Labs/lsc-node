@@ -422,18 +422,26 @@ func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64) (*sequencer
 	binary.BigEndian.PutUint64(prefix, l1BlockNumber)
 
 	var res *sequencerv2types.BatchHeader
+	isFound := false
 	if err := c.db.Iterate(prefix, func(key, value []byte) error {
+		if isFound {
+			return nil
+		}
 		var batchHeader sequencerv2types.BatchHeader
 		if err := proto.Unmarshal(value, &batchHeader); err != nil {
 			return fmt.Errorf("failed to unmarshal the batch header: %v", err)
 		}
 		if batchHeader.FromBlockNumber() == l2BlockNumber {
 			res = &batchHeader
-			return nil
+			isFound = true
 		}
-		return fmt.Errorf("the batch header is not found for the L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
+		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("failed to iterate the database: %v", err)
+	}
+
+	if !isFound {
+		return nil, fmt.Errorf("the batch header is not found for L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
 	}
 
 	return res, nil
