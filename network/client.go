@@ -2,11 +2,11 @@ package network
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -217,13 +217,14 @@ func (c *Client) Start() error {
 					continue
 				}
 				if errors.Is(err, ErrBatchNotFound) {
-					// if the batch is not found, set the begin block number to the L1 block number
-					logger.Infof("the batch is not found, set the begin block number to the L1 block number %d", batch.L1BlockNumber())
-					c.rpcClient.SetBeginBlockNumber(batch.L1BlockNumber(), batch.BatchHeader.FromBlockNumber())
+					logger.Warnf("The batch is not found, please check the metrics for the RPC provider. There may be a delay or a performance issue.")
+					if err := c.initBeginBlockNumber(batch.L1BlockNumber()); err != nil {
+						logger.Errorf("failed to initialize the begin block number: %v", err)
+					}
 					continue
 				}
 				if errors.Is(err, ErrBatchNotReady) {
-					logger.Infof("the batch is not ready yet")
+					logger.Warn("NOTE: The given round is not initialized yet. It may be because the sequencer is waiting for the next batch since it is almost caught up with the current block. Please wait for the next batch.")
 					continue
 				}
 
@@ -296,7 +297,7 @@ func (c *Client) joinNetwork() error {
 	}
 	req.Signature = utils.Bytes2Hex(sig)
 	ti := time.Now()
-	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
+	res, err := c.NetworkServiceClient.JoinNetwork(utils.GetContext(), req)
 	if err != nil {
 		return fmt.Errorf("failed to join the network: %v", err)
 	}
@@ -307,8 +308,45 @@ func (c *Client) joinNetwork() error {
 
 	c.jwToken = res.Token
 
-	c.rpcClient.SetBeginBlockNumber(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
+	if err := c.initBeginBlockNumber(res.PrevL1BlockNumber); err != nil {
+		return fmt.Errorf("failed to initialize the begin block number: %v", err)
+	}
+
 	return c.verifyPrevBatch(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
+}
+
+// initBeginBlockNumber initializes the begin block number for the RPC client.
+func (c *Client) initBeginBlockNumber(blockNumber uint64) error {
+	lastStoredBlockNumber := uint64(0)
+	// get the last stored block number
+	key := make([]byte, 12)
+	binary.BigEndian.PutUint64(key, math.MaxUint64)
+	binary.BigEndian.PutUint32(key[8:], math.MaxUint32)
+	pKey, _, err := c.db.Prev(key)
+	if err != nil {
+		return fmt.Errorf("failed to get the previous key: %v", err)
+	}
+	if pKey != nil {
+		lastStoredBlockNumber = binary.BigEndian.Uint64(pKey)
+	}
+	if lastStoredBlockNumber > blockNumber {
+		// check if the block number exists in the database
+		prefix := make([]byte, 12)
+		storedBlockNumber := uint64(0)
+		binary.BigEndian.PutUint64(prefix, blockNumber+1)
+		pKey, _, err := c.db.Prev(prefix)
+		if err != nil {
+			return fmt.Errorf("failed to get the previous key: %v", err)
+		}
+		if pKey != nil {
+			storedBlockNumber = binary.BigEndian.Uint64(pKey)
+		}
+		if storedBlockNumber == blockNumber {
+			blockNumber = lastStoredBlockNumber
+		}
+	}
+	c.rpcClient.SetBeginBlockNumber(blockNumber)
+	return nil
 }
 
 // startBatchFetching starts the batch fetching loop.
@@ -320,8 +358,11 @@ func (c *Client) startBatchFetching() {
 			c.chErr <- err
 			return
 		}
+		telemetry.SetGauge(float64(batch.L1BlockNumber), "client", "get_batch_l1_block_number")
+		logger.Infof("got the batch the L1 block number %d", batch.L1BlockNumber)
+
 		// block the writeBatchHeader if the batch is too far from the current block
-		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/2 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
+		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/4 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
 			time.Sleep(1 * time.Second)
 		}
 		if err := c.writeBatchHeader(batch); err != nil {
@@ -415,7 +456,7 @@ func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 // TryGetBatch tries to get the batch from the network.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	ti := time.Now()
-	res, err := c.GetBatch(context.Background(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
+	res, err := c.GetBatch(utils.GetContext(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
 			return nil, ErrInvalidToken
@@ -451,7 +492,8 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 
 	// verify the committee root
 	if err := c.verifyCommitteeRoot(batch); err != nil {
-		return nil, fmt.Errorf("failed to verify the committee root: %v", err)
+		logger.Warnf("failed to verify the committee root: %v", err)
+		return nil, err
 	}
 
 	// verify if the batch hash is correct
@@ -504,6 +546,9 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 		if err != nil {
 			return fmt.Errorf("failed to get the previous batch L1 number: %v", err)
 		}
+		if prevBatchL1Number == 0 {
+			return ErrBatchNotFound
+		}
 	}
 	prevCommitteeData, err := c.getCommitteeRoot(prevBatchL1Number)
 	if err != nil {
@@ -552,7 +597,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 		Token:        c.jwToken,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := utils.GetContextWithCancel()
 	defer cancel()
 
 	stream, err := c.CommitBatch(ctx, req)

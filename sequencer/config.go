@@ -7,8 +7,6 @@ type Config struct {
 	Chain string `mapstructure:"Chain"`
 	// FromL1BlockNumber is the starting L1 block number.
 	FromL1BlockNumber uint64 `mapstructure:"FromL1BlockNumber"`
-	// FromL2BlockNumber is the starting L2 block number.
-	FromL2BlockNumber uint64 `mapstructure:"FromL2BlockNumber"`
 	// EthereumURL is the endpoint of the ethereum node.
 	EthereumURL string `mapstructure:"EthereumURL"`
 	// CommitteeSCAddress is the address of the committee smart contract.

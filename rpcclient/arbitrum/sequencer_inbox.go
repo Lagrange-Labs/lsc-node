@@ -1,7 +1,6 @@
 package arbitrum
 
 import (
-	"context"
 	"encoding/binary"
 	"errors"
 	"fmt"
@@ -10,10 +9,12 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/core/types"
+	coretypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/arbinbox"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 var sequencerBridgeABI *abi.ABI
@@ -60,21 +61,22 @@ type SequencerBatch struct {
 	TxHash         common.Hash
 	SequenceNumber uint64
 
-	rawLog       types.Log
+	rawLog       coretypes.Log
 	dataLocation batchDataLocation
 	serialized   []byte
 	segments     [][]byte
-	txes         []*types.Transaction
+	txes         []*coretypes.Transaction
 }
 
 // NewSequencerInbox creates a new SequencerInbox instance.
-func NewSequencerInbox(inboxAddr common.Address, client *ethclient.Client) (*SequencerInbox, error) {
-	inbox, err := arbinbox.NewArbinbox(inboxAddr, client)
+func NewSequencerInbox(inboxAddr common.Address, client types.EvmClient) (*SequencerInbox, error) {
+	ethClient := client.GetEthClient()
+	inbox, err := arbinbox.NewArbinbox(inboxAddr, ethClient)
 	if err != nil {
 		return nil, err
 	}
 
-	chainId, err := client.ChainID(context.Background())
+	chainId, err := ethClient.ChainID(utils.GetContext())
 	if err != nil {
 		return nil, err
 	}
@@ -82,20 +84,20 @@ func NewSequencerInbox(inboxAddr common.Address, client *ethclient.Client) (*Seq
 	return &SequencerInbox{
 		inbox:   inbox,
 		address: inboxAddr,
-		client:  client,
+		client:  ethClient,
 		chainId: chainId,
 	}, nil
 }
 
 // fetchBatchTransactions fetches the batch transactions from the sequencer inbox.
-func (s *SequencerInbox) fetchBatchTransactions(ctx context.Context, from, to *big.Int) ([]*SequencerBatch, error) {
+func (s *SequencerInbox) fetchBatchTransactions(from, to *big.Int) ([]*SequencerBatch, error) {
 	query := ethereum.FilterQuery{
 		FromBlock: from,
 		ToBlock:   to,
 		Addresses: []common.Address{s.address},
 		Topics:    [][]common.Hash{{batchDeliveredID}},
 	}
-	logs, err := s.client.FilterLogs(ctx, query)
+	logs, err := s.client.FilterLogs(utils.GetContext(), query)
 	if err != nil {
 		return nil, err
 	}
@@ -141,8 +143,8 @@ func (s *SequencerInbox) fetchBatchTransactions(ctx context.Context, from, to *b
 	return messages, nil
 }
 
-func (s *SequencerInbox) getLogTransaction(log types.Log) (*types.Transaction, error) {
-	tx, err := s.client.TransactionInBlock(context.Background(), log.BlockHash, log.TxIndex)
+func (s *SequencerInbox) getLogTransaction(log coretypes.Log) (*coretypes.Transaction, error) {
+	tx, err := s.client.TransactionInBlock(utils.GetContext(), log.BlockHash, log.TxIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -178,7 +180,7 @@ func (s *SequencerInbox) serialize(batch *SequencerBatch) ([]byte, error) {
 				Addresses: []common.Address{s.address},
 				Topics:    [][]common.Hash{{sequencerBatchDataABI.ID}, {numberAsHash}},
 			}
-			logs, err := s.client.FilterLogs(context.Background(), query)
+			logs, err := s.client.FilterLogs(utils.GetContext(), query)
 			if err != nil {
 				return nil, err
 			}
@@ -259,12 +261,12 @@ const (
 const MaxL2MessageSize = 256 * 1024
 
 // parseL2Transactions parses L1IncomingMessage from the sequencer batch.
-func (s *SequencerInbox) parseL2Transactions(batch *SequencerBatch) ([]*types.Transaction, error) {
+func (s *SequencerInbox) parseL2Transactions(batch *SequencerBatch) ([]*coretypes.Transaction, error) {
 	if batch.segments == nil {
 		return nil, errors.New("batch segments not yet decompressed")
 	}
 
-	batch.txes = make([]*types.Transaction, 0)
+	batch.txes = make([]*coretypes.Transaction, 0)
 	for _, segment := range batch.segments {
 		kind := segment[0]
 		segment = segment[1:]

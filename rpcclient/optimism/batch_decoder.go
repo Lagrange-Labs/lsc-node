@@ -43,6 +43,7 @@ func (f *Fetcher) handleFrames() error {
 
 	defer func() {
 		f.done <- struct{}{}
+		logger.Infof("decoder is stopped")
 	}()
 
 	for framesRef := range f.chFramesRef {
@@ -160,7 +161,7 @@ func (f *Fetcher) parseBatch(batchData *derive.BatchData) (*L2BlockBatch, error)
 func (f *Fetcher) pushBatchesRef(batchesRef *BatchesRef) error {
 	pushCache := func(l2BlockNumber uint64, batchesRef *BatchesRef) error {
 		// check the parent hash of the first block is correct
-		parentHash, err := f.getL2BlockHash(l2BlockNumber - 1)
+		parentHash, err := f.l2Client.GetBlockHashByNumber(l2BlockNumber - 1)
 		if err != nil {
 			logger.Errorf("failed to get L2 block hash: %v", err)
 			return err
@@ -169,7 +170,7 @@ func (f *Fetcher) pushBatchesRef(batchesRef *BatchesRef) error {
 			logger.Infof("L2 batch is loaded from %d BlockCount: %d L1 BlockNumber:%d TxHash: %v", l2BlockNumber, batchesRef.L2BlockCount, batchesRef.L1BlockNumber, batchesRef.L1TxHash.Hex())
 			batchesRef.L2BlockNumber = l2BlockNumber
 			f.batchHeaders <- batchesRef
-			f.lastSyncedL2BlockNumber = l2BlockNumber
+			f.lastSyncedL2BlockNumber = l2BlockNumber + uint64(batchesRef.L2BlockCount) - 1
 			return nil
 		} else {
 			logger.Errorf("parent hash mismatch L2 BlockNumber: %d, Parent Hash: %v, Ref: %+v", l2BlockNumber, parentHash, batchesRef)
@@ -182,9 +183,9 @@ func (f *Fetcher) pushBatchesRef(batchesRef *BatchesRef) error {
 	if err == ErrNoTransaction {
 		// no transaction in the batch
 		logger.Warnf("no transaction in the batch: %+v", batchesRef)
-		for i := 1; i < cacheLimit; i++ {
+		for i := 0; i < searchLimit; i++ {
 			bn := f.lastSyncedL2BlockNumber + uint64(i)
-			hash, err := f.getL2BlockHash(bn)
+			hash, err := f.l2Client.GetBlockHashByNumber(bn)
 			if err != nil {
 				logger.Errorf("failed to get L2 block hash: %v", err)
 				return err
@@ -192,8 +193,11 @@ func (f *Fetcher) pushBatchesRef(batchesRef *BatchesRef) error {
 			if bytes.Equal(batchesRef.Batches[0].ParentHashCheck, hash[:20]) {
 				return pushCache(bn+1, batchesRef)
 			}
+			if i == 0 {
+				continue
+			}
 			bn = f.lastSyncedL2BlockNumber - uint64(i)
-			hash, err = f.getL2BlockHash(bn)
+			hash, err = f.l2Client.GetBlockHashByNumber(bn)
 			if err != nil {
 				logger.Errorf("failed to get L2 block hash: %v", err)
 				return err
@@ -240,7 +244,7 @@ func (f *Fetcher) getBeginL2BlockNumber(batchesRef *BatchesRef) (uint64, error) 
 		return 0, ErrNoTransaction
 	}
 	for bn := l2BlockNumber; bn >= l2BlockNumber-forwardCount; bn-- {
-		blockHash, err := f.getL2BlockHash(bn)
+		blockHash, err := f.l2Client.GetBlockHashByNumber(bn)
 		if err != nil {
 			logger.Errorf("failed to get L2 block hash: %v", err)
 			return 0, err
