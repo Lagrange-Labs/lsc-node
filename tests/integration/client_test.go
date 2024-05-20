@@ -65,7 +65,8 @@ func (suite *ClientTestSuite) TearDownSuite() {
 func (suite *ClientTestSuite) Test_Client_Start() {
 	suite.T().Run("Test_Join_Network", func(t *testing.T) {
 		suite.manager.RunSequencer(true)
-		suite.client.TryJoinNetwork()
+		err := suite.client.TryJoinNetwork()
+		require.NoError(t, err)
 
 		stakeAddress := suite.client.GetStakeAddress()
 		node, err := suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress, suite.client.GetChainID())
