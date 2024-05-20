@@ -12,6 +12,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	networkv2types "github.com/Lagrange-Labs/lagrange-node/network/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 const (
@@ -95,7 +96,7 @@ func (hm *healthManager) loadHealthClient() error {
 				logger.Warnf("failed to watch the health of the server %s: %v", serverURL, err)
 			}
 			for i := 0; i < DefaultHealthCheckRetry; i++ {
-				resp, err := healthClient.Check(hm.ctx, &grpc_health_v1.HealthCheckRequest{})
+				resp, err := healthClient.Check(utils.GetContext(), &grpc_health_v1.HealthCheckRequest{})
 				if err != nil {
 					logger.Warnf("failed to receive the health of the server %s: %v", serverURL, err)
 					continue
@@ -133,7 +134,7 @@ func (hm *healthManager) healthCheck() {
 			return
 		case <-ticker.C:
 			ti := time.Now()
-			resp, err := hm.healthClient.Check(hm.ctx, &grpc_health_v1.HealthCheckRequest{})
+			resp, err := hm.healthClient.Check(utils.GetContext(), &grpc_health_v1.HealthCheckRequest{})
 			if err == nil && resp.Status == grpc_health_v1.HealthCheckResponse_SERVING {
 				telemetry.MeasureSince(ti, "network", "health_check")
 				telemetry.SetGauge(float64(hm.index), "network", "current_health_server_index")
