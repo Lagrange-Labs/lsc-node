@@ -92,7 +92,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		concurrentFetcher: cfg.ConcurrentFetchers,
 		batchHeaders:      make(chan *BatchesRef, 64),
 
-		done: make(chan struct{}),
+		done: make(chan struct{}, 1),
 	}, nil
 }
 
