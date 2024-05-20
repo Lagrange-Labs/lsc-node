@@ -43,6 +43,7 @@ func (f *Fetcher) handleFrames() error {
 
 	defer func() {
 		f.done <- struct{}{}
+		logger.Infof("decoder is stopped")
 	}()
 
 	for framesRef := range f.chFramesRef {
