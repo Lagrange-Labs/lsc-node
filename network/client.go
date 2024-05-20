@@ -190,7 +190,9 @@ func (c *Client) GetChainID() uint32 {
 
 // Start starts the connection loop.
 func (c *Client) Start() error {
-	c.TryJoinNetwork()
+	if err := c.TryJoinNetwork(); err != nil {
+		return err
+	}
 
 	for {
 		select {
@@ -209,7 +211,9 @@ func (c *Client) Start() error {
 			batch, err := c.TryGetBatch()
 			if err != nil {
 				if errors.Is(err, ErrInvalidToken) {
-					c.TryJoinNetwork()
+					if err := c.TryJoinNetwork(); err != nil {
+						return err
+					}
 					continue
 				}
 				if errors.Is(err, ErrBatchNotFound) {
@@ -229,7 +233,9 @@ func (c *Client) Start() error {
 
 			if err := c.TryCommitBatch(batch); err != nil {
 				if errors.Is(err, ErrInvalidToken) {
-					c.TryJoinNetwork()
+					if err := c.TryJoinNetwork(); err != nil {
+						return err
+					}
 				} else if errors.Is(err, ErrBatchNotFinalized) {
 					logger.Infof("NOTE: the current batch is not finalized yet due to a lack of voting power. Please wait until getting enough voting power.")
 				} else {
@@ -244,20 +250,34 @@ func (c *Client) Start() error {
 }
 
 // TryJoinNetwork tries to join the network.
-func (c *Client) TryJoinNetwork() {
+func (c *Client) TryJoinNetwork() error {
 	for {
-		if err := c.joinNetwork(); err != nil {
-			logger.Infof("failed to join the network: %v", err)
-			if strings.Contains(err.Error(), ErrNotCommitteeMember.Error()) {
-				logger.Warn("NOTE: If you just joined the network, please wait for the next committee rotation. If you have been observing this message for a long time, please check if the BLS public key and the operator address are set correctly in the config file or contact the Largrange team.")
-			} else if strings.Contains(err.Error(), ErrCheckCommitteeMember.Error()) {
-				logger.Warn("NOTE: The given round is not initialized yet. It may be because the sequencer is waiting for the next batch since it is almost caught up with the current block. Please wait for the next batch.")
+		select {
+		case err := <-c.healthMgr.chErr:
+			if errors.Is(err, ErrCurrentServerNotServing) {
+				c.NetworkServiceClient, err = c.healthMgr.getHealthClient()
+				if err != nil {
+					return err
+				}
+				continue
 			}
-			time.Sleep(5 * time.Second)
-			continue
+			return err
+		case err := <-c.chErr:
+			return err
+		default:
+			if err := c.joinNetwork(); err != nil {
+				logger.Infof("failed to join the network: %v", err)
+				if strings.Contains(err.Error(), ErrNotCommitteeMember.Error()) {
+					logger.Warn("NOTE: If you just joined the network, please wait for the next committee rotation. If you have been observing this message for a long time, please check if the BLS public key and the operator address are set correctly in the config file or contact the Largrange team.")
+				} else if strings.Contains(err.Error(), ErrCheckCommitteeMember.Error()) {
+					logger.Warn("NOTE: The given round is not initialized yet. It may be because the sequencer is waiting for the next batch since it is almost caught up with the current block. Please wait for the next batch.")
+				}
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			logger.Info("joined the network with the new token")
+			return nil
 		}
-		logger.Info("joined the network with the new token")
-		break
 	}
 }
 
