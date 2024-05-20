@@ -16,7 +16,6 @@ import (
 	"github.com/ethereum-optimism/optimism/op-service/sources"
 	"github.com/ethereum/go-ethereum/common"
 	coretypes "github.com/ethereum/go-ethereum/core/types"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"github.com/ethereum/go-ethereum/log"
 	"golang.org/x/sync/errgroup"
 
@@ -62,8 +61,7 @@ type FramesRef struct {
 
 // Fetcher is a synchronizer for the BatchInbox EOA.
 type Fetcher struct {
-	l1Client          *ethclient.Client
-	l1EvmClient       types.EvmClient
+	l1Client          types.EvmClient
 	l2Client          types.EvmClient
 	l1BlobFetcher     *sources.L1BeaconClient
 	batchInboxAddress common.Address
@@ -87,11 +85,7 @@ type Fetcher struct {
 
 // NewFetcher creates a new Fetcher instance.
 func NewFetcher(cfg *Config) (*Fetcher, error) {
-	l1Client, err := ethclient.Dial(cfg.L1RPCURL)
-	if err != nil {
-		return nil, err
-	}
-	l1EvmClient, err := evmclient.NewClient(cfg.L1RPCURL)
+	l1Client, err := evmclient.NewClient(cfg.L1RPCURL)
 	if err != nil {
 		return nil, err
 	}
@@ -99,7 +93,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 	if err != nil {
 		return nil, err
 	}
-	chainID, err := l1Client.ChainID(context.Background())
+	chainID, err := l1Client.GetChainID()
 	if err != nil {
 		return nil, err
 	}
@@ -113,14 +107,13 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 
 	return &Fetcher{
 		l1Client:          l1Client,
-		l1EvmClient:       l1EvmClient,
 		l2Client:          l2Client,
 		l1BlobFetcher:     l1BlobFetcher,
 		chainID:           big.NewInt(int64(l2ChainID)),
 		batchInboxAddress: common.HexToAddress(cfg.BatchInbox),
 		batchSender:       common.HexToAddress(cfg.BatchSender),
 		concurrentFetcher: cfg.ConcurrentFetchers,
-		signer:            coretypes.LatestSignerForChainID(chainID),
+		signer:            coretypes.LatestSignerForChainID(big.NewInt(int64(chainID))),
 		batchHeaders:      make(chan *BatchesRef, 64),
 
 		chErr: make(chan error, 1),
@@ -134,6 +127,8 @@ func (f *Fetcher) GetFetchedBlockNumber() uint64 {
 }
 
 // InitFetch inits the fetcher context.
+//
+// NOTE: This should be called before calling Fetch after the Stop.
 func (f *Fetcher) InitFetch() {
 	f.chFramesRef = make(chan *FramesRef, 64)
 	f.ctx, f.cancel = context.WithCancel(context.Background())
@@ -167,7 +162,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			g, ctx := errgroup.WithContext(context.Background())
 			g.SetLimit(f.concurrentFetcher)
 			// Fetch the latest finalized block number.
-			blockNumber, err := f.l1EvmClient.GetFinalizedBlockNumber()
+			blockNumber, err := f.l1Client.GetFinalizedBlockNumber()
 			if err != nil {
 				return err
 			}
@@ -282,6 +277,8 @@ func (f *Fetcher) Stop() {
 	<-f.done
 	// close batch decoder
 	close(f.chFramesRef)
+	for range f.chFramesRef {
+	}
 	<-f.done
 	// release retains and close batch headers channel to notify the outside
 	close(f.batchHeaders)
@@ -295,7 +292,7 @@ func (f *Fetcher) Stop() {
 // fetchBlock fetches the given block and analyzes the transactions
 // which are sent to the BatchInbox EOA.
 func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64) ([]*FramesRef, error) {
-	block, err := f.l1Client.BlockByNumber(ctx, big.NewInt(int64(blockNumber)))
+	block, err := f.l1Client.GetBlockByNumber(blockNumber)
 	if err != nil {
 		return nil, err
 	}
