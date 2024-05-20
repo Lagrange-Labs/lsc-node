@@ -2,7 +2,6 @@ package network
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
@@ -278,7 +277,7 @@ func (c *Client) joinNetwork() error {
 	}
 	req.Signature = utils.Bytes2Hex(sig)
 	ti := time.Now()
-	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
+	res, err := c.NetworkServiceClient.JoinNetwork(utils.GetContext(), req)
 	if err != nil {
 		return fmt.Errorf("failed to join the network: %v", err)
 	}
@@ -325,6 +324,9 @@ func (c *Client) startBatchFetching() {
 			c.chErr <- err
 			return
 		}
+		telemetry.SetGauge(float64(batch.L1BlockNumber), "client", "get_batch_l1_block_number")
+		logger.Infof("got the batch the L1 block number %d", batch.L1BlockNumber)
+
 		// block the writeBatchHeader if the batch is too far from the current block
 		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/2 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
 			time.Sleep(1 * time.Second)
@@ -420,7 +422,7 @@ func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 // TryGetBatch tries to get the batch from the network.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	ti := time.Now()
-	res, err := c.GetBatch(context.Background(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
+	res, err := c.GetBatch(utils.GetContext(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
 			return nil, ErrInvalidToken
@@ -561,7 +563,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 		Token:        c.jwToken,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := utils.GetContextWithCancel()
 	defer cancel()
 
 	stream, err := c.CommitBatch(ctx, req)
