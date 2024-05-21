@@ -77,7 +77,6 @@ type Fetcher struct {
 	chFramesRef chan *FramesRef
 	chainID     *big.Int
 
-	mtx    sync.Mutex
 	ctx    context.Context
 	cancel context.CancelFunc
 	done   chan struct{}
@@ -133,7 +132,6 @@ func (f *Fetcher) GetFetchedBlockNumber() uint64 {
 func (f *Fetcher) InitFetch() {
 	f.chFramesRef = make(chan *FramesRef, ParallelBlocks)
 	f.ctx, f.cancel = context.WithCancel(context.Background())
-	f.lastSyncedL2BlockNumber = l2BlockNumber
 }
 
 // Fetch fetches the block data from the Ethereum and analyzes the
@@ -149,10 +147,6 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 	defer func() {
 		f.done <- struct{}{}
 		logger.Infof("fetcher is stopped")
-	}()
-
-	defer func() {
-		f.done <- struct{}{}
 	}()
 
 	f.lastSyncedL1BlockNumber.Store(l1BeginBlockNumber)
