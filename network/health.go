@@ -97,16 +97,17 @@ func (hm *healthManager) loadHealthClient() error {
 			}
 			for i := 0; i < DefaultHealthCheckRetry; i++ {
 				resp, err := healthClient.Check(utils.GetContext(), &grpc_health_v1.HealthCheckRequest{})
-				if err != nil {
-					logger.Warnf("failed to receive the health of the server %s: %v", serverURL, err)
-					continue
-				}
-				if resp.Status == grpc_health_v1.HealthCheckResponse_SERVING {
+				if err == nil && resp.Status == grpc_health_v1.HealthCheckResponse_SERVING {
 					hm.index = index
 					hm.conn = conn
 					hm.healthClient = healthClient
 					logger.Infof("connected to the server %s", serverURL)
 					return true
+				}
+				if err != nil {
+					logger.Warnf("failed to receive the health of the server %s: %v", serverURL, err)
+				} else if resp.Status != grpc_health_v1.HealthCheckResponse_SERVING {
+					logger.Warnf("the server %s is not serving: %v", serverURL, resp.Status)
 				}
 				time.Sleep(time.Second * DefaultHealthCheckInterval)
 			}
