@@ -317,6 +317,9 @@ func (c *Client) joinNetwork() error {
 
 // initBeginBlockNumber initializes the begin block number for the RPC client.
 func (c *Client) initBeginBlockNumber(blockNumber uint64) error {
+	// set the open block number
+	c.openL1BlockNumber.Store(blockNumber)
+
 	lastStoredBlockNumber := uint64(0)
 	// get the last stored block number
 	key := make([]byte, 12)

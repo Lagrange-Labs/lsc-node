@@ -114,7 +114,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		batchSender:       common.HexToAddress(cfg.BatchSender),
 		concurrentFetcher: cfg.ConcurrentFetchers,
 		signer:            coretypes.LatestSignerForChainID(big.NewInt(int64(chainID))),
-		batchHeaders:      make(chan *BatchesRef, 64),
+		batchHeaders:      make(chan *BatchesRef, ParallelBlocks),
 
 		chErr: make(chan error, 1),
 		done:  make(chan struct{}, 2),

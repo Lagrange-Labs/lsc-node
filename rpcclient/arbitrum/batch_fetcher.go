@@ -90,7 +90,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		sequencerInbox:    sequencerInbox,
 		chainID:           big.NewInt(int64(l2ChainID)),
 		concurrentFetcher: cfg.ConcurrentFetchers,
-		batchHeaders:      make(chan *BatchesRef, 64),
+		batchHeaders:      make(chan *BatchesRef, ParallelBlocks),
 
 		done: make(chan struct{}, 1),
 	}, nil
