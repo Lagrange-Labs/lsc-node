@@ -464,6 +464,77 @@ func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 	return nil
 }
 
+// writeBatchHeader writes the batch header to the database.
+func (c *Client) writeBatchHeader(batchHeader *sequencerv2types.BatchHeader) error {
+	key := make([]byte, 12)
+	binary.BigEndian.PutUint64(key, batchHeader.L1BlockNumber)
+	binary.BigEndian.PutUint32(key[8:], batchHeader.L1TxIndex)
+	value, err := proto.Marshal(batchHeader)
+	if err != nil {
+		return fmt.Errorf("failed to marshal the batch header: %v", err)
+	}
+
+	return c.db.Put(key, value)
+}
+
+// getPrevBatchL1Number gets the previous batch L1 number from the database.
+func (c *Client) getPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (uint64, error) {
+	key := make([]byte, 12)
+	binary.BigEndian.PutUint64(key, l1BlockNumber)
+	binary.BigEndian.PutUint32(key[8:], l1TxIndex)
+
+	prevKey, _, err := c.db.Prev(key)
+	if err != nil {
+		return 0, fmt.Errorf("failed to get the previous key: %v", err)
+	}
+	var prevL1BlockNumber uint64
+	if prevKey != nil {
+		prevL1BlockNumber = binary.BigEndian.Uint64(prevKey[:8])
+	}
+
+	return prevL1BlockNumber, nil
+}
+
+// getBatchHeader gets the batch header from the database.
+func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "client", "get_batch_header")
+
+	prefix := make([]byte, 8)
+	binary.BigEndian.PutUint64(prefix, l1BlockNumber)
+
+	var res *sequencerv2types.BatchHeader
+	if err := c.db.Iterate(prefix, func(key, value []byte) error {
+		var batchHeader sequencerv2types.BatchHeader
+		if err := proto.Unmarshal(value, &batchHeader); err != nil {
+			return fmt.Errorf("failed to unmarshal the batch header: %v", err)
+		}
+		if batchHeader.FromBlockNumber() == l2BlockNumber {
+			res = &batchHeader
+			return nil
+		}
+		return fmt.Errorf("the batch header is not found for the L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
+	}); err != nil {
+		return nil, fmt.Errorf("failed to iterate the database: %v", err)
+	}
+
+	return res, nil
+}
+
+// verifyPrevBatch verifies the previous batch.
+func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
+	batchHeader, err := c.getBatchHeader(l1BlockNumber, l2BlockNumber)
+	if err != nil {
+		return fmt.Errorf("failed to get the batch header: %v", err)
+	}
+
+	if batchHeader == nil {
+		return fmt.Errorf("the batch header is not found for L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
+	}
+
+	return nil
+}
+
 // TryGetBatch tries to get the batch from the network.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	ti := time.Now()
