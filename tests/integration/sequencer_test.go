@@ -42,7 +42,7 @@ func (suite *SequencerTestSuite) Test_Sequencer_Block_Generation() {
 			suite.T().Fatal("timeout")
 		default:
 		}
-		batch, err := suite.manager.Storage.GetBatch(ctx, suite.manager.GetChainID(), cfg.Sequencer.FromL2BlockNumber)
+		batch, err := suite.manager.Storage.GetBatch(ctx, suite.manager.GetChainID(), cfg.Sequencer.FromL1BlockNumber)
 		if errors.Is(err, types.ErrBatchNotFound) {
 			time.Sleep(1 * time.Second)
 			continue

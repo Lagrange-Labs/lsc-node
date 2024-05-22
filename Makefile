@@ -51,7 +51,7 @@ test: stop
 	docker compose -f docker-compose.yml up -d lagrangesc
 	sleep 3
 	docker compose -f docker-compose.yml up -d simavs-sync
-	sleep 2
+	sleep 3
 	docker ps -a
 	trap '$(STOP)' EXIT; go test ./... --timeout=10m
 .PHONY: test
@@ -89,6 +89,7 @@ localnet-start: stop create-keystore
 	docker compose -f docker-compose.yml up -d lagrangesc
 	sleep 3
 	docker compose -f docker-compose.yml up -d simserver
+	docker compose -f docker-compose.yml up -d simserver1
 	docker compose -f docker-compose.yml up -d simsequencer
 	docker compose -f docker-compose.yml up -d simavs-sync
 	sleep 3

@@ -58,10 +58,6 @@ func (d *DB) Prev(key []byte) ([]byte, []byte, error) {
 	defer iter.Release()
 
 	iter.Seek(key)
-	if !iter.Valid() {
-		return nil, nil, nil
-	}
-
 	iter.Prev()
 	if !iter.Valid() {
 		return nil, nil, nil

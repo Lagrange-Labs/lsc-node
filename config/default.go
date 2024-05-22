@@ -6,7 +6,7 @@ const DefaultValues = `
 GRPCPort = "9090"
 
 [Client]
-GrpcURL = "127.0.0.1:9090"
+GrpcURLs = "127.0.0.1:9090"
 Chain = "mock"
 EthereumURL = "http://localhost:8545"
 OperatorAddress = "0x6E654b122377EA7f592bf3FD5bcdE9e8c1B1cEb9"
@@ -27,7 +27,6 @@ DBPath = "mongodb://127.0.0.1:27017"
 [Sequencer]
 Chain = "mock"
 FromL1BlockNumber = 20
-FromL2BlockNumber = 20
 EthereumURL = "http://localhost:8545"
 CommitteeSCAddress = "0xBF4E09354df24900e3d2A1e9057a9F7601fbDD06"
 StakingCheckInterval = "2s"
@@ -44,6 +43,10 @@ StakingCheckInterval = "2s"
 	
 	[RpcClient.Arbitrum]
 	RPCURL = "http://localhost:8545"
+	L1RPCURL = "http://localhost:8545"
+	BeaconURL = "http://localhost:8545"
+	BatchInbox = "0x1c479675ad559DC151F6Ec7ed3FbF8ceE79582B6"
+	ConcurrentFetchers = 8
 
 	[RpcClient.Mantle]
 	RPCURL = "http://localhost:8545"

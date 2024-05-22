@@ -104,7 +104,6 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 		return nil, err
 	}
 
-	fromL2BlockNumber := uint64(0)
 	fromL1BlockNumber := uint64(0)
 	fromL1TxIndex := uint32(0)
 	batchNumber, err := storage.GetLastBatchNumber(context.Background(), chainID)
@@ -112,7 +111,6 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 		if errors.Is(err, storetypes.ErrBatchNotFound) {
 			logger.Infof("no batch found")
 			fromL1BlockNumber = cfg.FromL1BlockNumber
-			fromL2BlockNumber = cfg.FromL2BlockNumber
 		} else {
 			logger.Errorf("failed to get last batch number: %v", err)
 			return nil, err
@@ -123,11 +121,10 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 			logger.Errorf("failed to get batch for batch number: %d error : %v", batchNumber, err)
 			return nil, err
 		}
-		fromL2BlockNumber = batch.BatchHeader.FromBlockNumber()
 		fromL1BlockNumber = batch.L1BlockNumber()
 		fromL1TxIndex = batch.BatchHeader.L1TxIndex
 	}
-	rpcClient.SetBeginBlockNumber(fromL1BlockNumber, fromL2BlockNumber)
+	rpcClient.SetBeginBlockNumber(fromL1BlockNumber)
 
 	ctx, cancel := context.WithCancel(context.Background())
 	return &Sequencer{
@@ -218,7 +215,7 @@ func (s *Sequencer) Start() error {
 
 			s.fromL1BlockNumber = batchHeader.L1BlockNumber
 			s.fromL1TxIndex = batchHeader.L1TxIndex
-			logger.Infof("batch block sequenced up to %d", batchHeader.ToBlockNumber())
+			logger.Infof("batch L2 block sequenced up to %d, count: %d", batchHeader.ToBlockNumber(), batchHeader.ToBlockNumber()-batchHeader.FromBlockNumber()+1)
 			time.Sleep(1 * time.Millisecond)
 		}
 	}
@@ -347,7 +344,7 @@ func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRo
 
 // Stop stops the sequencer.
 func (s *Sequencer) Stop() {
-	if s != nil {
+	if s != nil && s.ctx != nil {
 		s.cancel()
 	}
 }

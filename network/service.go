@@ -51,6 +51,9 @@ func NewSequencerService(storage storageInterface, consensus consensusInterface,
 
 // JoinNetwork is a method to join the attestation network.
 func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.JoinNetworkRequest) (*networkv2types.JoinNetworkResponse, error) {
+	// Check if the consensus is initialized
+	s.consensus.Start()
+
 	logger.Infof("JoinNetwork request: %+v", req)
 	ti := time.Now()
 	defer telemetry.MeasureSince(ti, "server", "join_network")

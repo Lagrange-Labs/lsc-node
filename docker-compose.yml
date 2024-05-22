@@ -58,11 +58,32 @@ services:
       - LAGRANGE_NODE_STORE_DBPATH=mongodb://192.168.20.101:27017
       - LAGRANGE_NODE_CONSENSUS_PROPOSERBLSKEYSTOREPATH=/app/config/bls_0.json
       - LAGRANGE_NODE_CONSENSUS_PROPOSERBLSKEYSTOREPASSWORD=password_localtest
+  simserver1:
+    container_name: server1
+    image: lagrange-node
+    networks:
+      localnet:
+        ipv4_address: 192.168.20.33
+    volumes:
+      - ./testutil/vector/config:/app/config
+    ports:
+      - 9092:9090
+      - 6062:6060
+      - 8085:8080
+    command:
+      - "/bin/sh"
+      - "-c"
+      - "/app/lagrange-node run-server"
+    environment:
+      - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
+      - LAGRANGE_NODE_STORE_DBPATH=mongodb://192.168.20.101:27017
+      - LAGRANGE_NODE_CONSENSUS_PROPOSERBLSKEYSTOREPATH=/app/config/bls_0.json
+      - LAGRANGE_NODE_CONSENSUS_PROPOSERBLSKEYSTOREPASSWORD=password_localtest
   simnode1:
     container_name: node0
     image: lagrange-node
     environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
+      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.42s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x516D6C27C23CEd21BF7930E2a01F0BcA9A141a0d
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_1.json
@@ -86,7 +107,7 @@ services:
     container_name: node1
     image: lagrange-node
     environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
+      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.5s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x4d694DE17246086d6451D732Ea8EA2a9a76dC997
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_2.json
@@ -108,7 +129,7 @@ services:
     container_name: node2
     image: lagrange-node
     environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
+      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.43s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x5d51B4c1fb0c67d0e1274EC96c1B895F45505a3D
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_3.json
@@ -130,7 +151,7 @@ services:
     container_name: node3
     image: lagrange-node
     environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
+      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.35s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x13cF11F76a08214A826355a1C8d661E41EA7Bf97
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_4.json
@@ -152,7 +173,7 @@ services:
     container_name: node4
     image: lagrange-node
     environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
+      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.23s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0xBD2369a9535751004617bC47cB0BF8Ea5c35Ed7C
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_5.json
@@ -174,7 +195,7 @@ services:
     container_name: node5
     image: lagrange-node
     environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
+      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.38s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x83070c799c0d41526D4c71e462557CdbB2C750AC
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_6.json
@@ -197,7 +218,7 @@ services:
     container_name: node6
     image: lagrange-node
     environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURL=192.168.20.3:9090
+      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.47s
       - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x7365666466f97E8aBBEE8900925521e0469A1f25
       - LAGRANGE_NODE_CLIENT_BLSKEYSTOREPATH=/app/config/bls_7.json

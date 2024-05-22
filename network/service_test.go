@@ -20,6 +20,12 @@ import (
 
 type mockConsensus struct{}
 
+func (m *mockConsensus) Start() {}
+
+func (m *mockConsensus) IsStopped() bool {
+	return false
+}
+
 func (m *mockConsensus) GetOpenBatch() *sequencerv2types.Batch {
 	return &sequencerv2types.Batch{
 		BatchHeader: &sequencerv2types.BatchHeader{},

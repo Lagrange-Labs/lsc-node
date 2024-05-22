@@ -2,11 +2,11 @@ package network
 
 import (
 	"bytes"
-	"context"
 	"crypto/ecdsa"
 	"encoding/binary"
 	"errors"
 	"fmt"
+	"math"
 	"math/big"
 	"os"
 	"path/filepath"
@@ -18,9 +18,6 @@ import (
 	"github.com/ethereum/go-ethereum/common/lru"
 	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
-	"google.golang.org/grpc"
-	"google.golang.org/grpc/credentials/insecure"
-	"google.golang.org/grpc/health/grpc_health_v1"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
@@ -54,6 +51,7 @@ type PreviousBatchInfo struct {
 // Client is a gRPC client to join the network
 type Client struct {
 	networkv2types.NetworkServiceClient
+	healthMgr   *healthManager
 	rpcClient   rpctypes.RpcClient
 	committeeSC *committee.Committee
 	blsScheme   crypto.BLSScheme
@@ -69,46 +67,14 @@ type Client struct {
 	committeeCache        *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
 	openL1BlockNumber     atomic.Uint64
 
-	db         *goleveldb.DB
-	ctx        context.Context
-	cancelFunc context.CancelFunc
-	chErr      chan error
+	db    *goleveldb.DB
+	chErr chan error
 }
 
 // NewClient creates a new client.
 func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
-	opts := []grpc.DialOption{
-		grpc.WithTransportCredentials(insecure.NewCredentials()),
-	}
-	conn, err := grpc.NewClient(cfg.GrpcURL, opts...)
-	if err != nil {
-		return nil, err
-	}
-
-	healthClient := grpc_health_v1.NewHealthClient(conn)
-	hctx, hcancel := context.WithTimeout(context.Background(), 100*time.Second)
-	defer hcancel()
-
-	watcher, err := healthClient.Watch(hctx, &grpc_health_v1.HealthCheckRequest{})
-	if err != nil {
-		logger.Error("Failed to check gRPC health:", err)
-		return nil, err
-	}
-
-	for {
-		response, err := watcher.Recv()
-		if err != nil {
-			logger.Info("Failed to get gRPC health response:", err)
-		}
-		if response.Status == grpc_health_v1.HealthCheckResponse_SERVING {
-			logger.Info("gRPC server is healthy")
-			break
-		} else {
-			logger.Info("gRPC server is not healthy")
-		}
-	}
-
 	if len(cfg.BLSKeystorePasswordPath) > 0 {
+		var err error
 		cfg.BLSKeystorePassword, err = crypto.ReadKeystorePasswordFromFile(cfg.BLSKeystorePasswordPath)
 		if err != nil {
 			logger.Fatalf("failed to read the bls keystore password from %s: %v", cfg.BLSKeystorePasswordPath, err)
@@ -179,10 +145,19 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	if err != nil {
 		logger.Fatalf("failed to create the database: %v", err)
 	}
-	ctx, cancel := context.WithCancel(context.Background())
+
+	healthMgr, err := newHealthManager(cfg.GrpcURLs)
+	if err != nil {
+		logger.Fatalf("failed to create the health manager: %v", err)
+	}
+	healthClient, err := healthMgr.getHealthClient()
+	if err != nil {
+		logger.Fatalf("failed to get the health client: %v", err)
+	}
 
 	c := &Client{
-		NetworkServiceClient:  networkv2types.NewNetworkServiceClient(conn),
+		NetworkServiceClient:  healthClient,
+		healthMgr:             healthMgr,
 		blsScheme:             blsScheme,
 		blsPrivateKey:         blsPriv,
 		blsPublicKey:          utils.Bytes2Hex(pubkey),
@@ -195,10 +170,8 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		genesisBlockNumber:    uint64(params.GenesisBlock.Int64() - params.L1Bias.Int64()),
 		committeeCache:        lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
 
-		db:         db,
-		ctx:        ctx,
-		cancelFunc: cancel,
-		chErr:      make(chan error),
+		db:    db,
+		chErr: make(chan error),
 	}
 	go c.startBatchFetching()
 
@@ -217,29 +190,41 @@ func (c *Client) GetChainID() uint32 {
 
 // Start starts the connection loop.
 func (c *Client) Start() error {
-	c.TryJoinNetwork()
+	if err := c.TryJoinNetwork(); err != nil {
+		return err
+	}
 
 	for {
 		select {
-		case <-c.ctx.Done():
-			return errors.New("the client is stopped")
+		case err := <-c.healthMgr.chErr:
+			if errors.Is(err, ErrCurrentServerNotServing) {
+				c.NetworkServiceClient, err = c.healthMgr.getHealthClient()
+				if err != nil {
+					return err
+				}
+				continue
+			}
+			return err
 		case err := <-c.chErr:
 			return err
 		case <-time.After(c.pullInterval):
 			batch, err := c.TryGetBatch()
 			if err != nil {
 				if errors.Is(err, ErrInvalidToken) {
-					c.TryJoinNetwork()
+					if err := c.TryJoinNetwork(); err != nil {
+						return err
+					}
 					continue
 				}
 				if errors.Is(err, ErrBatchNotFound) {
-					// if the batch is not found, set the begin block number to the L1 block number
-					logger.Infof("the batch is not found, set the begin block number to the L1 block number %d", batch.L1BlockNumber())
-					c.rpcClient.SetBeginBlockNumber(batch.L1BlockNumber(), batch.BatchHeader.FromBlockNumber())
+					logger.Warnf("The batch is not found, please check the metrics for the RPC provider. There may be a delay or a performance issue.")
+					if err := c.initBeginBlockNumber(batch.L1BlockNumber()); err != nil {
+						logger.Errorf("failed to initialize the begin block number: %v", err)
+					}
 					continue
 				}
 				if errors.Is(err, ErrBatchNotReady) {
-					logger.Infof("the batch is not ready yet")
+					logger.Warn("NOTE: The given round is not initialized yet. It may be because the sequencer is waiting for the next batch since it is almost caught up with the current block. Please wait for the next batch.")
 					continue
 				}
 
@@ -249,7 +234,9 @@ func (c *Client) Start() error {
 
 			if err := c.TryCommitBatch(batch); err != nil {
 				if errors.Is(err, ErrInvalidToken) {
-					c.TryJoinNetwork()
+					if err := c.TryJoinNetwork(); err != nil {
+						return err
+					}
 				} else if errors.Is(err, ErrBatchNotFinalized) {
 					logger.Infof("NOTE: the current batch is not finalized yet due to a lack of voting power. Please wait until getting enough voting power.")
 				} else {
@@ -264,20 +251,34 @@ func (c *Client) Start() error {
 }
 
 // TryJoinNetwork tries to join the network.
-func (c *Client) TryJoinNetwork() {
+func (c *Client) TryJoinNetwork() error {
 	for {
-		if err := c.joinNetwork(); err != nil {
-			logger.Infof("failed to join the network: %v", err)
-			if strings.Contains(err.Error(), ErrNotCommitteeMember.Error()) {
-				logger.Warn("NOTE: If you just joined the network, please wait for the next committee rotation. If you have been observing this message for a long time, please check if the BLS public key and the operator address are set correctly in the config file or contact the Largrange team.")
-			} else if strings.Contains(err.Error(), ErrCheckCommitteeMember.Error()) {
-				logger.Warn("NOTE: The given round is not initialized yet. It may be because the sequencer is waiting for the next batch since it is almost caught up with the current block. Please wait for the next batch.")
+		select {
+		case err := <-c.healthMgr.chErr:
+			if errors.Is(err, ErrCurrentServerNotServing) {
+				c.NetworkServiceClient, err = c.healthMgr.getHealthClient()
+				if err != nil {
+					return err
+				}
+				continue
 			}
-			time.Sleep(5 * time.Second)
-			continue
+			return err
+		case err := <-c.chErr:
+			return err
+		default:
+			if err := c.joinNetwork(); err != nil {
+				logger.Infof("failed to join the network: %v", err)
+				if strings.Contains(err.Error(), ErrNotCommitteeMember.Error()) {
+					logger.Warn("NOTE: If you just joined the network, please wait for the next committee rotation. If you have been observing this message for a long time, please check if the BLS public key and the operator address are set correctly in the config file or contact the Largrange team.")
+				} else if strings.Contains(err.Error(), ErrCheckCommitteeMember.Error()) {
+					logger.Warn("NOTE: The given round is not initialized yet. It may be because the sequencer is waiting for the next batch since it is almost caught up with the current block. Please wait for the next batch.")
+				}
+				time.Sleep(5 * time.Second)
+				continue
+			}
+			logger.Info("joined the network with the new token")
+			return nil
 		}
-		logger.Info("joined the network with the new token")
-		break
 	}
 }
 
@@ -296,7 +297,7 @@ func (c *Client) joinNetwork() error {
 	}
 	req.Signature = utils.Bytes2Hex(sig)
 	ti := time.Now()
-	res, err := c.NetworkServiceClient.JoinNetwork(context.Background(), req)
+	res, err := c.NetworkServiceClient.JoinNetwork(utils.GetContext(), req)
 	if err != nil {
 		return fmt.Errorf("failed to join the network: %v", err)
 	}
@@ -307,8 +308,48 @@ func (c *Client) joinNetwork() error {
 
 	c.jwToken = res.Token
 
-	c.rpcClient.SetBeginBlockNumber(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
+	if err := c.initBeginBlockNumber(res.PrevL1BlockNumber); err != nil {
+		return fmt.Errorf("failed to initialize the begin block number: %v", err)
+	}
+
 	return c.verifyPrevBatch(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
+}
+
+// initBeginBlockNumber initializes the begin block number for the RPC client.
+func (c *Client) initBeginBlockNumber(blockNumber uint64) error {
+	// set the open block number
+	c.openL1BlockNumber.Store(blockNumber)
+
+	lastStoredBlockNumber := uint64(0)
+	// get the last stored block number
+	key := make([]byte, 12)
+	binary.BigEndian.PutUint64(key, math.MaxUint64)
+	binary.BigEndian.PutUint32(key[8:], math.MaxUint32)
+	pKey, _, err := c.db.Prev(key)
+	if err != nil {
+		return fmt.Errorf("failed to get the previous key: %v", err)
+	}
+	if pKey != nil {
+		lastStoredBlockNumber = binary.BigEndian.Uint64(pKey)
+	}
+	if lastStoredBlockNumber > blockNumber {
+		// check if the block number exists in the database
+		prefix := make([]byte, 12)
+		storedBlockNumber := uint64(0)
+		binary.BigEndian.PutUint64(prefix, blockNumber+1)
+		pKey, _, err := c.db.Prev(prefix)
+		if err != nil {
+			return fmt.Errorf("failed to get the previous key: %v", err)
+		}
+		if pKey != nil {
+			storedBlockNumber = binary.BigEndian.Uint64(pKey)
+		}
+		if storedBlockNumber == blockNumber {
+			blockNumber = lastStoredBlockNumber
+		}
+	}
+	c.rpcClient.SetBeginBlockNumber(blockNumber)
+	return nil
 }
 
 // startBatchFetching starts the batch fetching loop.
@@ -320,8 +361,11 @@ func (c *Client) startBatchFetching() {
 			c.chErr <- err
 			return
 		}
+		telemetry.SetGauge(float64(batch.L1BlockNumber), "client", "get_batch_l1_block_number")
+		logger.Infof("got the batch the L1 block number %d", batch.L1BlockNumber)
+
 		// block the writeBatchHeader if the batch is too far from the current block
-		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/2 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
+		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/4 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
 			time.Sleep(1 * time.Second)
 		}
 		if err := c.writeBatchHeader(batch); err != nil {
@@ -381,18 +425,26 @@ func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64) (*sequencer
 	binary.BigEndian.PutUint64(prefix, l1BlockNumber)
 
 	var res *sequencerv2types.BatchHeader
+	isFound := false
 	if err := c.db.Iterate(prefix, func(key, value []byte) error {
+		if isFound {
+			return nil
+		}
 		var batchHeader sequencerv2types.BatchHeader
 		if err := proto.Unmarshal(value, &batchHeader); err != nil {
 			return fmt.Errorf("failed to unmarshal the batch header: %v", err)
 		}
 		if batchHeader.FromBlockNumber() == l2BlockNumber {
 			res = &batchHeader
-			return nil
+			isFound = true
 		}
-		return fmt.Errorf("the batch header is not found for the L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
+		return nil
 	}); err != nil {
 		return nil, fmt.Errorf("failed to iterate the database: %v", err)
+	}
+
+	if !isFound {
+		return nil, fmt.Errorf("the batch header is not found for L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
 	}
 
 	return res, nil
@@ -415,7 +467,7 @@ func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 // TryGetBatch tries to get the batch from the network.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	ti := time.Now()
-	res, err := c.GetBatch(context.Background(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
+	res, err := c.GetBatch(utils.GetContext(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
 			return nil, ErrInvalidToken
@@ -451,7 +503,8 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 
 	// verify the committee root
 	if err := c.verifyCommitteeRoot(batch); err != nil {
-		return nil, fmt.Errorf("failed to verify the committee root: %v", err)
+		logger.Warnf("failed to verify the committee root: %v", err)
+		return nil, err
 	}
 
 	// verify if the batch hash is correct
@@ -504,6 +557,9 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 		if err != nil {
 			return fmt.Errorf("failed to get the previous batch L1 number: %v", err)
 		}
+		if prevBatchL1Number == 0 {
+			return ErrBatchNotFound
+		}
 	}
 	prevCommitteeData, err := c.getCommitteeRoot(prevBatchL1Number)
 	if err != nil {
@@ -552,7 +608,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 		Token:        c.jwToken,
 	}
 
-	ctx, cancel := context.WithTimeout(context.Background(), 10*time.Second)
+	ctx, cancel := utils.GetContextWithCancel()
 	defer cancel()
 
 	stream, err := c.CommitBatch(ctx, req)
@@ -580,7 +636,9 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 // Stop function stops the client node.
 func (c *Client) Stop() {
 	if c != nil {
-		c.cancelFunc()
+		if c.healthMgr != nil {
+			c.healthMgr.cancel()
+		}
 	}
 }
 

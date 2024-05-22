@@ -1,10 +1,15 @@
 package network
 
 import (
+	"fmt"
 	"testing"
+	"time"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/store/goleveldb"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -36,4 +41,97 @@ func TestECDSASignVerify(t *testing.T) {
 	require.NoError(t, err)
 	require.True(t, isVerified)
 	require.Equal(t, addr.Hex(), "0x516D6C27C23CEd21BF7930E2a01F0BcA9A141a0d")
+}
+
+var _ rpctypes.RpcClient = (*mockRPC)(nil)
+
+type mockRPC struct {
+	chBatch            chan *sequencerv2types.BatchHeader
+	chBeginBlockNumber chan uint64
+}
+
+func (m *mockRPC) GetCurrentBlockNumber() (uint64, error) {
+	return 0, nil
+}
+
+func (m *mockRPC) GetFinalizedBlockNumber() (uint64, error) {
+	return 0, nil
+}
+
+func (m *mockRPC) GetChainID() (uint32, error) {
+	return 0, nil
+}
+
+func (m *mockRPC) SetBeginBlockNumber(l1BlockNumber uint64) {
+	m.chBeginBlockNumber <- l1BlockNumber
+}
+
+func (m *mockRPC) NextBatch() (*sequencerv2types.BatchHeader, error) {
+	batch, ok := <-m.chBatch
+	if !ok {
+		return nil, fmt.Errorf("channel closed")
+	}
+	return batch, nil
+}
+
+func TestClientStorage(t *testing.T) {
+	db, err := goleveldb.NewDB(t.TempDir())
+	require.NoError(t, err)
+	chBatch := make(chan *sequencerv2types.BatchHeader, 10)
+	chBeginBlockNumber := make(chan uint64, 1)
+	client := &Client{
+		rpcClient: &mockRPC{
+			chBatch:            chBatch,
+			chBeginBlockNumber: chBeginBlockNumber,
+		},
+		db: db,
+	}
+
+	go func() {
+		client.startBatchFetching()
+	}()
+
+	// push some batches
+	for i := 1; i <= 10; i++ {
+		chBatch <- &sequencerv2types.BatchHeader{
+			L1BlockNumber: uint64(i),
+			L1TxIndex:     1,
+			L2Blocks: []*sequencerv2types.BlockHeader{
+				{
+					BlockNumber: uint64(i),
+				},
+			},
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
+
+	// get previous batch
+	prev, err := client.getPrevBatchL1Number(3, 0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), prev)
+	prev, err = client.getPrevBatchL1Number(3, 1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), prev)
+	prev, err = client.getPrevBatchL1Number(8, 2)
+	require.NoError(t, err)
+	require.Equal(t, uint64(8), prev)
+
+	// get batch by L1 block number
+	_, err = client.getBatchHeader(3, 2)
+	require.Error(t, err)
+	batch, err := client.getBatchHeader(5, 5)
+	require.NoError(t, err)
+	require.Equal(t, uint64(5), batch.L1BlockNumber)
+	require.Equal(t, uint32(1), batch.L1TxIndex)
+
+	// init begin block number
+	err = client.initBeginBlockNumber(5)
+	require.NoError(t, err)
+	beginBlockNumber := <-chBeginBlockNumber
+	require.Equal(t, uint64(10), beginBlockNumber)
+
+	err = client.initBeginBlockNumber(11)
+	require.NoError(t, err)
+	beginBlockNumber = <-chBeginBlockNumber
+	require.Equal(t, uint64(11), beginBlockNumber)
 }

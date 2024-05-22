@@ -21,7 +21,6 @@ type Client struct {
 	evmclient.Client
 
 	fromL1BlockNumber uint64
-	fromL2BlockNumber uint64
 
 	chainID uint32
 }
@@ -64,14 +63,13 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 }
 
 // SetBeginBlockNumber sets the begin L1 & L2 block number.
-func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) {
+func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) {
 	c.fromL1BlockNumber = l1BlockNumber
-	c.fromL2BlockNumber = l2BlockNumber
 }
 
 // NextBatch returns the next batch after SetBeginBlockNumber.
 func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
-	l2BlockNumber := c.fromL2BlockNumber
+	l2BlockNumber := c.fromL1BlockNumber
 	blockHeader, err := c.GetBlockHeaderByNumber(l2BlockNumber, common.Hash{})
 	if err != nil {
 		if errors.Is(err, types.ErrNoResult) {
@@ -92,7 +90,7 @@ func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
 		}
 	}
 
-	c.fromL2BlockNumber++
+	c.fromL1BlockNumber++
 	return &sequencerv2types.BatchHeader{
 		BatchNumber: blockHeader.Number.Uint64(),
 		ChainId:     c.chainID,

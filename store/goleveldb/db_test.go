@@ -33,6 +33,10 @@ func TestGoLevelDB(t *testing.T) {
 	require.NoError(t, err)
 	require.Equal(t, "key1", string(key))
 	require.Equal(t, "value1", string(value))
+	key, value, err = db.Prev([]byte("key4"))
+	require.NoError(t, err)
+	require.Equal(t, "key3", string(key))
+	require.Equal(t, "value3", string(value))
 
 	// iterate all key-value
 	count := 0
