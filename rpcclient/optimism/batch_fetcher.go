@@ -24,6 +24,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 const (
@@ -184,7 +185,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 
 				number := i
 				g.Go(func() error {
-					res, err := f.fetchBlock(ctx, number)
+					res, err := f.fetchBlock(number)
 					if err != nil {
 						return err
 					}
@@ -283,16 +284,16 @@ func (f *Fetcher) StopFetch() {
 	f.lastSyncedL1BlockNumber.Store(0)
 	// close L1 fetcher
 	f.cancel()
-	<-f.done
 	// close batch decoder
 	close(f.chFramesRef)
 	for range f.chFramesRef {
 	}
-	<-f.done
+	<-f.done // wait for the batch decoder to finish
 	// drain channel
 	for len(f.batchHeaders) > 0 {
 		<-f.batchHeaders
 	}
+	<-f.done // wait for the fetcher to finish
 
 	f.cancel = nil
 	f.ctx = nil
@@ -300,7 +301,7 @@ func (f *Fetcher) StopFetch() {
 
 // fetchBlock fetches the given block and analyzes the transactions
 // which are sent to the BatchInbox EOA.
-func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64) ([]*FramesRef, error) {
+func (f *Fetcher) fetchBlock(blockNumber uint64) ([]*FramesRef, error) {
 	block, err := f.l1Client.GetBlockByNumber(blockNumber)
 	if err != nil {
 		return nil, err
@@ -352,7 +353,7 @@ func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64) ([]*Frames
 			Time:       block.Time(),
 		}
 		ti := time.Now()
-		blobs, err := f.l1BlobFetcher.GetBlobs(ctx, blockRef, hashes)
+		blobs, err := f.l1BlobFetcher.GetBlobs(utils.GetContext(), blockRef, hashes)
 		if err != nil {
 			logger.Errorf("failed to get blobs: %v", err)
 			return nil, err
