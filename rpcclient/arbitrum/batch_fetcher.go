@@ -152,7 +152,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			for _, batch := range batches {
 				var rawMsg []byte
 				if batch.serialized[0] == BlobHashesHeaderFlag {
-					rawMsg, err = f.fetchBlock(f.ctx, batch.BlockNumber, batch.TxHash)
+					rawMsg, err = f.fetchBlock(batch.BlockNumber, batch.TxHash)
 					if err != nil {
 						return err
 					}
@@ -163,8 +163,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 				if err != nil {
 					return err
 				}
-				_, err := f.sequencerInbox.parseL2Transactions(batch)
-				if err != nil {
+				if _, err := f.sequencerInbox.parseL2Transactions(batch); err != nil {
 					return err
 				}
 				batchesRef, err := f.getBatchRef(batch)
@@ -244,11 +243,11 @@ func (f *Fetcher) StopFetch() {
 	f.lastSyncedL1BlockNumber.Store(0)
 	// close L1 fetcher
 	f.cancel()
-	<-f.done
 	// drain channel
 	for len(f.batchHeaders) > 0 {
 		<-f.batchHeaders
 	}
+	<-f.done // wait for the fetcher to finish
 
 	f.cancel = nil
 	f.ctx = nil
@@ -256,7 +255,7 @@ func (f *Fetcher) StopFetch() {
 
 // fetchBlock fetches the given block and analyzes the transactions
 // which are sent to the BatchInbox EOA.
-func (f *Fetcher) fetchBlock(ctx context.Context, blockNumber uint64, txHash common.Hash) ([]byte, error) {
+func (f *Fetcher) fetchBlock(blockNumber uint64, txHash common.Hash) ([]byte, error) {
 	block, err := f.l1Client.GetBlockByNumber(blockNumber)
 	if err != nil {
 		return nil, err

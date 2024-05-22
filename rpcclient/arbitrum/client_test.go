@@ -1,4 +1,4 @@
-package optimism
+package arbitrum
 
 import (
 	"testing"
@@ -14,7 +14,6 @@ func TestErrorHandling(t *testing.T) {
 		L1RPCURL:           "http://localhost:8545",
 		BeaconURL:          "http://localhost:8545",
 		BatchInbox:         common.Address{}.Hex(),
-		BatchSender:        common.Address{}.Hex(),
 		ConcurrentFetchers: 4,
 	}
 	client, err := NewClient(cfg)
