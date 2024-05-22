@@ -53,7 +53,7 @@ test: stop
 	docker compose -f docker-compose.yml up -d simavs-sync
 	sleep 3
 	docker ps -a
-	trap '$(STOP)' EXIT; go test ./... --timeout=10m
+	trap '$(STOP)' EXIT; go test ./... --timeout=10m --race
 .PHONY: test
 
 run-db-mongo:
