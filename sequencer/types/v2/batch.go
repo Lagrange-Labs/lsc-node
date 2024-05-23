@@ -1,6 +1,9 @@
 package v2
 
-import "github.com/Lagrange-Labs/lagrange-node/utils"
+import (
+	"github.com/Lagrange-Labs/lagrange-node/crypto"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
+)
 
 // BatchNumber returns the batch number of the batch.
 func (b *Batch) BatchNumber() uint64 {
@@ -101,12 +104,16 @@ func (bh *BatchHeader) ToBlockNumber() uint64 {
 
 // Hash returns the hash of the batch header.
 func (bh *BatchHeader) Hash() []byte {
-	h := append([]byte{}, utils.Hex2Bytes(bh.L1TxHash)...)
+	h := append([]byte{}, utils.Uint64ToBytes(uint64(bh.ChainId))...)
+	h = append(h, utils.Hex2Bytes(bh.L1TxHash)...)
 	h = append(h, utils.Uint64ToBytes(bh.L1BlockNumber)...)
+	h = append(h, utils.Uint64ToBytes(bh.FromBlockNumber())...)
+	h = append(h, utils.Uint64ToBytes(bh.ToBlockNumber())...)
+	hashes := make([][]byte, 0, len(bh.L2Blocks))
 	for _, block := range bh.L2Blocks {
-		h = append(h, utils.Uint64ToBytes(block.BlockNumber)...)
-		h = append(h, utils.Hex2Bytes(block.BlockHash)...)
+		hashes = append(hashes, utils.Hex2Bytes(block.BlockHash))
 	}
+	h = append(h, crypto.MerkleRoot(hashes)...)
 	return utils.Hash(h)
 }
 
