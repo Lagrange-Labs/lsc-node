@@ -19,7 +19,7 @@ services:
       - LAGRANGE_NODE_SEQUENCER_ETHEREUMURL=http://192.168.20.100:8545
   simavs-sync:
     container_name: avs-sync
-    image: lagrangelabs/avs-sync:main
+    image: lagrangelabs/avs-sync:seq
     networks:
       localnet:
         ipv4_address: 192.168.20.50
@@ -35,8 +35,8 @@ services:
       - AVS_SYNC_SYNCHRONIZER_LAGRANGESERVICEADDRESS=0xBda41273d671bb33374F7b9C4Ae8746c712727f7
       - AVS_SYNC_SYNCHRONIZER_VOTEWEIGHERADDRESS=0x47836868bCC9Fd592824444D0F428012d3b057f1
       - AVS_SYNC_SYNCHRONIZER_COMMITTEEADDRESS=0xBF4E09354df24900e3d2A1e9057a9F7601fbDD06
-      - AVS_SYNC_SYNCHRONIZER_SYNCINTERVAL=1
-      - AVS_SYNC_SYNCHRONIZER_RETRYTIMEINTERVAL=1
+      - AVS_SYNC_SYNCHRONIZER_SYNCINTERVAL=2
+      - AVS_SYNC_SYNCHRONIZER_RETRYTIMEINTERVAL=2
   simserver:
     container_name: server
     image: lagrange-node
@@ -238,7 +238,7 @@ services:
       - "/app/lagrange-node run-client"
   lagrangesc:
     container_name: lagrange-smart-contract
-    image: lagrangelabs/lagrange-contracts:local
+    image: lagrangelabs/lagrange-contracts:develop
     networks:
       localnet:
         ipv4_address: 192.168.20.100

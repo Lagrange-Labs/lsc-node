@@ -301,8 +301,31 @@ func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRo
 	ti := time.Now()
 	defer telemetry.MeasureSince(ti, "sequencer", "fetch_committee_root")
 
-	epochEndBlockNumber := (epochNumber+1)*s.committeeParams.Duration + s.committeeParams.StartBlock - 1
+	var (
+		epochEndBlockNumber   uint64
+		epochStartBlockNumber uint64
+	)
+
+	epochPeriodCount, err := s.committeeSC.GetEpochPeriodCount(nil, s.chainID)
+	if err != nil {
+		logger.Errorf("failed to get epoch period count: %w", err)
+		return nil, err
+	}
+	for index := epochPeriodCount; index > 0; index-- {
+		epochFlag, err := s.committeeSC.GetEpochPeriodByIndex(nil, s.chainID, index)
+		if err != nil {
+			logger.Errorf("failed to get epoch period by index: %w", err)
+			return nil, err
+		}
+		if epochNumber >= epochFlag.FlagEpoch.Uint64() {
+			epochStartBlockNumber = (epochNumber-epochFlag.FlagEpoch.Uint64())*epochFlag.Duration.Uint64() + epochFlag.FlagBlock.Uint64()
+			epochEndBlockNumber = epochStartBlockNumber + epochFlag.Duration.Uint64() - 1
+			break
+		}
+	}
+
 	epochEndBlockNumber = uint64(int64(epochEndBlockNumber) - s.committeeParams.L1Bias)
+	epochStartBlockNumber = uint64(int64(epochStartBlockNumber) - s.committeeParams.L1Bias)
 	committeeData, err := s.committeeSC.GetCommittee(nil, s.chainID, big.NewInt(int64(epochEndBlockNumber)))
 	if err != nil {
 		logger.Errorf("failed to get committee data for block number %d, epoch number %d: %w", epochEndBlockNumber, epochNumber, err)
@@ -322,16 +345,15 @@ func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRo
 	for _, operator := range operators {
 		tvl += operator.VotingPower
 	}
-	epochStart := epochEndBlockNumber - s.committeeParams.Duration + 1
 	if epochNumber == uint64(1) {
-		epochStart = uint64(int64(s.committeeParams.GenesisBlock) - s.committeeParams.L1Bias)
+		epochStartBlockNumber = uint64(int64(s.committeeParams.GenesisBlock) - s.committeeParams.L1Bias)
 	}
 
 	committeeRoot := &v2types.CommitteeRoot{
 		ChainID:               s.chainID,
 		CurrentCommitteeRoot:  utils.Bytes2Hex(committeeData.Root[:]),
 		TotalVotingPower:      tvl,
-		EpochStartBlockNumber: epochStart,
+		EpochStartBlockNumber: epochStartBlockNumber,
 		EpochEndBlockNumber:   epochEndBlockNumber,
 		EpochNumber:           epochNumber,
 		Operators:             operators,
