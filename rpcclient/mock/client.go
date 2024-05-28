@@ -63,8 +63,9 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 }
 
 // SetBeginBlockNumber sets the begin L1 & L2 block number.
-func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) {
+func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) bool {
 	c.fromL1BlockNumber = l1BlockNumber
+	return true
 }
 
 // NextBatch returns the next batch after SetBeginBlockNumber.

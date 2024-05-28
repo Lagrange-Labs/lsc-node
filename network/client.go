@@ -66,6 +66,7 @@ type Client struct {
 	pullInterval          time.Duration
 	committeeCache        *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
 	openL1BlockNumber     atomic.Uint64
+	isSetBeginBlockNumber atomic.Bool
 
 	db    *goleveldb.DB
 	chErr chan error
@@ -348,7 +349,10 @@ func (c *Client) initBeginBlockNumber(blockNumber uint64) error {
 			blockNumber = lastStoredBlockNumber
 		}
 	}
-	c.rpcClient.SetBeginBlockNumber(blockNumber)
+
+	res := c.rpcClient.SetBeginBlockNumber(blockNumber)
+	c.isSetBeginBlockNumber.Store(res)
+
 	return nil
 }
 
@@ -361,13 +365,26 @@ func (c *Client) startBatchFetching() {
 			c.chErr <- err
 			return
 		}
-		telemetry.SetGauge(float64(batch.L1BlockNumber), "client", "get_batch_l1_block_number")
-		logger.Infof("got the batch the L1 block number %d", batch.L1BlockNumber)
+		telemetry.SetGauge(float64(batch.L1BlockNumber), "client", "fetch_batch_l1_block_number")
+		logger.Infof("fetch the batch with L1 block number %d", batch.L1BlockNumber)
 
 		// block the writeBatchHeader if the batch is too far from the current block
 		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/4 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
+			if c.isSetBeginBlockNumber.Load() {
+				break
+			}
 			time.Sleep(1 * time.Second)
 		}
+		openL1BlockNumber := c.openL1BlockNumber.Load()
+		if openL1BlockNumber > 0 && openL1BlockNumber+PruningBlocks/4 < batch.L1BlockNumber {
+			logger.Infof("Rolling back the batch fetching to the block number %d", c.openL1BlockNumber.Load())
+		} else if openL1BlockNumber > 0 && openL1BlockNumber+PruningBlocks/2 < batch.L1BlockNumber {
+			logger.Warnf("The batch %d fetching is too far from the current block number %d", batch.L1BlockNumber, openL1BlockNumber)
+			continue
+		} else if openL1BlockNumber > 0 && openL1BlockNumber+PruningBlocks/4 > batch.L1BlockNumber {
+			c.isSetBeginBlockNumber.Store(false)
+		}
+
 		if err := c.writeBatchHeader(batch); err != nil {
 			logger.Errorf("failed to write the batch header: %v", err)
 			c.chErr <- err
@@ -483,7 +500,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	fromBlockNumber := batch.BatchHeader.FromBlockNumber()
 	toBlockNumber := batch.BatchHeader.ToBlockNumber()
 	c.openL1BlockNumber.Store(batch.L1BlockNumber())
-	logger.Infof("got the batch the block number from %d to %d", fromBlockNumber, toBlockNumber)
+	logger.Infof("get the batch with L2 block number from %d to %d", fromBlockNumber, toBlockNumber)
 
 	// verify the L1 block number
 	batchHeader, err := c.getBatchHeader(batch.L1BlockNumber(), fromBlockNumber)
