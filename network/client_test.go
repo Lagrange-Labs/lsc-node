@@ -62,8 +62,9 @@ func (m *mockRPC) GetChainID() (uint32, error) {
 	return 0, nil
 }
 
-func (m *mockRPC) SetBeginBlockNumber(l1BlockNumber uint64) {
+func (m *mockRPC) SetBeginBlockNumber(l1BlockNumber uint64) bool {
 	m.chBeginBlockNumber <- l1BlockNumber
+	return true
 }
 
 func (m *mockRPC) NextBatch() (*sequencerv2types.BatchHeader, error) {

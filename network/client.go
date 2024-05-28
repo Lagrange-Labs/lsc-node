@@ -66,6 +66,7 @@ type Client struct {
 	pullInterval          time.Duration
 	committeeCache        *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
 	openL1BlockNumber     atomic.Uint64
+	isSetBeginBlockNumber atomic.Bool
 
 	db    *goleveldb.DB
 	chErr chan error
@@ -348,7 +349,10 @@ func (c *Client) initBeginBlockNumber(blockNumber uint64) error {
 			blockNumber = lastStoredBlockNumber
 		}
 	}
-	c.rpcClient.SetBeginBlockNumber(blockNumber)
+
+	res := c.rpcClient.SetBeginBlockNumber(blockNumber)
+	c.isSetBeginBlockNumber.Store(res)
+
 	return nil
 }
 
@@ -366,8 +370,16 @@ func (c *Client) startBatchFetching() {
 
 		// block the writeBatchHeader if the batch is too far from the current block
 		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/4 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
+			if c.isSetBeginBlockNumber.Load() {
+				break
+			}
 			time.Sleep(1 * time.Second)
 		}
+		if c.openL1BlockNumber.Load() > 0 && c.openL1BlockNumber.Load()+PruningBlocks/4 < batch.L1BlockNumber {
+			logger.Infof("Rolling back the batch fetching to the block number %d", c.openL1BlockNumber.Load())
+			continue
+		}
+		c.isSetBeginBlockNumber.Store(false)
 		if err := c.writeBatchHeader(batch); err != nil {
 			logger.Errorf("failed to write the batch header: %v", err)
 			c.chErr <- err

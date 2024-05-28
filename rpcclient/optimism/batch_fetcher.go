@@ -289,11 +289,16 @@ func (f *Fetcher) StopFetch() {
 	for range f.chFramesRef {
 	}
 	<-f.done // wait for the batch decoder to finish
-	// drain channel
+	// drain channel, if the `batchHeaders` channel is full, it will block the fetcher
+	// and the fetcher will not stop.
 	for len(f.batchHeaders) > 0 {
 		<-f.batchHeaders
 	}
 	<-f.done // wait for the fetcher to finish
+	// drain channel to clean up the batches while stopping the fetcher
+	for len(f.batchHeaders) > 0 {
+		<-f.batchHeaders
+	}
 
 	f.cancel = nil
 	f.ctx = nil
