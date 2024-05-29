@@ -390,8 +390,8 @@ func (c *Client) startBatchFetching() {
 			c.chErr <- err
 			return
 		}
-		if batch.L1BlockNumber > PruningBlocks {
-			prunedBlockNumber := batch.L1BlockNumber - PruningBlocks
+		if openL1BlockNumber > PruningBlocks {
+			prunedBlockNumber := openL1BlockNumber - PruningBlocks
 			prefix := make([]byte, 12)
 			binary.BigEndian.PutUint64(prefix, prunedBlockNumber)
 			if err := c.db.Prune(prefix); err != nil {
