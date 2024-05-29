@@ -97,7 +97,10 @@ func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
 		}
 	}
 
+	c.mtx.Lock()
 	c.fromL1BlockNumber++
+	c.mtx.Unlock()
+
 	return &sequencerv2types.BatchHeader{
 		BatchNumber: blockHeader.Number.Uint64(),
 		ChainId:     c.chainID,
