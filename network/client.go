@@ -392,13 +392,13 @@ func (c *Client) startBatchFetching() {
 		}
 		if batch.L1BlockNumber > PruningBlocks {
 			prunedBlockNumber := batch.L1BlockNumber - PruningBlocks
-			prefix := make([]byte, 8)
+			prefix := make([]byte, 12)
 			binary.BigEndian.PutUint64(prefix, prunedBlockNumber)
 			if err := c.db.Prune(prefix); err != nil {
 				logger.Errorf("failed to prune the database: %v", err)
 			}
 		}
-		time.Sleep(100 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 }
 
@@ -500,7 +500,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	fromBlockNumber := batch.BatchHeader.FromBlockNumber()
 	toBlockNumber := batch.BatchHeader.ToBlockNumber()
 	c.openL1BlockNumber.Store(batch.L1BlockNumber())
-	logger.Infof("get the batch with L2 block number from %d to %d", fromBlockNumber, toBlockNumber)
+	logger.Infof("get the batch with L1 block number %d with L2 block number from %d to %d", batch.L1BlockNumber(), fromBlockNumber, toBlockNumber)
 
 	// verify the L1 block number
 	batchHeader, err := c.getBatchHeader(batch.L1BlockNumber(), fromBlockNumber)
@@ -509,36 +509,36 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 		return batch, ErrBatchNotFound
 	}
 	if batch.L1BlockNumber() != batchHeader.L1BlockNumber {
-		return nil, fmt.Errorf("the batch L1 block number %d is not equal to the rpc L1 block number %d", res.Batch.L1BlockNumber(), batchHeader.L1BlockNumber)
+		return batch, fmt.Errorf("the batch L1 block number %d is not equal to the rpc L1 block number %d", res.Batch.L1BlockNumber(), batchHeader.L1BlockNumber)
 	}
 	if fromBlockNumber != batchHeader.FromBlockNumber() {
-		return nil, fmt.Errorf("the batch from block number %d is not equal to the rpc from block number %d", fromBlockNumber, batchHeader.FromBlockNumber())
+		return batch, fmt.Errorf("the batch from block number %d is not equal to the rpc from block number %d", fromBlockNumber, batchHeader.FromBlockNumber())
 	}
 	if toBlockNumber != batchHeader.ToBlockNumber() {
-		return nil, fmt.Errorf("the batch to block number %d is not equal to the rpc to block number %d", toBlockNumber, batchHeader.ToBlockNumber())
+		return batch, fmt.Errorf("the batch to block number %d is not equal to the rpc to block number %d", toBlockNumber, batchHeader.ToBlockNumber())
 	}
 
 	// verify the committee root
 	if err := c.verifyCommitteeRoot(batch); err != nil {
 		logger.Warnf("failed to verify the committee root: %v", err)
-		return nil, err
+		return batch, err
 	}
 
 	// verify if the batch hash is correct
 	batchHash := batch.BatchHeader.Hash()
 	bhHash := batchHeader.Hash()
 	if !bytes.Equal(batchHash, bhHash) {
-		return nil, fmt.Errorf("the batch hash %s is not equal to the batch header hash %s", batchHash, utils.Bytes2Hex(bhHash))
+		return batch, fmt.Errorf("the batch hash %s is not equal to the batch header hash %s", batchHash, utils.Bytes2Hex(bhHash))
 	}
 
 	// verify the proposer signature
 	if len(batch.ProposerPubKey) == 0 {
-		return nil, fmt.Errorf("the block %d proposer key is empty", batch.BatchNumber())
+		return batch, fmt.Errorf("the block %d proposer key is empty", batch.BatchNumber())
 	}
 	blsSigHash := batch.BlsSignature().Hash()
 	verified, err := c.blsScheme.VerifySignature(common.FromHex(batch.ProposerPubKey), blsSigHash, common.FromHex(batch.ProposerSignature))
 	if err != nil || !verified {
-		return nil, fmt.Errorf("failed to verify the proposer signature: %v", err)
+		return batch, fmt.Errorf("failed to verify the proposer signature: %v", err)
 	}
 
 	telemetry.SetGauge(float64(batch.BatchNumber()), "client", "current_batch_number")
@@ -565,7 +565,7 @@ func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommi
 
 func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 	blockNumber := batch.L1BlockNumber()
-	prevBatchL1Number := batch.L1BlockNumber()
+	prevBatchL1Number := uint64(0)
 	isGenesis := c.genesisBlockNumber == blockNumber
 	// verify the previous batch's next committee root
 	if !isGenesis {

@@ -140,7 +140,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			if err != nil {
 				return err
 			}
-			telemetry.MeasureSince(ti, "rpc_arbitrum", "l1_filter_logs")
+			telemetry.MeasureSince(ti, "rpc", "l1_filter_logs")
 
 			// sort the batches by L1 block number and L1 tx index
 			sort.Slice(batches, func(i, j int) bool {
@@ -183,7 +183,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 // The range is [start, end].
 func (f *Fetcher) getL2BlockHashes(start, end uint64) ([]*sequencerv2types.BlockHeader, error) {
 	ti := time.Now()
-	defer telemetry.MeasureSince(ti, "rpc_arbitrum", "fetch_l2_block_hashes")
+	defer telemetry.MeasureSince(ti, "rpc", "fetch_l2_block_hashes")
 
 	g, ctx := errgroup.WithContext(context.Background())
 	g.SetLimit(f.concurrentFetcher)
@@ -300,7 +300,7 @@ func (f *Fetcher) fetchBlock(blockNumber uint64, txHash common.Hash) ([]byte, er
 			logger.Errorf("failed to get blobs: %v", err)
 			return nil, err
 		}
-		telemetry.MeasureSince(ti, "rpc_arbitrum", "fetch_beacon_blobs")
+		telemetry.MeasureSince(ti, "rpc", "fetch_beacon_blobs")
 		if len(blobs) != len(hashes) {
 			logger.Errorf("blobs length is not matched: %d, %d", len(blobs), len(hashes))
 			return nil, fmt.Errorf("blobs length is not matched: %d, %d", len(blobs), len(hashes))
