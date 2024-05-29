@@ -47,7 +47,7 @@ func TestGoLevelDB(t *testing.T) {
 	require.Equal(t, 4, count)
 
 	// prune
-	require.NoError(t, db.Prune([]byte("key1")))
+	require.NoError(t, db.Prune([]byte("key2")))
 	_, err = db.Get([]byte("key1"))
 	require.NoError(t, err)
 	_, err = db.Get([]byte("key"))

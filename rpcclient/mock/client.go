@@ -4,6 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -20,6 +21,7 @@ var _ types.RpcClient = (*Client)(nil)
 type Client struct {
 	evmclient.Client
 
+	mtx               sync.Mutex
 	fromL1BlockNumber uint64
 
 	chainID uint32
@@ -64,13 +66,17 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 
 // SetBeginBlockNumber sets the begin L1 & L2 block number.
 func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) bool {
+	c.mtx.Lock()
+	defer c.mtx.Unlock()
 	c.fromL1BlockNumber = l1BlockNumber
 	return true
 }
 
 // NextBatch returns the next batch after SetBeginBlockNumber.
 func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
+	c.mtx.Lock()
 	l2BlockNumber := c.fromL1BlockNumber
+	c.mtx.Unlock()
 	blockHeader, err := c.GetBlockHeaderByNumber(l2BlockNumber, common.Hash{})
 	if err != nil {
 		if errors.Is(err, types.ErrNoResult) {
@@ -91,7 +97,10 @@ func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
 		}
 	}
 
+	c.mtx.Lock()
 	c.fromL1BlockNumber++
+	c.mtx.Unlock()
+
 	return &sequencerv2types.BatchHeader{
 		BatchNumber: blockHeader.Number.Uint64(),
 		ChainId:     c.chainID,

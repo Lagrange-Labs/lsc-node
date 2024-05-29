@@ -93,8 +93,8 @@ func (d *DB) Prune(prefix []byte) error {
 	defer iter.Release()
 
 	iter.Seek(prefix)
-	iter.Prev()
-	for ; iter.Valid(); iter.Prev() {
+	iter.Prev() // Skip the last key-value pair with the prefix.
+	for iter.Prev(); iter.Valid(); iter.Prev() {
 		key := iter.Key()
 
 		if err := d.db.Delete(key, &opt.WriteOptions{Sync: true}); err != nil {
