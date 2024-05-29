@@ -286,15 +286,31 @@ func (f *Fetcher) StopFetch() {
 	f.cancel()
 	// close batch decoder
 	close(f.chFramesRef)
-	for range f.chFramesRef {
+	for len(f.chFramesRef) > 0 { // drain channel
+		<-f.chFramesRef
 	}
 	<-f.done // wait for the batch decoder to finish
-	// drain channel, if the `batchHeaders` channel is full, it will block the fetcher
-	// and the fetcher will not stop.
-	for len(f.batchHeaders) > 0 {
-		<-f.batchHeaders
-	}
-	<-f.done // wait for the fetcher to finish
+
+	func() {
+		// wait for the fetcher to finish
+		ctx, cancel := context.WithTimeout(context.Background(), fetchInterval*5)
+		defer cancel()
+		for {
+			select {
+			case <-f.done: // wait for the fetcher to finish
+				return
+			case <-ctx.Done():
+				panic("failed to stop the fetcher")
+			default:
+				time.Sleep(10 * time.Millisecond)
+				// drain channel, if the `batchHeaders` channel is full, it will block the fetcher
+				// and the fetcher will not stop.
+				for len(f.batchHeaders) > 0 {
+					<-f.batchHeaders
+				}
+			}
+		}
+	}()
 	// drain channel to clean up the batches while stopping the fetcher
 	for len(f.batchHeaders) > 0 {
 		<-f.batchHeaders
