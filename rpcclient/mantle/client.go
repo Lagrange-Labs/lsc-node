@@ -100,7 +100,9 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 }
 
 // SetBeginBlockNumber sets the begin L1 & L2 block number.
-func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) {}
+func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) bool {
+	return true
+}
 
 // NextBatch returns the next batch after SetBeginBlockNumber.
 func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {

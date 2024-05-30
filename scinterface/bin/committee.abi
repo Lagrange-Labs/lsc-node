@@ -19,10 +19,53 @@
     "anonymous": false,
     "inputs": [
       {
+        "indexed": true,
+        "internalType": "uint32",
+        "name": "chainID",
+        "type": "uint32"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint32",
+        "name": "epochPeriodIndex",
+        "type": "uint32"
+      },
+      {
         "indexed": false,
+        "internalType": "uint256",
+        "name": "flagBlock",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "flagEpoch",
+        "type": "uint256"
+      },
+      {
+        "indexed": false,
+        "internalType": "uint256",
+        "name": "duration",
+        "type": "uint256"
+      }
+    ],
+    "name": "EpochPeriodUpdated",
+    "type": "event"
+  },
+  {
+    "anonymous": false,
+    "inputs": [
+      {
+        "indexed": true,
         "internalType": "uint256",
         "name": "chainID",
         "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint8",
+        "name": "quorumNumber",
+        "type": "uint8"
       },
       {
         "indexed": false,
@@ -41,12 +84,6 @@
         "internalType": "uint256",
         "name": "freezeDuration",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint8",
-        "name": "quorumNumber",
-        "type": "uint8"
       },
       {
         "indexed": false,
@@ -100,13 +137,13 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "uint256",
         "name": "chainID",
         "type": "uint256"
       },
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "uint256",
         "name": "epochNumber",
         "type": "uint256"
@@ -125,10 +162,16 @@
     "anonymous": false,
     "inputs": [
       {
-        "indexed": false,
+        "indexed": true,
         "internalType": "uint256",
         "name": "chainID",
         "type": "uint256"
+      },
+      {
+        "indexed": true,
+        "internalType": "uint8",
+        "name": "quorumNumber",
+        "type": "uint8"
       },
       {
         "indexed": false,
@@ -153,12 +196,6 @@
         "internalType": "uint256",
         "name": "freezeDuration",
         "type": "uint256"
-      },
-      {
-        "indexed": false,
-        "internalType": "uint8",
-        "name": "quorumNumber",
-        "type": "uint8"
       },
       {
         "indexed": false,
@@ -475,8 +512,61 @@
     "outputs": [
       {
         "internalType": "uint256",
-        "name": "",
+        "name": "epochNumber",
         "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "chainID",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint32",
+        "name": "index",
+        "type": "uint32"
+      }
+    ],
+    "name": "getEpochPeriodByIndex",
+    "outputs": [
+      {
+        "internalType": "uint256",
+        "name": "flagBlock",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "flagEpoch",
+        "type": "uint256"
+      },
+      {
+        "internalType": "uint256",
+        "name": "duration",
+        "type": "uint256"
+      }
+    ],
+    "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "chainID",
+        "type": "uint32"
+      }
+    ],
+    "name": "getEpochPeriodCount",
+    "outputs": [
+      {
+        "internalType": "uint32",
+        "name": "",
+        "type": "uint32"
       }
     ],
     "stateMutability": "view",
@@ -691,8 +781,57 @@
     "type": "function"
   },
   {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "internalType": "uint32[]",
+        "name": "indices",
+        "type": "uint32[]"
+      }
+    ],
+    "name": "removeBlsPubKeys",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      }
+    ],
+    "name": "removeOperator",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
     "inputs": [],
     "name": "renounceOwnership",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "chainID",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint256",
+        "name": "epochNumber",
+        "type": "uint256"
+      }
+    ],
+    "name": "revertEpoch",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -708,6 +847,19 @@
       }
     ],
     "stateMutability": "view",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "uint32",
+        "name": "chainID",
+        "type": "uint32"
+      }
+    ],
+    "name": "setFirstEpochPeriod",
+    "outputs": [],
+    "stateMutability": "nonpayable",
     "type": "function"
   },
   {
@@ -768,6 +920,24 @@
   {
     "inputs": [
       {
+        "internalType": "address[]",
+        "name": "operators",
+        "type": "address[]"
+      },
+      {
+        "internalType": "uint32",
+        "name": "chainID",
+        "type": "uint32"
+      }
+    ],
+    "name": "unsubscribeByAdmin",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
         "internalType": "address",
         "name": "operator",
         "type": "address"
@@ -797,6 +967,29 @@
       }
     ],
     "name": "update",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "internalType": "uint32",
+        "name": "index",
+        "type": "uint32"
+      },
+      {
+        "internalType": "uint256[2]",
+        "name": "blsPubKey",
+        "type": "uint256[2]"
+      }
+    ],
+    "name": "updateBlsPubKey",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"
@@ -845,6 +1038,24 @@
       }
     ],
     "name": "updateChain",
+    "outputs": [],
+    "stateMutability": "nonpayable",
+    "type": "function"
+  },
+  {
+    "inputs": [
+      {
+        "internalType": "address",
+        "name": "operator",
+        "type": "address"
+      },
+      {
+        "internalType": "address",
+        "name": "newSignAddress",
+        "type": "address"
+      }
+    ],
+    "name": "updateSignAddress",
     "outputs": [],
     "stateMutability": "nonpayable",
     "type": "function"

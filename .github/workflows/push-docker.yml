@@ -3,6 +3,7 @@ on:
   push:
     branches:
       - develop
+      - v1
 
 jobs:
   build:
@@ -16,6 +17,8 @@ jobs:
         with:
           username: ${{ secrets.DOCKERHUB_USERNAME }}
           password: ${{ secrets.DOCKERHUB_TOKEN }}
+      - name: Get the branch name
+        run: echo "BRANCH=${GITHUB_REF##*/}" >> $GITHUB_ENV
       - name: Build and push
         id: docker_build
         uses: docker/build-push-action@v5
@@ -24,4 +27,4 @@ jobs:
           platforms: linux/amd64,linux/arm64
           push: true
           tags: |
-            lagrangelabs/lagrange-node:develop
+            lagrangelabs/lagrange-node:${{ env.BRANCH }}

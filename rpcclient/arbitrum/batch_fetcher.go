@@ -53,6 +53,7 @@ type Fetcher struct {
 
 	chainID                 *big.Int
 	lastSyncedL1BlockNumber atomic.Uint64
+	lastPulledL1BlockNumber atomic.Uint64
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -101,6 +102,11 @@ func (f *Fetcher) GetFetchedBlockNumber() uint64 {
 	return f.lastSyncedL1BlockNumber.Load()
 }
 
+// GetPulledBlockNumber returns the last pulled batch L1 block number.
+func (f *Fetcher) GetPulledBlockNumber() uint64 {
+	return f.lastPulledL1BlockNumber.Load()
+}
+
 // InitFetch inits the fetcher context.
 func (f *Fetcher) InitFetch() {
 	f.ctx, f.cancel = context.WithCancel(context.Background())
@@ -140,7 +146,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 			if err != nil {
 				return err
 			}
-			telemetry.MeasureSince(ti, "rpc_arbitrum", "l1_filter_logs")
+			telemetry.MeasureSince(ti, "rpc", "l1_filter_logs")
 
 			// sort the batches by L1 block number and L1 tx index
 			sort.Slice(batches, func(i, j int) bool {
@@ -183,7 +189,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 // The range is [start, end].
 func (f *Fetcher) getL2BlockHashes(start, end uint64) ([]*sequencerv2types.BlockHeader, error) {
 	ti := time.Now()
-	defer telemetry.MeasureSince(ti, "rpc_arbitrum", "fetch_l2_block_hashes")
+	defer telemetry.MeasureSince(ti, "rpc", "fetch_l2_block_hashes")
 
 	g, ctx := errgroup.WithContext(context.Background())
 	g.SetLimit(f.concurrentFetcher)
@@ -243,11 +249,31 @@ func (f *Fetcher) StopFetch() {
 	f.lastSyncedL1BlockNumber.Store(0)
 	// close L1 fetcher
 	f.cancel()
-	// drain channel
+
+	func() {
+		// wait for the fetcher to finish
+		ctx, cancel := context.WithTimeout(context.Background(), fetchInterval*5)
+		defer cancel()
+		for {
+			select {
+			case <-f.done: // wait for the fetcher to finish
+				return
+			case <-ctx.Done():
+				panic("failed to stop the fetcher")
+			default:
+				time.Sleep(10 * time.Millisecond)
+				// drain channel, if the `batchHeaders` channel is full, it will block the fetcher
+				// and the fetcher will not stop.
+				for len(f.batchHeaders) > 0 {
+					<-f.batchHeaders
+				}
+			}
+		}
+	}()
+	// drain channel to clean up the batches while stopping the fetcher
 	for len(f.batchHeaders) > 0 {
 		<-f.batchHeaders
 	}
-	<-f.done // wait for the fetcher to finish
 
 	f.cancel = nil
 	f.ctx = nil
@@ -295,7 +321,7 @@ func (f *Fetcher) fetchBlock(blockNumber uint64, txHash common.Hash) ([]byte, er
 			logger.Errorf("failed to get blobs: %v", err)
 			return nil, err
 		}
-		telemetry.MeasureSince(ti, "rpc_arbitrum", "fetch_beacon_blobs")
+		telemetry.MeasureSince(ti, "rpc", "fetch_beacon_blobs")
 		if len(blobs) != len(hashes) {
 			logger.Errorf("blobs length is not matched: %d, %d", len(blobs), len(hashes))
 			return nil, fmt.Errorf("blobs length is not matched: %d, %d", len(blobs), len(hashes))
@@ -340,6 +366,7 @@ func (f *Fetcher) nextBatchHeader() (*sequencerv2types.BatchHeader, error) {
 	if !ok {
 		return nil, errors.New("batch headers channel is closed")
 	}
+	defer f.lastPulledL1BlockNumber.Store(batchesRef.L1BlockNumber)
 
 	header := sequencerv2types.BatchHeader{
 		L1BlockNumber: batchesRef.L1BlockNumber,
