@@ -53,6 +53,7 @@ type Fetcher struct {
 
 	chainID                 *big.Int
 	lastSyncedL1BlockNumber atomic.Uint64
+	lastPulledL1BlockNumber atomic.Uint64
 
 	ctx    context.Context
 	cancel context.CancelFunc
@@ -99,6 +100,11 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 // GetFetchedBlockNumber returns the last fetched L1 block number.
 func (f *Fetcher) GetFetchedBlockNumber() uint64 {
 	return f.lastSyncedL1BlockNumber.Load()
+}
+
+// GetPulledBlockNumber returns the last pulled batch L1 block number.
+func (f *Fetcher) GetPulledBlockNumber() uint64 {
+	return f.lastPulledL1BlockNumber.Load()
 }
 
 // InitFetch inits the fetcher context.
@@ -360,6 +366,7 @@ func (f *Fetcher) nextBatchHeader() (*sequencerv2types.BatchHeader, error) {
 	if !ok {
 		return nil, errors.New("batch headers channel is closed")
 	}
+	defer f.lastPulledL1BlockNumber.Store(batchesRef.L1BlockNumber)
 
 	header := sequencerv2types.BatchHeader{
 		L1BlockNumber: batchesRef.L1BlockNumber,
