@@ -73,7 +73,8 @@ func (f *Fetcher) handleFrames() error {
 			}
 
 			if ch.Channel.IsReady() {
-				br, err := derive.BatchReader(ch.Channel.Reader())
+				// TODO: Optimism Fjord launch check
+				br, err := derive.BatchReader(ch.Channel.Reader(), 100_000_000, true)
 				if err != nil {
 					logger.Errorf("Failed to create zlib reader: %v", err)
 					return err
