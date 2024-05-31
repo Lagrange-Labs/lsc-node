@@ -42,7 +42,7 @@ func (f *Fetcher) handleFrames() error {
 	)
 
 	defer func() {
-		f.done <- struct{}{}
+		f.decoderDone <- struct{}{}
 		logger.Infof("decoder is stopped")
 	}()
 
