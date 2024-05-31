@@ -79,10 +79,11 @@ type Fetcher struct {
 	chFramesRef chan *FramesRef
 	chainID     *big.Int
 
-	ctx    context.Context
-	cancel context.CancelFunc
-	done   chan struct{}
-	chErr  chan error
+	ctx         context.Context
+	cancel      context.CancelFunc
+	fetcherDone chan struct{}
+	decoderDone chan struct{}
+	chErr       chan error
 }
 
 // NewFetcher creates a new Fetcher instance.
@@ -118,8 +119,9 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		signer:            coretypes.LatestSignerForChainID(big.NewInt(int64(chainID))),
 		batchHeaders:      make(chan *BatchesRef, ParallelBlocks),
 
-		chErr: make(chan error, 1),
-		done:  make(chan struct{}, 2),
+		chErr:       make(chan error, 1),
+		fetcherDone: make(chan struct{}, 1),
+		decoderDone: make(chan struct{}, 1),
 	}, nil
 }
 
@@ -152,7 +154,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 	}()
 
 	defer func() {
-		f.done <- struct{}{}
+		f.fetcherDone <- struct{}{}
 		logger.Infof("fetcher is stopped")
 	}()
 
@@ -277,7 +279,8 @@ func (f *Fetcher) Stop() {
 
 	// close the batch headers channel to notify the outside
 	close(f.batchHeaders)
-	close(f.done)
+	close(f.fetcherDone)
+	close(f.decoderDone)
 	close(f.chErr)
 }
 
@@ -288,31 +291,37 @@ func (f *Fetcher) StopFetch() {
 	}
 
 	f.lastSyncedL1BlockNumber.Store(0)
+
 	// close L1 fetcher
 	f.cancel()
-	// close batch decoder
-	close(f.chFramesRef)
-	for len(f.chFramesRef) > 0 { // drain channel
-		<-f.chFramesRef
-	}
-	<-f.done // wait for the batch decoder to finish
 
 	func() {
+		doneCount := 0
 		// wait for the fetcher to finish
-		ctx, cancel := context.WithTimeout(context.Background(), fetchInterval*5)
+		ctx, cancel := context.WithTimeout(context.Background(), 1*time.Minute)
 		defer cancel()
 		for {
 			select {
-			case <-f.done: // wait for the fetcher to finish
-				return
+			case <-f.fetcherDone: // wait for the fetcher to finish
+				// close batch decoder
+				close(f.chFramesRef)
+				doneCount++
+			case <-f.decoderDone: // wait for the batch decoder to finish
+				doneCount++
 			case <-ctx.Done():
 				panic("failed to stop the fetcher")
 			default:
+				if doneCount == 2 {
+					return
+				}
 				time.Sleep(10 * time.Millisecond)
 				// drain channel, if the `batchHeaders` channel is full, it will block the fetcher
 				// and the fetcher will not stop.
 				for len(f.batchHeaders) > 0 {
 					<-f.batchHeaders
+				}
+				for len(f.chFramesRef) > 0 { // drain channel
+					<-f.chFramesRef
 				}
 			}
 		}
@@ -320,6 +329,9 @@ func (f *Fetcher) StopFetch() {
 	// drain channel to clean up the batches while stopping the fetcher
 	for len(f.batchHeaders) > 0 {
 		<-f.batchHeaders
+	}
+	for len(f.chFramesRef) > 0 { // drain channel
+		<-f.chFramesRef
 	}
 
 	f.cancel = nil
