@@ -434,42 +434,53 @@ func (c *Client) getPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (u
 }
 
 // getBatchHeader gets the batch header from the database.
-func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
+func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64, l1TxIndex uint32) (*sequencerv2types.BatchHeader, error) {
 	ti := time.Now()
 	defer telemetry.MeasureSince(ti, "client", "get_batch_header")
+
+	if l1TxIndex > 0 {
+		key := make([]byte, 12)
+		binary.BigEndian.PutUint64(key, l1BlockNumber)
+		binary.BigEndian.PutUint32(key[8:], l1TxIndex)
+		value, err := c.db.Get(key)
+		if err != nil {
+			return nil, fmt.Errorf("failed to get the batch header: %v", err)
+		}
+		var batchHeader sequencerv2types.BatchHeader
+		if err := proto.Unmarshal(value, &batchHeader); err != nil {
+			return nil, fmt.Errorf("failed to unmarshal the batch header: %v", err)
+		}
+		return &batchHeader, nil
+	}
+
+	var res *sequencerv2types.BatchHeader
 
 	prefix := make([]byte, 8)
 	binary.BigEndian.PutUint64(prefix, l1BlockNumber)
 
-	var res *sequencerv2types.BatchHeader
-	isFound := false
+	errFound := fmt.Errorf("found")
 	if err := c.db.Iterate(prefix, func(key, value []byte) error {
-		if isFound {
-			return nil
-		}
 		var batchHeader sequencerv2types.BatchHeader
 		if err := proto.Unmarshal(value, &batchHeader); err != nil {
 			return fmt.Errorf("failed to unmarshal the batch header: %v", err)
 		}
 		if batchHeader.FromBlockNumber() == l2BlockNumber {
 			res = &batchHeader
-			isFound = true
+			return errFound
 		}
 		return nil
-	}); err != nil {
+	}); errors.Is(errFound, err) {
+		return res, nil
+	} else if err != nil {
 		return nil, fmt.Errorf("failed to iterate the database: %v", err)
-	}
-
-	if !isFound {
+	} else {
 		return nil, fmt.Errorf("the batch header is not found for L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
 	}
-
-	return res, nil
 }
 
 // verifyPrevBatch verifies the previous batch.
 func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
-	batchHeader, err := c.getBatchHeader(l1BlockNumber, l2BlockNumber)
+	batchHeader, err := c.getBatchHeader(l1BlockNumber, l2BlockNumber, 0)
 	if err != nil {
 		return fmt.Errorf("failed to get the batch header: %v", err)
 	}
@@ -503,7 +514,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	logger.Infof("get the batch with L1 block number %d with L2 block number from %d to %d", batch.L1BlockNumber(), fromBlockNumber, toBlockNumber)
 
 	// verify the L1 block number
-	batchHeader, err := c.getBatchHeader(batch.L1BlockNumber(), fromBlockNumber)
+	batchHeader, err := c.getBatchHeader(batch.L1BlockNumber(), fromBlockNumber, batch.BatchHeader.L1TxIndex)
 	if err != nil || batchHeader == nil {
 		logger.Errorf("failed to get the batch header: %v", err)
 		return batch, ErrBatchNotFound
