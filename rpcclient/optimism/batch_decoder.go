@@ -64,12 +64,12 @@ func (f *Fetcher) handleFrames() error {
 
 			if ch.Channel.IsReady() {
 				logger.Errorf("Invaild Frame: channel %v is ready", frame.ID)
-				return errors.New("invaild Frame: channel is ready")
+				break
 			}
 
 			if err := ch.Channel.AddFrame(frame, blockRef); err != nil {
 				logger.Errorf("Failed to add frame to channel %v : %v", frame.ID, err)
-				return err
+				continue
 			}
 
 			if ch.Channel.IsReady() {
