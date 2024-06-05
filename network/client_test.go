@@ -118,12 +118,17 @@ func TestClientStorage(t *testing.T) {
 	require.Equal(t, uint64(8), prev)
 
 	// get batch by L1 block number
-	_, err = client.getBatchHeader(3, 2)
+	_, err = client.getBatchHeader(3, 2, 0)
 	require.Error(t, err)
-	batch, err := client.getBatchHeader(5, 5)
+	batch, err := client.getBatchHeader(5, 5, 1)
 	require.NoError(t, err)
 	require.Equal(t, uint64(5), batch.L1BlockNumber)
 	require.Equal(t, uint32(1), batch.L1TxIndex)
+	_, err = client.getBatchHeader(5, 5, 2)
+	require.Error(t, err)
+	batch, err = client.getBatchHeader(8, 8, 0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(8), batch.L1BlockNumber)
 
 	// init begin block number
 	err = client.initBeginBlockNumber(5)
