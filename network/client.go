@@ -444,7 +444,7 @@ func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64, l1TxIndex u
 		binary.BigEndian.PutUint32(key[8:], l1TxIndex)
 		value, err := c.db.Get(key)
 		if err != nil {
-			return nil, fmt.Errorf("failed to get the batch header: %v", err)
+			return nil, err
 		}
 		var batchHeader sequencerv2types.BatchHeader
 		if err := proto.Unmarshal(value, &batchHeader); err != nil {
@@ -482,7 +482,7 @@ func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64, l1TxIndex u
 func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 	batchHeader, err := c.getBatchHeader(l1BlockNumber, l2BlockNumber, 0)
 	if err != nil {
-		return fmt.Errorf("failed to get the batch header: %v", err)
+		return fmt.Errorf("failed to get the previous batch header for L1 block number %d, L2 block number %d: %v", l1BlockNumber, l2BlockNumber, err)
 	}
 
 	if batchHeader == nil {
@@ -516,7 +516,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	// verify the L1 block number
 	batchHeader, err := c.getBatchHeader(batch.L1BlockNumber(), fromBlockNumber, batch.BatchHeader.L1TxIndex)
 	if err != nil || batchHeader == nil {
-		logger.Errorf("failed to get the batch header: %v", err)
+		logger.Errorf("failed to get the batch header for L1BlockNumber %d, L2FromBlockNumber %d, L1TxIndex %d: %v", batch.L1BlockNumber(), fromBlockNumber, batch.BatchHeader.L1TxIndex, err)
 		return batch, ErrBatchNotFound
 	}
 	if batch.L1BlockNumber() != batchHeader.L1BlockNumber {
