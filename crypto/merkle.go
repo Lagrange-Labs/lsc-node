@@ -14,7 +14,7 @@ func MerkleRoot(data [][]byte) []byte {
 		return utils.Hash([]byte{})
 	}
 
-	emptyLeaf := leafHash([]byte{})
+	emptyLeaf := make([]byte, 32)
 	// expand the leaf nodes to a power of 2
 	count := nextPowerOfTwo(len(data))
 	nodes := make([][]byte, 0, count)
