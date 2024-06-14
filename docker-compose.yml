@@ -1,4 +1,4 @@
-version: "3.5"
+version: "3.7"
 
 services:
   simsequencer:
@@ -19,7 +19,7 @@ services:
       - LAGRANGE_NODE_SEQUENCER_ETHEREUMURL=http://192.168.20.100:8545
   simavs-sync:
     container_name: avs-sync
-    image: lagrangelabs/avs-sync:seq
+    image: lagrangelabs/avs-sync:main
     networks:
       localnet:
         ipv4_address: 192.168.20.50
@@ -238,7 +238,7 @@ services:
       - "/app/lagrange-node run-client"
   lagrangesc:
     container_name: lagrange-smart-contract
-    image: lagrangelabs/lagrange-contracts:develop
+    image: lagrangelabs/lagrange-contracts:v0.2.2
     networks:
       localnet:
         ipv4_address: 192.168.20.100
