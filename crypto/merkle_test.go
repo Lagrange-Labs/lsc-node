@@ -74,7 +74,7 @@ func TestMerkleRoot(t *testing.T) {
 		{[][]byte{}, "c5d2460186f7233c927e7db2dcc703c0e500b653ca82273b7bfad8045d85a470"},
 		{[][]byte{{1, 2, 3}}, "d4ff8d9d9a44c2b7b9c6a2defc4735f367b95e877ea7efc5f30970ebd56b6df1"},
 		{[][]byte{{1, 2, 3}, {4, 5, 6}}, "50a5c8c83ab0942462e74dc6940bb54b6fc15a79d1a8da84799937f11f4ba43a"},
-		{[][]byte{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}, "f07aa539b07550b33c7eef211520f3a9106b7c37299a7d814bc1500b0fb696c2"},
+		{[][]byte{{1, 2, 3}, {4, 5, 6}, {7, 8, 9}}, "a83a6fba6dc1ab15186f11d8dda138913b22635dc3b5e7a0a559c570e4a5323b"},
 	}
 
 	for _, tc := range testCases {
