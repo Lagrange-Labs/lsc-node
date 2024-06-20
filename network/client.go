@@ -172,7 +172,7 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		committeeCache:        lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
 
 		db:    db,
-		chErr: make(chan error),
+		chErr: make(chan error, CommitteeCacheSize),
 	}
 	go c.startBatchFetching()
 
@@ -566,8 +566,8 @@ func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommi
 	defer telemetry.MeasureSince(ti, "client", "get_committee")
 
 	committeeData, err := c.committeeSC.GetCommittee(nil, c.chainID, big.NewInt(int64(blockNumber)))
-	if err != nil {
-		return nil, fmt.Errorf("failed to get the committee data: %v", err)
+	if err != nil || committeeData.LeafCount == 0 {
+		return nil, fmt.Errorf("failed to get the committee data %+v: %v", committeeData, err)
 	}
 	c.committeeCache.Add(blockNumber, &committeeData)
 

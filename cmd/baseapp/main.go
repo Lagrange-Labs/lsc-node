@@ -31,9 +31,7 @@ var (
 	}
 )
 
-// TODO: use an environment variable to enable/disable debug mode
 const DEBUG_MODE = false
-const METRICS_ENABLED = true
 
 func main() {
 	// Start an HTTP server for pprof profiling data.
@@ -41,15 +39,6 @@ func main() {
 		logger.Info("Starting pprof server on 6060")
 		go func() {
 			log.Println(http.ListenAndServe(":6060", nil))
-		}()
-	}
-
-	// Start an HTTP server for prometheus metrics.
-	if METRICS_ENABLED {
-		logger.Info("Starting prometheus server on 8080")
-		go func() {
-			http.Handle("/metrics", promhttp.Handler())
-			log.Println(http.ListenAndServe(":8080", nil))
 		}()
 	}
 
@@ -197,6 +186,15 @@ func runSequencer(ctx *cli.Context) error {
 }
 
 func initMetrics(cfg telemetry.Config, module string) error {
+	// Start an HTTP server for prometheus metrics.
+	if cfg.MetricsEnabled {
+		logger.Infof("Starting prometheus server on %s", cfg.MetricsServerPort)
+		go func() {
+			http.Handle("/metrics", promhttp.Handler())
+			log.Println(http.ListenAndServe(fmt.Sprintf(":%s", cfg.MetricsServerPort), nil))
+		}()
+	}
+
 	if cfg.PrometheusRetentionTime > 0 {
 		logger.Info("Initializing metrics")
 		if err := telemetry.NewGlobal(cfg); err != nil {
@@ -204,6 +202,7 @@ func initMetrics(cfg telemetry.Config, module string) error {
 		}
 		telemetry.SetLabel(telemetry.NewLabel("module", module))
 	}
+
 	return nil
 }
 
