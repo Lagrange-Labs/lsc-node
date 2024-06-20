@@ -23,6 +23,12 @@ const (
 
 // Config defines the configuration options for application telemetry.
 type Config struct {
+	// MetricsEnabled enables the metrics collection.
+	MetricsEnabled bool `mapstructure:"MetricsEnabled"`
+
+	// MetricsServerPort is the port on which the metrics server will listen.
+	MetricsServerPort string `mapstructure:"MetricsServerPort"`
+
 	// Prefixed with keys to separate services
 	ServiceName string `mapstructure:"ServiceName"`
 
