@@ -18,7 +18,11 @@ type RoundState struct {
 	proposedBatch *sequencerv2types.Batch
 
 	commitSignatures map[string]map[string]*sequencerv2types.BlsSignature
-	evidences        []*sequencerv2types.BlsSignature // to determine slashing
+	evidences        []struct {
+		operator     string
+		blsPubKey    string
+		blsSignature *sequencerv2types.BlsSignature
+	} // to determine slashing
 
 	rwMutex   sync.RWMutex // to protect the round state updates
 	isBlocked bool         // to prevent the block commit
@@ -142,12 +146,14 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 	sigHash := blsSignature.Hash()
 	signatures := make([][]byte, 0)
 	pubKeys := make([][]byte, 0)
+	operators := make([]string, 0)
 
 	// aggregate the signatures of client nodes
-	for _, operatorSignatures := range rs.commitSignatures {
+	for operator, operatorSignatures := range rs.commitSignatures {
 		for pubKey, commit := range operatorSignatures {
 			signatures = append(signatures, utils.Hex2Bytes(commit.BlsSignature))
 			pubKeys = append(pubKeys, utils.Hex2Bytes(pubKey))
+			operators = append(operators, operator)
 		}
 	}
 
@@ -161,6 +167,7 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 			for _, pubKey := range pubKeys {
 				rs.proposedBatch.PubKeys = append(rs.proposedBatch.PubKeys, utils.Bytes2Hex(pubKey))
 			}
+			rs.proposedBatch.Operators = operators
 			return nil
 		}
 		if err != nil {
@@ -174,30 +181,44 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 			commitHash := commit.Hash()
 			if !bytes.Equal(commitHash, sigHash) {
 				logger.Errorf("wrong commit message: %v, original: %v", utils.Bytes2Hex(commitHash), utils.Bytes2Hex(sigHash))
-				rs.addEvidence(operator, commit)
+				rs.addEvidence(operator, pubKey, commit)
 				continue
 			}
 			verified, err := rs.blsScheme.VerifySignature(utils.Hex2Bytes(pubKey), commitHash, utils.Hex2Bytes(commit.BlsSignature))
 			if err != nil {
 				logger.Errorf("failed to verify the signature: %v", err)
-				rs.addEvidence(operator, commit)
+				rs.addEvidence(operator, pubKey, commit)
 				continue
 			}
 			if !verified {
 				logger.Errorf("invalid signature: %v", commit)
-				rs.addEvidence(operator, commit)
+				rs.addEvidence(operator, pubKey, commit)
 			}
 		}
 	}
+
+	rs.ejectEvidences()
 
 	logger.Errorf("invalid aggregated signature: %v", rs.proposedBatch)
 
 	return ErrInvalidAggregativeSignature
 }
 
-func (rs *RoundState) addEvidence(operator string, signature *sequencerv2types.BlsSignature) {
-	rs.evidences = append(rs.evidences, signature)
-	delete(rs.commitSignatures, operator)
+func (rs *RoundState) addEvidence(operator string, blsPubKey string, signature *sequencerv2types.BlsSignature) {
+	rs.evidences = append(rs.evidences, struct {
+		operator     string
+		blsPubKey    string
+		blsSignature *sequencerv2types.BlsSignature
+	}{operator: operator, blsPubKey: blsPubKey, blsSignature: signature})
+}
+
+func (rs *RoundState) ejectEvidences() {
+	for _, req := range rs.evidences {
+		delete(rs.commitSignatures[req.operator], req.blsPubKey)
+		if len(rs.commitSignatures[req.operator]) == 0 {
+			delete(rs.commitSignatures, req.operator)
+		}
+	}
 }
 
 // GetEvidences returns the evidences.
@@ -207,7 +228,7 @@ func (rs *RoundState) GetEvidences() ([]*Evidence, error) {
 	var evidences []*Evidence
 
 	for _, req := range rs.evidences {
-		evidence, err := GetEvidence(req)
+		evidence, err := GetEvidence(req.operator, req.blsPubKey, req.blsSignature)
 		if err != nil {
 			return nil, err
 		}
