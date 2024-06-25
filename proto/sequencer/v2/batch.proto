@@ -34,10 +34,11 @@ message Batch {
     string proposer_pub_key = 3;
     string proposer_signature = 4;
     repeated string pub_keys = 5;
-    string agg_signature = 6;
+    repeated string operators = 6;
+    string agg_signature = 7;
     // meta data
-    string sequenced_time = 7;
-    string finalized_time = 8;
+    string sequenced_time = 8;
+    string finalized_time = 9;
 }
 
 // BlsSignature is the BLS signature of the given batch
