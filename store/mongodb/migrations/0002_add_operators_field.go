@@ -26,7 +26,7 @@ func up_0002(client *mongo.Client) error {
 	logger.Info("Updating operators field in batches")
 	for {
 		logger.Infof("Fetching batches from %d to %d", lastBatchNumber, maxBatchNumber)
-		filter := bson.M{"batch_header.batch_number": bson.M{"$gt": lastBatchNumber, "$lte": maxBatchNumber}, "batch_header.chain_id": chainId, "agg_signature": bson.M{"$ne": ""}}
+		filter := bson.M{"batch_header.batch_number": bson.M{"$gt": lastBatchNumber, "$lte": maxBatchNumber}, "batch_header.chain_id": chainId, "agg_signature": bson.M{"$ne": ""}, "operators": bson.M{"$exists": false}}
 		// Fetch the batch of documents from the database
 		cursor, err := batchesCollection.Find(context.Background(), filter, options.Find().SetLimit(int64(batchSize)).SetSort(bson.M{"batch_header.batch_number": 1}))
 		if err != nil {
