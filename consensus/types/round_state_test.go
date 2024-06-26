@@ -131,4 +131,5 @@ func TestCheckAggregatedSignature(t *testing.T) {
 	err = rs.CheckAggregatedSignature()
 	require.Error(t, err)
 	require.Len(t, rs.evidences, 3)
+	require.Len(t, rs.commitSignatures, 7)
 }
