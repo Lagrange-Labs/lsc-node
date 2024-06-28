@@ -25,7 +25,7 @@ func up_0002(client *mongo.Client) error {
 	var cacheValidForRangeEnd int64
 	logger.Info("Updating operators field in batches")
 	for {
-		logger.Infof("Fetching batches from %d to %d", lastBatchNumber, maxBatchNumber)
+		logger.Infof("Fetching batches from %d to %d", lastBatchNumber, lastBatchNumber+int64(batchSize))
 		filter := bson.M{"batch_header.batch_number": bson.M{"$gt": lastBatchNumber, "$lte": maxBatchNumber}, "batch_header.chain_id": chainId, "agg_signature": bson.M{"$ne": ""}, "operators": bson.M{"$exists": false}}
 		// Fetch the batch of documents from the database
 		cursor, err := batchesCollection.Find(context.Background(), filter, options.Find().SetLimit(int64(batchSize)).SetSort(bson.M{"batch_header.batch_number": 1}))
@@ -107,6 +107,7 @@ func up_0002(client *mongo.Client) error {
 				logger.Infof("Error updating batch: %v", err)
 				return err
 			}
+			logger.Info("Batch processed successfully.")
 			lastBatchNumber = batchNumber
 		}
 		if !batchesProcessed {
