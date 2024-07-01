@@ -16,6 +16,8 @@ import (
 // Evidence defines an evidence.
 type Evidence struct {
 	Operator             string   `json:"operator" bson:"operator"`
+	Signer               string   `json:"signer" bson:"signer"`
+	BlsPublicKey         string   `json:"bls_public_key" bson:"bls_public_key"`
 	BlockHash            [32]byte `json:"block_hash" bson:"block_hash"`
 	CurrentCommitteeRoot [32]byte `json:"current_committee_root" bson:"current_committee_root"`
 	NextCommitteeRoot    [32]byte `json:"next_committee_root" bson:"next_committee_root"`
@@ -51,7 +53,7 @@ func GetCommitRequestHash(sig *sequencertypes.BlsSignature) []byte {
 }
 
 // GetEvidence returns the evidence from the commit block request.
-func GetEvidence(sig *sequencerv2types.BlsSignature) (*Evidence, error) {
+func GetEvidence(operator string, blsPubKey string, sig *sequencerv2types.BlsSignature) (*Evidence, error) {
 	hash := sig.CommitHash()
 	signature := common.FromHex(sig.EcdsaSignature)
 	pubKey, err := crypto.SigToPub(hash, signature)
@@ -65,7 +67,9 @@ func GetEvidence(sig *sequencerv2types.BlsSignature) (*Evidence, error) {
 	}
 	addr := crypto.PubkeyToAddress(*pubKey).Hex()
 	return &Evidence{
-		Operator:             addr,
+		Operator:             operator,
+		Signer:               addr,
+		BlsPublicKey:         blsPubKey,
 		CurrentCommitteeRoot: common.HexToHash(sig.CurrentCommittee()),
 		NextCommitteeRoot:    common.HexToHash(sig.NextCommittee()),
 		BlockNumber:          sig.BatchNumber(),
