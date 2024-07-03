@@ -22,11 +22,18 @@ func up_0002(client *mongo.Client) error {
 	
 	// cache committee details for a range of batches to reduce the number of queries
 	var cachedCommitteeDetails map[string]interface{}
-	var cacheValidForRangeEnd int64
 	logger.Info("Updating operators field in batches")
 	for {
 		logger.Infof("Fetching batches from %d to %d", lastBatchNumber, lastBatchNumber+int64(batchSize))
-		filter := bson.M{"batch_header.batch_number": bson.M{"$gt": lastBatchNumber, "$lte": maxBatchNumber}, "batch_header.chain_id": chainId, "agg_signature": bson.M{"$ne": ""}, "operators": bson.M{"$exists": false}}
+		filter := bson.M{
+			"batch_header.batch_number": bson.M{
+				"$gt": lastBatchNumber,
+				"$lte": maxBatchNumber,
+				},
+			"batch_header.chain_id": chainId,
+			"agg_signature": bson.M{"$ne": ""},
+			"operators": bson.M{"$exists": false},
+		}
 		// Fetch the batch of documents from the database
 		cursor, err := batchesCollection.Find(context.Background(), filter, options.Find().SetLimit(int64(batchSize)).SetSort(bson.M{"batch_header.batch_number": 1}))
 		if err != nil {
@@ -45,31 +52,19 @@ func up_0002(client *mongo.Client) error {
 				return err
 			}
 			batchNumber := batch["batch_header"].(map[string]interface{})["batch_number"].(int64)
+			current_committee_root := batch["committee_header"].(map[string]interface{})["current_committee"].(string)
 			logger.Infof("Processing batch %d", batchNumber)
 
 			// If the cache is not valid for the current batch, update the cache
-			if cachedCommitteeDetails == nil || batchNumber > cacheValidForRangeEnd {
-				logger.Infof("Updating cache for batch %d", batchNumber)
+			if cachedCommitteeDetails == nil || current_committee_root != cachedCommitteeDetails["current_committee_root"].(string) {
+				logger.Infof("Updating cache for batch=%d and committee root=%s", batchNumber, current_committee_root)
 				// Get the committee details for the batch
-				committee_details, err := getCommitteeDetailsForBatch(batchesCollection, batchNumber, chainId)
+				committee_details, err := getCommitteeDetailsForBatch(db, current_committee_root, chainId)
 				if err != nil {
 					logger.Infof("Error getting committee details for batch: %v", err)
 					return err
 				}
 				cachedCommitteeDetails = committee_details
-				if committeeDetailsSlice, ok := committee_details["committee_details"].(primitive.A); ok {
-					if len(committeeDetailsSlice) > 0 {
-						if committeeDetail, ok := committeeDetailsSlice[0].(map[string]interface{}); ok {
-							cacheValidForRangeEnd = committeeDetail["epoch_end_block_number"].(int64)
-						} else {
-							logger.Infof("Error parsing committee details for batch %d", batchNumber)
-							return fmt.Errorf("error parsing committee details for batch %d", batchNumber)
-						}
-					} else {
-						logger.Infof("No committee details found for batch %d", batchNumber)
-						continue
-					}
-				}
 			}
 			
 			operators := make([]string, len(batch["pub_keys"].(primitive.A)))
@@ -79,7 +74,7 @@ func up_0002(client *mongo.Client) error {
 					logger.Infof("Error parsing pubkey for batch %d", batchNumber)
 					return fmt.Errorf("error parsing pubkey for batch %d", batchNumber)
 				}
-				for _, operator := range cachedCommitteeDetails["committee_details"].(primitive.A)[0].(map[string]interface{})["operators"].(primitive.A) {
+				for _, operator := range cachedCommitteeDetails["operators"].(primitive.A) {
 					operatorMap, ok := operator.(map[string]interface{})
 					if !ok {
 						logger.Infof("Error parsing operator for batch %d", batchNumber)
@@ -91,8 +86,6 @@ func up_0002(client *mongo.Client) error {
 					}
 				}
 			}
-
-			logger.Infof("Operators to update: %v", operators)
 
 			// Update the batch with the operators using batch_number and chain_id
 			_, err = batchesCollection.UpdateOne(
@@ -122,9 +115,9 @@ func down_0002(client *mongo.Client) error {
 	db := client.Database("state")
 	batchesCollection := db.Collection("batches")
 
-	fromBatchNumber := 1 // for testing purposes
-	toBatchNumber := 2 // for testing purposes
-	chainId := 421614
+	fromBatchNumber := 0 // for testing purposes
+	toBatchNumber := 3700 // for testing purposes
+	chainId := 42161
 
 	filter := bson.M{
 		"batch_header.batch_number": bson.M{
@@ -148,65 +141,27 @@ func down_0002(client *mongo.Client) error {
 }
 
 // getCommitteeDetailsForBatch fetches the committee details for the given batch number and chain id
-func getCommitteeDetailsForBatch(batchesCollection *mongo.Collection, batchNumber int64, chainId uint64) (map[string]interface{}, error) {
+func getCommitteeDetailsForBatch(db *mongo.Database, committeeRoot string, chainId uint64) (map[string]interface{}, error) {
 	ctx, cancel := context.WithTimeout(context.Background(), 60*time.Second)
 	defer cancel()
 
-	pipeline := mongo.Pipeline{
-		{{Key: "$match", Value: bson.D{
-			{Key: "batch_header.batch_number", Value: batchNumber},
-			{Key: "batch_header.chain_id", Value: chainId},
-		}}},
-
-		{{Key: "$lookup", Value: bson.D{
-			{Key: "from", Value: "committee_roots"},
-			{Key: "let", Value: bson.D{
-				{Key: "current_committee", Value: "$committee_header.current_committee"},
-				{Key: "chain_id", Value: "$batch_header.chain_id"},
-				{Key: "l1_block_number", Value: "$batch_header.l1_block_number"},
-			}},
-			{Key: "pipeline", Value: mongo.Pipeline{
-				{{Key: "$match", Value: bson.D{
-					{Key: "$expr", Value: bson.D{
-						{Key: "$and", Value: bson.A{
-							bson.D{{Key: "$eq", Value: bson.A{"$current_committee_root", "$$current_committee"}}},
-							bson.D{{Key: "$eq", Value: bson.A{"$chain_id", "$$chain_id"}}},
-							bson.D{{Key: "$lte", Value: bson.A{"$epoch_start_block_number", "$$l1_block_number"}}},
-							bson.D{{Key: "$gte", Value: bson.A{"$epoch_end_block_number", "$$l1_block_number"}}},
-						}},
-					}},
-				}}},
-			}},
-			{Key: "as", Value: "committee_details"},
-		}}},
-
-		{{Key: "$project", Value: bson.D{
-			{Key: "agg_signature", Value: 0},
-			{Key: "batch_header", Value: 0},
-			{Key: "finalized_time", Value: 0},
-			{Key: "sequenced_time", Value: 0},
-			{Key: "proposer_pub_key", Value: 0},
-			{Key: "proposer_signature", Value: 0},
-		}}},
-	}
-
-	cursor, err := batchesCollection.Aggregate(ctx, pipeline)
+	opts := options.Find().SetLimit(1)
+	cursor, err := db.Collection("committee_roots").Find(ctx, bson.M{"chain_id": chainId, "current_committee_root": committeeRoot}, opts)
 	if err != nil {
-		logger.Errorf("Error executing aggregation pipeline: %v", err)
+		if err == mongo.ErrNoDocuments {
+			return nil, fmt.Errorf("committee root not found")
+		}
 		return nil, err
 	}
 	defer cursor.Close(ctx)
 
-	var results []map[string]interface{}
-	if err = cursor.All(ctx, &results); err != nil {
-		logger.Errorf("Error parsing aggregation result: %v", err)
-		return nil, err
+	var committeeRootDetails map[string]interface{}
+	if cursor.Next(ctx) {
+		if err := cursor.Decode(&committeeRootDetails); err != nil {
+			return nil, err
+		}
+		return committeeRootDetails, nil
 	}
 
-	if len(results) == 0 {
-		logger.Infof("No committee root details found for batchNumber %d and chainId %d", batchNumber, chainId)
-		return nil, fmt.Errorf("no committee root details found")
-	}
-
-	return results[0], nil
+	return nil, fmt.Errorf("committee root not found")
 }
