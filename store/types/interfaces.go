@@ -9,6 +9,7 @@ import (
 	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 )
 
+// Storage is the interface for the database storage.
 type Storage interface {
 	// AddNode adds a new node to the database.
 	AddNode(ctx context.Context, node *servertypes.ClientNode) error
@@ -56,4 +57,22 @@ type Storage interface {
 	GetLastEvidenceBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
 	// CleanUp cleans up the database.
 	CleanUp(ctx context.Context) error
+}
+
+// KVStorage is the interface for the key-value database storage.
+type KVStorage interface {
+	// Get returns the value for the given key.
+	Get(key []byte) ([]byte, error)
+	// Put puts the value for the given key.
+	Put(key, value []byte) error
+	// Next returns the next key-value pair.
+	Next(key []byte) ([]byte, []byte, error)
+	// Prev returns the previous key-value pair.
+	Prev(key []byte) ([]byte, []byte, error)
+	// Iterate iterates over the key-value pairs.
+	Iterate(prefix []byte, f func(key, value []byte) error) error
+	// Prune prunes the key-value pairs.
+	Prune(prefix []byte) error
+	// Close closes the database.
+	Close() error
 }
