@@ -7,9 +7,9 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/config"
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/network"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
+	"github.com/Lagrange-Labs/lagrange-node/server"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/testutil"
@@ -57,7 +57,7 @@ func (m *Manager) RunServer() {
 	state := consensus.NewState(&m.cfg.Consensus, m.Storage, m.chainID)
 	state.Start()
 	go func() {
-		if err := network.RunServer(&m.cfg.Server, m.Storage, state, m.chainID); err != nil {
+		if err := server.RunServer(&m.cfg.Server, m.Storage, state, m.chainID); err != nil {
 			panic(err)
 		}
 	}()

@@ -12,12 +12,13 @@ import (
 	"github.com/prometheus/client_golang/prometheus/promhttp"
 	"github.com/urfave/cli/v2"
 
+	"github.com/Lagrange-Labs/lagrange-node/client"
 	"github.com/Lagrange-Labs/lagrange-node/config"
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
-	"github.com/Lagrange-Labs/lagrange-node/network"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
+	"github.com/Lagrange-Labs/lagrange-node/server"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 )
@@ -120,7 +121,7 @@ func runServer(ctx *cli.Context) error {
 	state := consensus.NewState(&cfg.Consensus, storage, chainID)
 
 	// Start the server.
-	if err = network.RunServer(&cfg.Server, storage, state, chainID); err != nil {
+	if err = server.RunServer(&cfg.Server, storage, state, chainID); err != nil {
 		return err
 	}
 
@@ -144,7 +145,7 @@ func runClient(ctx *cli.Context) error {
 
 	logger.Info("Starting client")
 
-	client, err := network.NewClient(&cfg.Client, &cfg.RpcClient)
+	client, err := client.NewClient(&cfg.Client, &cfg.RpcClient)
 	if err != nil {
 		return err
 	}

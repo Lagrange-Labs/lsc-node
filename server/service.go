@@ -1,4 +1,4 @@
-package network
+package server
 
 import (
 	context "context"
@@ -13,8 +13,8 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
-	"github.com/Lagrange-Labs/lagrange-node/network/types"
-	networkv2types "github.com/Lagrange-Labs/lagrange-node/network/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/server/types"
+	v2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
@@ -33,14 +33,14 @@ var (
 type sequencerService struct {
 	storage   storageInterface
 	consensus consensusInterface
-	networkv2types.UnimplementedNetworkServiceServer
+	v2types.UnimplementedNetworkServiceServer
 
 	blsScheme crypto.BLSScheme
 	chainID   uint32
 }
 
 // NewSequencerService creates the sequencer service.
-func NewSequencerService(storage storageInterface, consensus consensusInterface, blsScheme crypto.BLSScheme, chainID uint32) (networkv2types.NetworkServiceServer, error) {
+func NewSequencerService(storage storageInterface, consensus consensusInterface, blsScheme crypto.BLSScheme, chainID uint32) (v2types.NetworkServiceServer, error) {
 	return &sequencerService{
 		storage:   storage,
 		consensus: consensus,
@@ -50,7 +50,7 @@ func NewSequencerService(storage storageInterface, consensus consensusInterface,
 }
 
 // JoinNetwork is a method to join the attestation network.
-func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.JoinNetworkRequest) (*networkv2types.JoinNetworkResponse, error) {
+func (s *sequencerService) JoinNetwork(ctx context.Context, req *v2types.JoinNetworkRequest) (*v2types.JoinNetworkResponse, error) {
 	// Check if the consensus is initialized
 	s.consensus.Start()
 
@@ -77,7 +77,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.
 	}
 	if !isMember {
 		logger.Warnf("The operator %s is not a committee member", req.StakeAddress)
-		return &networkv2types.JoinNetworkResponse{}, ErrNotCommitteeMember
+		return &v2types.JoinNetworkResponse{}, ErrNotCommitteeMember
 	}
 	// Register node
 	ip, err := getIPAddress(ctx)
@@ -103,7 +103,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.
 
 	logger.Infof("New node %v joined the network", req.StakeAddress)
 	prevBatch := s.consensus.GetPrevBatch()
-	return &networkv2types.JoinNetworkResponse{
+	return &v2types.JoinNetworkResponse{
 		Token:             token,
 		PrevL2BlockNumber: prevBatch.BatchHeader.FromBlockNumber(),
 		PrevL1BlockNumber: prevBatch.L1BlockNumber(),
@@ -111,7 +111,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *networkv2types.
 }
 
 // GetBatch is a method to get the proposed batch.
-func (s *sequencerService) GetBatch(ctx context.Context, req *networkv2types.GetBatchRequest) (*networkv2types.GetBatchResponse, error) {
+func (s *sequencerService) GetBatch(ctx context.Context, req *v2types.GetBatchRequest) (*v2types.GetBatchResponse, error) {
 	ti := time.Now()
 	defer telemetry.MeasureSince(ti, "server", "get_batch")
 
@@ -123,13 +123,13 @@ func (s *sequencerService) GetBatch(ctx context.Context, req *networkv2types.Get
 
 	logger.Infof("GetBatch request from %v, %d", req.StakeAddress, req.BatchNumber)
 
-	return &networkv2types.GetBatchResponse{
+	return &v2types.GetBatchResponse{
 		Batch: s.consensus.GetOpenBatch(),
 	}, nil
 }
 
 // CommitBatch is a method to commit the proposed batch.
-func (s *sequencerService) CommitBatch(req *networkv2types.CommitBatchRequest, stream networkv2types.NetworkService_CommitBatchServer) error {
+func (s *sequencerService) CommitBatch(req *v2types.CommitBatchRequest, stream v2types.NetworkService_CommitBatchServer) error {
 	ti := time.Now()
 	defer telemetry.MeasureSince(ti, "server", "commit_batch")
 
@@ -169,12 +169,12 @@ func (s *sequencerService) CommitBatch(req *networkv2types.CommitBatchRequest, s
 		select {
 		case <-timeoutCtx.Done():
 			logger.Warnf("Failed to commit the batch: %v err: %v", req.StakeAddress, timeoutCtx.Err())
-			return stream.Send(&networkv2types.CommitBatchResponse{
+			return stream.Send(&v2types.CommitBatchResponse{
 				Result: false,
 			})
 		default:
 			if s.consensus.IsFinalized(batchNumber) {
-				return stream.Send(&networkv2types.CommitBatchResponse{
+				return stream.Send(&v2types.CommitBatchResponse{
 					Result: true,
 				})
 			}

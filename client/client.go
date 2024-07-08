@@ -1,4 +1,4 @@
-package network
+package client
 
 import (
 	"bytes"
@@ -22,11 +22,12 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
-	networkv2types "github.com/Lagrange-Labs/lagrange-node/network/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/server"
+	serverv2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/store/goleveldb"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
@@ -50,7 +51,7 @@ type PreviousBatchInfo struct {
 
 // Client is a gRPC client to join the network
 type Client struct {
-	networkv2types.NetworkServiceClient
+	serverv2types.NetworkServiceClient
 	healthMgr   *healthManager
 	rpcClient   rpctypes.RpcClient
 	committeeSC *committee.Committee
@@ -73,7 +74,7 @@ type Client struct {
 }
 
 // NewClient creates a new client.
-func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
+func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 	if len(cfg.BLSKeystorePasswordPath) > 0 {
 		var err error
 		cfg.BLSKeystorePassword, err = crypto.ReadKeystorePasswordFromFile(cfg.BLSKeystorePasswordPath)
@@ -211,7 +212,7 @@ func (c *Client) Start() error {
 		case <-time.After(c.pullInterval):
 			batch, err := c.TryGetBatch()
 			if err != nil {
-				if errors.Is(err, ErrInvalidToken) {
+				if errors.Is(err, server.ErrInvalidToken) {
 					if err := c.TryJoinNetwork(); err != nil {
 						return err
 					}
@@ -234,7 +235,7 @@ func (c *Client) Start() error {
 			}
 
 			if err := c.TryCommitBatch(batch); err != nil {
-				if errors.Is(err, ErrInvalidToken) {
+				if errors.Is(err, server.ErrInvalidToken) {
 					if err := c.TryJoinNetwork(); err != nil {
 						return err
 					}
@@ -251,7 +252,7 @@ func (c *Client) Start() error {
 	}
 }
 
-// TryJoinNetwork tries to join the network.
+// TryJoinNetwork tries to join the server.
 func (c *Client) TryJoinNetwork() error {
 	for {
 		select {
@@ -269,9 +270,9 @@ func (c *Client) TryJoinNetwork() error {
 		default:
 			if err := c.joinNetwork(); err != nil {
 				logger.Infof("failed to join the network: %v", err)
-				if strings.Contains(err.Error(), ErrNotCommitteeMember.Error()) {
+				if strings.Contains(err.Error(), server.ErrNotCommitteeMember.Error()) {
 					logger.Warn("NOTE: If you just joined the network, please wait for the next committee rotation. If you have been observing this message for a long time, please check if the BLS public key and the operator address are set correctly in the config file or contact the Largrange team.")
-				} else if strings.Contains(err.Error(), ErrCheckCommitteeMember.Error()) {
+				} else if strings.Contains(err.Error(), server.ErrCheckCommitteeMember.Error()) {
 					logger.Warn("NOTE: The given round is not initialized yet. It may be because the sequencer is waiting for the next batch since it is almost caught up with the current block. Please wait for the next batch.")
 				}
 				time.Sleep(5 * time.Second)
@@ -284,7 +285,7 @@ func (c *Client) TryJoinNetwork() error {
 }
 
 func (c *Client) joinNetwork() error {
-	req := &networkv2types.JoinNetworkRequest{
+	req := &serverv2types.JoinNetworkRequest{
 		PublicKey:    c.blsPublicKey,
 		StakeAddress: c.stakeAddress,
 	}
@@ -492,13 +493,13 @@ func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 	return nil
 }
 
-// TryGetBatch tries to get the batch from the network.
+// TryGetBatch tries to get the batch from the server.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	ti := time.Now()
-	res, err := c.GetBatch(utils.GetContext(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
+	res, err := c.GetBatch(utils.GetContext(), &serverv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
-		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
-			return nil, ErrInvalidToken
+		if strings.Contains(err.Error(), server.ErrInvalidToken.Error()) {
+			return nil, server.ErrInvalidToken
 		}
 		return nil, err
 	}
@@ -609,7 +610,7 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 	return nil
 }
 
-// TryCommitBatch tries to commit the signature to the network.
+// TryCommitBatch tries to commit the signature to the server.
 func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 	ti := time.Now()
 	defer telemetry.MeasureSince(ti, "client", "try_commit_batch")
@@ -629,7 +630,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 	}
 	blsSignature.EcdsaSignature = common.Bytes2Hex(sig)
 
-	req := &networkv2types.CommitBatchRequest{
+	req := &serverv2types.CommitBatchRequest{
 		BlsSignature: blsSignature,
 		StakeAddress: c.stakeAddress,
 		PublicKey:    c.blsPublicKey,
@@ -641,8 +642,8 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 
 	stream, err := c.CommitBatch(ctx, req)
 	if err != nil {
-		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
-			return ErrInvalidToken
+		if strings.Contains(err.Error(), server.ErrInvalidToken.Error()) {
+			return server.ErrInvalidToken
 		}
 		return fmt.Errorf("failed to upload signature: %v", err)
 	}

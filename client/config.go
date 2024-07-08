@@ -1,17 +1,9 @@
-package network
+package client
 
-import (
-	"github.com/Lagrange-Labs/lagrange-node/utils"
-)
+import "github.com/Lagrange-Labs/lagrange-node/utils"
 
-// ServerConfig is the configuration for the sequencer server.
-type ServerConfig struct {
-	// GRPCPort is TCP port to listen by gRPC server
-	GRPCPort string `mapstructure:"GRPCPort"`
-}
-
-// ClientConfig is the configuration for the client node.
-type ClientConfig struct {
+// Config is the configuration for the client node.
+type Config struct {
 	// GrpcURLs is the list of gRPC URLs
 	GrpcURLs []string `mapstructure:"GrpcURLs"`
 	// Chain is the chain name of the blockchain

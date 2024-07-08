@@ -1,4 +1,4 @@
-package network
+package server
 
 import (
 	"context"
@@ -11,9 +11,9 @@ import (
 	"google.golang.org/protobuf/proto"
 
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/network/types"
-	networkv2types "github.com/Lagrange-Labs/lagrange-node/network/types/v2"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/server/types"
+	v2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
@@ -130,7 +130,7 @@ func TestJoinNetwork(t *testing.T) {
 
 	for _, tc := range testCases {
 		t.Run(tc.name, func(t *testing.T) {
-			res, err := service.JoinNetwork(tc.ctx, &networkv2types.JoinNetworkRequest{
+			res, err := service.JoinNetwork(tc.ctx, &v2types.JoinNetworkRequest{
 				StakeAddress: tc.stakeAdr,
 				PublicKey:    tc.pubKey,
 				Signature:    tc.signature,

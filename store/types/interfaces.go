@@ -4,18 +4,18 @@ import (
 	"context"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 )
 
 type Storage interface {
 	// AddNode adds a new node to the database.
-	AddNode(ctx context.Context, node *networktypes.ClientNode) error
+	AddNode(ctx context.Context, node *servertypes.ClientNode) error
 	// GetNodesByStatuses returns the nodes with the given statuses.
-	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error)
+	GetNodesByStatuses(ctx context.Context, statuses []servertypes.NodeStatus, chainID uint32) ([]servertypes.ClientNode, error)
 	// GetNodeByStakeAddr returns the node for the given stake address.
-	GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*networktypes.ClientNode, error)
+	GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*servertypes.ClientNode, error)
 	// GetLastFinalizedBlock returns the last finalized block for the given chainID.
 	GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*sequencertypes.Block, error)
 	// GetLastFinalizedBlockNumber returns the last finalized block number for the given chainID.
