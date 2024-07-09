@@ -18,7 +18,7 @@ import (
 // Manager is a struct for test operations.
 type Manager struct {
 	cfg       *config.Config
-	chainID   uint32
+	chainInfo *consensus.ChainInfo
 	sequencer *sequencer.Sequencer
 
 	// Storage is a storage interface for test operations.
@@ -42,8 +42,12 @@ func NewManager() (*Manager, error) {
 	store, err := store.NewStorage(&cfg.Store)
 	return &Manager{
 		cfg:     cfg,
-		chainID: chainID,
 		Storage: store,
+		chainInfo: &consensus.ChainInfo{
+			ChainID:            chainID,
+			EthereumURL:        cfg.Sequencer.EthereumURL,
+			CommitteeSCAddress: cfg.Sequencer.CommitteeSCAddress,
+		},
 	}, err
 }
 
@@ -54,10 +58,10 @@ func (m *Manager) RunServer() {
 		panic(err)
 	}
 	m.cfg.Consensus.ProposerBLSKeystorePath = keystorePath
-	state := consensus.NewState(&m.cfg.Consensus, m.Storage, m.chainID)
+	state := consensus.NewState(&m.cfg.Consensus, m.Storage, m.chainInfo)
 	state.Start()
 	go func() {
-		if err := network.RunServer(&m.cfg.Server, m.Storage, state, m.chainID); err != nil {
+		if err := network.RunServer(&m.cfg.Server, m.Storage, state, m.chainInfo.ChainID); err != nil {
 			panic(err)
 		}
 	}()

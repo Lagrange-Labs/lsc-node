@@ -301,38 +301,19 @@ func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRo
 	ti := time.Now()
 	defer telemetry.MeasureSince(ti, "sequencer", "fetch_committee_root")
 
-	var (
-		epochEndBlockNumber   uint64
-		epochStartBlockNumber uint64
-	)
-
-	epochPeriodCount, err := s.committeeSC.GetEpochPeriodCount(nil, s.chainID)
+	epoch, err := s.committeeSC.GetEpochInterval(nil, s.chainID, big.NewInt(int64(epochNumber)))
 	if err != nil {
-		logger.Errorf("failed to get epoch period count: %w", err)
-		return nil, err
-	}
-	for index := epochPeriodCount; index > 0; index-- {
-		epochFlag, err := s.committeeSC.GetEpochPeriodByIndex(nil, s.chainID, index)
-		if err != nil {
-			logger.Errorf("failed to get epoch period by index: %w", err)
-			return nil, err
-		}
-		if epochNumber >= epochFlag.FlagEpoch.Uint64() {
-			epochStartBlockNumber = (epochNumber-epochFlag.FlagEpoch.Uint64())*epochFlag.Duration.Uint64() + epochFlag.FlagBlock.Uint64()
-			epochEndBlockNumber = epochStartBlockNumber + epochFlag.Duration.Uint64() - 1
-			break
-		}
+		return nil, fmt.Errorf("failed to get epoch interval for epoch number %d: %w", epochNumber, err)
 	}
 
-	epochEndBlockNumber = uint64(int64(epochEndBlockNumber) - s.committeeParams.L1Bias)
-	epochStartBlockNumber = uint64(int64(epochStartBlockNumber) - s.committeeParams.L1Bias)
-	committeeData, err := s.committeeSC.GetCommittee(nil, s.chainID, big.NewInt(int64(epochEndBlockNumber)))
+	epochStartBlockNumber := uint64(epoch.StartBlock.Int64() - s.committeeParams.L1Bias)
+	committeeData, err := s.committeeSC.GetCommittee(nil, s.chainID, big.NewInt(int64(epochStartBlockNumber)))
 	if err != nil {
-		logger.Errorf("failed to get committee data for block number %d, epoch number %d: %w", epochEndBlockNumber, epochNumber, err)
+		logger.Errorf("failed to get committee data for block number %d, epoch number %d: %w", epochStartBlockNumber, epochNumber, err)
 		return nil, err
 	}
 	if committeeData.LeafCount == 0 {
-		logger.Warnf("no operator in the committee for block number %d, epoch number %d", epochEndBlockNumber, epochNumber)
+		logger.Warnf("no operator in the committee for block number %d, epoch number %d", epochStartBlockNumber, epochNumber)
 		return nil, fmt.Errorf("no operator in the committee epoch number %d", epochNumber)
 	}
 
@@ -354,7 +335,6 @@ func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRo
 		CurrentCommitteeRoot:  utils.Bytes2Hex(committeeData.Root[:]),
 		TotalVotingPower:      tvl,
 		EpochStartBlockNumber: epochStartBlockNumber,
-		EpochEndBlockNumber:   epochEndBlockNumber,
 		EpochNumber:           epochNumber,
 		Operators:             operators,
 	}

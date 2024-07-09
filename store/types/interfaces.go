@@ -48,8 +48,11 @@ type Storage interface {
 	UpdateEvidence(ctx context.Context, evidence *contypes.Evidence) error
 	// UpdateCommitteeRoot updates the committee root in the database.
 	UpdateCommitteeRoot(ctx context.Context, committeeRoot *sequencerv2types.CommitteeRoot) error
-	// GetCommitteeRoot returns the first committee root which EpochBlockNumber is greater than or equal to the given l1BlockNumber.
+	// GetCommitteeRoot returns the last committee root which  EpochStartBlockNumber is smaller than or equal to the given l1BlockNumber.
+	// NOTE: The EpochEndBlockNumber of the returned committee root is not guaranteed to be greater than the given l1BlockNumber due to the dynamic committee root update.
 	GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*sequencerv2types.CommitteeRoot, error)
+	// GetCommitteeRootByBlockNumber returns the committee root for the given block number.
+	GetCommitteeRootByEpochNumber(ctx context.Context, chainID uint32, epochNumber uint64) (*sequencerv2types.CommitteeRoot, error)
 	// GetLastCommitteeEpochNumber returns the last committee epoch number for the given chainID.
 	GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error)
 	// GetLastEvidenceBlockNumber returns the last submitted evidence block number for the given chainID.

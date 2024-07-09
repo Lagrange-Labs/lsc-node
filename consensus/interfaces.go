@@ -24,5 +24,6 @@ type storageInterface interface {
 	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error)
 	AddEvidences(ctx context.Context, evidences []*types.Evidence) error
 	GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*sequencerv2types.CommitteeRoot, error)
+	GetCommitteeRootByEpochNumber(ctx context.Context, chainID uint32, epochNumber uint64) (*sequencerv2types.CommitteeRoot, error)
 	GetLastCommitteeEpochNumber(ctx context.Context, chainID uint32) (uint64, error)
 }
