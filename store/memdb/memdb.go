@@ -253,10 +253,20 @@ func (d *MemDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *sequence
 	return nil
 }
 
-// GetCommitteeRoot returns the first committee root which EpochBlockNumber is greater than or equal to the given l1BlockNumber.
+// GetCommitteeRoot returns the last committee root which EpochStartBlockNumber is smaller than or equal to the given l1BlockNumber.
 func (d *MemDB) GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*sequencerv2types.CommitteeRoot, error) {
+	for i := len(d.committeeRoots) - 1; i >= 0; i-- {
+		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].EpochStartBlockNumber <= l1BlockNumber {
+			return d.committeeRoots[i], nil
+		}
+	}
+	return nil, nil
+}
+
+// GetCommitteeRootByEpochNumber returns the committee root for the given epoch number.
+func (d *MemDB) GetCommitteeRootByEpochNumber(ctx context.Context, chainID uint32, epochNumber uint64) (*sequencerv2types.CommitteeRoot, error) {
 	for i := 0; i < len(d.committeeRoots); i++ {
-		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].EpochEndBlockNumber >= l1BlockNumber && d.committeeRoots[i].EpochStartBlockNumber <= l1BlockNumber {
+		if d.committeeRoots[i].ChainID == chainID && d.committeeRoots[i].EpochNumber == epochNumber {
 			return d.committeeRoots[i], nil
 		}
 	}

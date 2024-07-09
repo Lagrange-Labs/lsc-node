@@ -117,8 +117,14 @@ func runServer(ctx *cli.Context) error {
 		return err
 	}
 
+	chainInfo := consensus.ChainInfo{
+		ChainID:            chainID,
+		EthereumURL:        cfg.Sequencer.EthereumURL,
+		CommitteeSCAddress: cfg.Sequencer.CommitteeSCAddress,
+	}
+
 	// Start the consensus state.
-	state := consensus.NewState(&cfg.Consensus, storage, chainID)
+	state := consensus.NewState(&cfg.Consensus, storage, &chainInfo)
 
 	// Start the server.
 	if err = server.RunServer(&cfg.Server, storage, state, chainID); err != nil {

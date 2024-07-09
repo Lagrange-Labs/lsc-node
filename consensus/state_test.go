@@ -34,7 +34,11 @@ func createTestState(t *testing.T) (*State, chan *sequencertypes.BlsSignature) {
 	require.NoError(t, memDB.AddBlock(context.Background(), nil))
 
 	chCommit := make(chan *sequencertypes.BlsSignature)
-	return NewState(cfg, memDB, 1), chCommit
+	return NewState(cfg, memDB, &ChainInfo{
+		ChainID:            1,
+		EthereumURL:        "http://localhost:8545",
+		CommitteeSCAddress: "0xBF4E09354df24900e3d2A1e9057a9F7601fbDD06",
+	}), chCommit
 }
 
 func TestState_OnStart(t *testing.T) {

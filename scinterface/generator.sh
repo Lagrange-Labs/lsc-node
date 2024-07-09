@@ -10,4 +10,5 @@ gen() {
 }
 
 gen committee committee
+gen committeet committeet
 gen arbitrum_sequencer_inbox arbinbox

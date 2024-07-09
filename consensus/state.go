@@ -3,16 +3,20 @@ package consensus
 import (
 	"context"
 	"fmt"
+	"math/big"
 	"sync"
 	"time"
 
 	"github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 const CheckInterval = 1 * time.Second
@@ -21,6 +25,7 @@ const CheckInterval = 1 * time.Second
 type State struct {
 	validators *types.ValidatorSet
 
+	committeeSC     *committee.Committee
 	round           *types.RoundState
 	previousBatch   *sequencerv2types.Batch
 	fromBatchNumber uint64
@@ -41,7 +46,7 @@ type State struct {
 }
 
 // NewState returns a new State.
-func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
+func NewState(cfg *Config, storage storageInterface, chainInfo *ChainInfo) *State {
 	if len(cfg.ProposerBLSKeystorePasswordPath) > 0 {
 		var err error
 		cfg.ProposerBLSKeystorePasswordPath, err = crypto.ReadKeystorePasswordFromFile(cfg.ProposerBLSKeystorePasswordPath)
@@ -59,14 +64,24 @@ func NewState(cfg *Config, storage storageInterface, chainID uint32) *State {
 		logger.Fatalf("failed to get the public key: %v", err)
 	}
 
+	client, err := ethclient.Dial(chainInfo.EthereumURL)
+	if err != nil {
+		logger.Fatalf("failed to connect to ethereum: %v", err)
+	}
+	committeeSC, err := committee.NewCommittee(common.HexToAddress(chainInfo.CommitteeSCAddress), client)
+	if err != nil {
+		logger.Fatalf("failed to create committee contract: %v", err)
+	}
+
 	return &State{
+		committeeSC:      committeeSC,
 		blsScheme:        blsScheme,
 		proposerPrivKey:  privKey,
 		proposerPubKey:   utils.Bytes2Hex(pubKey),
 		storage:          storage,
 		roundLimit:       time.Duration(cfg.RoundLimit),
 		roundInterval:    time.Duration(cfg.RoundInterval),
-		chainID:          chainID,
+		chainID:          chainInfo.ChainID,
 		rwMutex:          &sync.RWMutex{},
 		blockedOperators: make(map[string]struct{}),
 	}
@@ -310,10 +325,15 @@ func (s *State) startRound(batchNumber uint64) error {
 
 	batch.CommitteeHeader = &sequencerv2types.CommitteeHeader{}
 	// load the committee root
+	epochNumberRaw, err := s.committeeSC.GetEpochNumber(nil, s.chainID, big.NewInt(int64(batch.L1BlockNumber())))
+	if err != nil {
+		return fmt.Errorf("failed to get the epoch number for the block number %d: %v", batch.L1BlockNumber(), err)
+	}
+	epochNumber := epochNumberRaw.Uint64()
 	var currentCommittee *sequencerv2types.CommitteeRoot
-	if s.lastCommittee == nil || batch.L1BlockNumber() > s.lastCommittee.EpochEndBlockNumber {
+	if s.lastCommittee == nil || epochNumber > s.lastCommittee.EpochNumber {
 		logger.Infof("the next committee root is loading: %v", batch.L1BlockNumber())
-		nextCommittee, err := s.storage.GetCommitteeRoot(context.Background(), s.chainID, batch.L1BlockNumber())
+		nextCommittee, err := s.storage.GetCommitteeRootByEpochNumber(context.Background(), s.chainID, epochNumber)
 		if err != nil {
 			logger.Errorf("failed to get the committee root for the block number %d: %v", batch.L1BlockNumber(), err)
 			return err
@@ -324,7 +344,7 @@ func (s *State) startRound(batchNumber uint64) error {
 				logger.Errorf("failed to get the previous committee root: %v", err)
 				return err
 			}
-			if prevCommittee.EpochEndBlockNumber < nextCommittee.EpochEndBlockNumber {
+			if prevCommittee.EpochNumber < nextCommittee.EpochNumber {
 				s.lastCommittee = prevCommittee
 			}
 		}
@@ -338,7 +358,7 @@ func (s *State) startRound(batchNumber uint64) error {
 		s.lastCommittee = nextCommittee
 	} else {
 		currentCommittee = s.lastCommittee
-		batch.CommitteeHeader.CurrentCommittee = currentCommittee.CurrentCommitteeRoot
+		batch.CommitteeHeader.CurrentCommittee = s.lastCommittee.CurrentCommitteeRoot
 		batch.CommitteeHeader.NextCommittee = currentCommittee.CurrentCommitteeRoot
 	}
 

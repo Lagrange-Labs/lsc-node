@@ -10,7 +10,6 @@ type CommitteeRoot struct {
 	CurrentCommitteeRoot  string                   `json:"current_committee_root" bson:"current_committee_root"`
 	EpochNumber           uint64                   `json:"epoch_number" bson:"epoch_number"`
 	EpochStartBlockNumber uint64                   `json:"epoch_start_block_number" bson:"epoch_start_block_number"`
-	EpochEndBlockNumber   uint64                   `json:"epoch_end_block_number" bson:"epoch_end_block_number"`
 	TotalVotingPower      uint64                   `json:"total_voting_power" bson:"total_voting_power"`
 	Operators             []servertypes.ClientNode `json:"operators" bson:"operators"`
 }

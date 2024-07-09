@@ -324,19 +324,28 @@ func (db *MongoDB) GetEvidences(ctx context.Context, chainID uint32, fromBlockNu
 // UpdateCommitteeRoot updates the committee root in the database.
 func (db *MongoDB) UpdateCommitteeRoot(ctx context.Context, committeeRoot *sequencerv2types.CommitteeRoot) error {
 	collection := db.client.Database("state").Collection("committee_roots")
-	filter := bson.M{"chain_id": committeeRoot.ChainID, "epoch_end_block_number": committeeRoot.EpochEndBlockNumber}
-	update := bson.M{"$set": bson.M{"current_committee_root": committeeRoot.CurrentCommitteeRoot, "total_voting_power": committeeRoot.TotalVotingPower, "epoch_number": committeeRoot.EpochNumber, "epoch_start_block_number": committeeRoot.EpochStartBlockNumber, "epoch_end_block_number": committeeRoot.EpochEndBlockNumber, "operators": committeeRoot.Operators}}
+	filter := bson.M{"chain_id": committeeRoot.ChainID, "epoch_start_block_number": committeeRoot.EpochStartBlockNumber}
+	update := bson.M{"$set": bson.M{"current_committee_root": committeeRoot.CurrentCommitteeRoot, "total_voting_power": committeeRoot.TotalVotingPower, "epoch_number": committeeRoot.EpochNumber, "epoch_start_block_number": committeeRoot.EpochStartBlockNumber, "operators": committeeRoot.Operators}}
 	_, err := collection.UpdateOne(ctx, filter, update, options.Update().SetUpsert(true))
 	return err
 }
 
-// GetCommitteeRoot returns the first committee root which EpochBlockNumber is greater than or equal to the given l1BlockNumber.
+// GetCommitteeRoot returns the last committee root which EpochStartBlockNumber is smaller than or equal to the given l1BlockNumber.
 func (db *MongoDB) GetCommitteeRoot(ctx context.Context, chainID uint32, l1BlockNumber uint64) (*sequencerv2types.CommitteeRoot, error) {
 	collection := db.client.Database("state").Collection("committee_roots")
-	filter := bson.M{"chain_id": chainID, "epoch_start_block_number": bson.M{"$lte": l1BlockNumber}, "epoch_end_block_number": bson.M{"$gte": l1BlockNumber}}
-	sortOptions := options.FindOne().SetSort(bson.D{{"epoch_block_number", 1}}) //nolint:govet
+	filter := bson.M{"chain_id": chainID, "epoch_start_block_number": bson.M{"$lte": l1BlockNumber}}
+	sortOptions := options.FindOne().SetSort(bson.D{{"epoch_number", -1}}) //nolint:govet
 	committeeRoot := sequencerv2types.CommitteeRoot{}
 	err := collection.FindOne(ctx, filter, sortOptions).Decode(&committeeRoot)
+	return &committeeRoot, err
+}
+
+// GetCommitteeRootByEpochNumber returns the committee root for the given epoch number.
+func (db *MongoDB) GetCommitteeRootByEpochNumber(ctx context.Context, chainID uint32, epochNumber uint64) (*sequencerv2types.CommitteeRoot, error) {
+	collection := db.client.Database("state").Collection("committee_roots")
+	filter := bson.M{"chain_id": chainID, "epoch_number": epochNumber}
+	committeeRoot := sequencerv2types.CommitteeRoot{}
+	err := collection.FindOne(ctx, filter).Decode(&committeeRoot)
 	return &committeeRoot, err
 }
 
