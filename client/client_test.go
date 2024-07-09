@@ -3,11 +3,13 @@ package client
 import (
 	"fmt"
 	"testing"
+	"time"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/store/goleveldb"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
@@ -73,69 +75,70 @@ func (m *mockRPC) NextBatch() (*sequencerv2types.BatchHeader, error) {
 	return batch, nil
 }
 
-// func TestClientStorage(t *testing.T) {
-// 	db, err := goleveldb.NewDB(t.TempDir())
-// 	require.NoError(t, err)
-// 	chBatch := make(chan *sequencerv2types.BatchHeader, 10)
-// 	chBeginBlockNumber := make(chan uint64, 1)
-// 	client := &Client{
-// 		rpcClient: &mockRPC{
-// 			chBatch:            chBatch,
-// 			chBeginBlockNumber: chBeginBlockNumber,
-// 		},
-// 		db: db,
-// 	}
+func TestRPCStorage(t *testing.T) {
+	db, err := goleveldb.NewDB(t.TempDir())
+	require.NoError(t, err)
+	chBatch := make(chan *sequencerv2types.BatchHeader, 10)
+	chBeginBlockNumber := make(chan uint64, 1)
+	adapter := &rpcAdapter{
+		client: &mockRPC{
+			chBatch:            chBatch,
+			chBeginBlockNumber: chBeginBlockNumber,
+		},
+		db: db,
+	}
 
-// 	go func() {
-// 		client.startBatchFetching()
-// 	}()
+	go func() {
+		chErr := make(chan error)
+		adapter.startBatchFetching(chErr)
+	}()
 
-// 	// push some batches
-// 	for i := 1; i <= 10; i++ {
-// 		chBatch <- &sequencerv2types.BatchHeader{
-// 			L1BlockNumber: uint64(i),
-// 			L1TxIndex:     1,
-// 			L2Blocks: []*sequencerv2types.BlockHeader{
-// 				{
-// 					BlockNumber: uint64(i),
-// 				},
-// 			},
-// 		}
-// 		time.Sleep(200 * time.Millisecond)
-// 	}
+	// push some batches
+	for i := 1; i <= 10; i++ {
+		chBatch <- &sequencerv2types.BatchHeader{
+			L1BlockNumber: uint64(i),
+			L1TxIndex:     1,
+			L2Blocks: []*sequencerv2types.BlockHeader{
+				{
+					BlockNumber: uint64(i),
+				},
+			},
+		}
+		time.Sleep(200 * time.Millisecond)
+	}
 
-// 	// get previous batch
-// 	prev, err := client.getPrevBatchL1Number(3, 0)
-// 	require.NoError(t, err)
-// 	require.Equal(t, uint64(2), prev)
-// 	prev, err = client.getPrevBatchL1Number(3, 1)
-// 	require.NoError(t, err)
-// 	require.Equal(t, uint64(2), prev)
-// 	prev, err = client.getPrevBatchL1Number(8, 2)
-// 	require.NoError(t, err)
-// 	require.Equal(t, uint64(8), prev)
+	// get previous batch
+	prev, err := adapter.getPrevBatchL1Number(3, 0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), prev)
+	prev, err = adapter.getPrevBatchL1Number(3, 1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), prev)
+	prev, err = adapter.getPrevBatchL1Number(8, 2)
+	require.NoError(t, err)
+	require.Equal(t, uint64(8), prev)
 
-// 	// get batch by L1 block number
-// 	_, err = client.getBatchHeader(3, 2, 0)
-// 	require.Error(t, err)
-// 	batch, err := client.getBatchHeader(5, 5, 1)
-// 	require.NoError(t, err)
-// 	require.Equal(t, uint64(5), batch.L1BlockNumber)
-// 	require.Equal(t, uint32(1), batch.L1TxIndex)
-// 	_, err = client.getBatchHeader(5, 5, 2)
-// 	require.Error(t, err)
-// 	batch, err = client.getBatchHeader(8, 8, 0)
-// 	require.NoError(t, err)
-// 	require.Equal(t, uint64(8), batch.L1BlockNumber)
+	// get batch by L1 block number
+	_, err = adapter.getBatchHeader(3, 2, 0)
+	require.Error(t, err)
+	batch, err := adapter.getBatchHeader(5, 5, 1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(5), batch.L1BlockNumber)
+	require.Equal(t, uint32(1), batch.L1TxIndex)
+	_, err = adapter.getBatchHeader(5, 5, 2)
+	require.Error(t, err)
+	batch, err = adapter.getBatchHeader(8, 8, 0)
+	require.NoError(t, err)
+	require.Equal(t, uint64(8), batch.L1BlockNumber)
 
-// 	// init begin block number
-// 	err = client.initBeginBlockNumber(5)
-// 	require.NoError(t, err)
-// 	beginBlockNumber := <-chBeginBlockNumber
-// 	require.Equal(t, uint64(10), beginBlockNumber)
+	// init begin block number
+	err = adapter.initBeginBlockNumber(5)
+	require.NoError(t, err)
+	beginBlockNumber := <-chBeginBlockNumber
+	require.Equal(t, uint64(10), beginBlockNumber)
 
-// 	err = client.initBeginBlockNumber(11)
-// 	require.NoError(t, err)
-// 	beginBlockNumber = <-chBeginBlockNumber
-// 	require.Equal(t, uint64(11), beginBlockNumber)
-// }
+	err = adapter.initBeginBlockNumber(11)
+	require.NoError(t, err)
+	beginBlockNumber = <-chBeginBlockNumber
+	require.Equal(t, uint64(11), beginBlockNumber)
+}
