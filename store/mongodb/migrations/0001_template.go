@@ -6,11 +6,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 )
 
-func init() {
-	// Register the migration with the migration manager
-	_ = RegisterMigration("0001_init", up_0001, down_0001)
-}
-
 func up_0001(client *mongo.Client) error {
 	db := client.Database("state")
 	// create blocks, nodes collections
