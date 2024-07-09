@@ -4,18 +4,19 @@ import (
 	"context"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 )
 
+// Storage is the interface for the database storage.
 type Storage interface {
 	// AddNode adds a new node to the database.
-	AddNode(ctx context.Context, node *networktypes.ClientNode) error
+	AddNode(ctx context.Context, node *servertypes.ClientNode) error
 	// GetNodesByStatuses returns the nodes with the given statuses.
-	GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error)
+	GetNodesByStatuses(ctx context.Context, statuses []servertypes.NodeStatus, chainID uint32) ([]servertypes.ClientNode, error)
 	// GetNodeByStakeAddr returns the node for the given stake address.
-	GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*networktypes.ClientNode, error)
+	GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*servertypes.ClientNode, error)
 	// GetLastFinalizedBlock returns the last finalized block for the given chainID.
 	GetLastFinalizedBlock(ctx context.Context, chainID uint32) (*sequencertypes.Block, error)
 	// GetLastFinalizedBlockNumber returns the last finalized block number for the given chainID.
@@ -59,4 +60,22 @@ type Storage interface {
 	GetLastEvidenceBlockNumber(ctx context.Context, chainID uint32) (uint64, error)
 	// CleanUp cleans up the database.
 	CleanUp(ctx context.Context) error
+}
+
+// KVStorage is the interface for the key-value database storage.
+type KVStorage interface {
+	// Get returns the value for the given key.
+	Get(key []byte) ([]byte, error)
+	// Put puts the value for the given key.
+	Put(key, value []byte) error
+	// Next returns the next key-value pair.
+	Next(key []byte) ([]byte, []byte, error)
+	// Prev returns the previous key-value pair.
+	Prev(key []byte) ([]byte, []byte, error)
+	// Iterate iterates over the key-value pairs.
+	Iterate(prefix []byte, f func(key, value []byte) error) error
+	// Prune prunes the key-value pairs.
+	Prune(prefix []byte) error
+	// Close closes the database.
+	Close() error
 }

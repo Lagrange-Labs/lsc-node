@@ -4,13 +4,13 @@ import (
 	"testing"
 
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/stretchr/testify/require"
 )
 
-func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []networktypes.ClientNode) {
+func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []servertypes.ClientNode) {
 	blsScheme := crypto.NewBLSScheme(blsCurve)
 
 	proposerSecKey, _ := blsScheme.GenerateRandomKey()
@@ -42,13 +42,13 @@ func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []ne
 	pBatch.ProposerSignature = utils.Bytes2Hex(proposerSigMsg)
 
 	secKeys := make([][]byte, 0)
-	nodes := []networktypes.ClientNode{}
+	nodes := []servertypes.ClientNode{}
 	for i := 0; i < 10; i++ {
 		secKey, _ := blsScheme.GenerateRandomKey()
 		pubKey, _ := blsScheme.GetPublicKey(secKey, true)
 		secKeys = append(secKeys, secKey)
 		addr := utils.RandomHex(20)
-		node := networktypes.ClientNode{
+		node := servertypes.ClientNode{
 			PublicKey:    utils.Bytes2Hex(pubKey),
 			StakeAddress: addr,
 			SignAddress:  addr,

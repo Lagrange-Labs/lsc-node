@@ -8,10 +8,10 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
+	"github.com/Lagrange-Labs/lagrange-node/client"
 	"github.com/Lagrange-Labs/lagrange-node/config"
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/network"
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
+	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 	"github.com/Lagrange-Labs/lagrange-node/testutil/operations"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
@@ -19,8 +19,8 @@ import (
 type ClientTestSuite struct {
 	suite.Suite
 
-	cfg     network.ClientConfig
-	client  *network.Client
+	cfg     client.Config
+	client  *client.Client
 	manager *operations.Manager
 }
 
@@ -36,7 +36,7 @@ func (suite *ClientTestSuite) SetupTest() {
 	err = crypto.SaveKey("BN254", utils.Hex2Bytes("0x00000000000000000000000000000000000000000000000000000000499602d7"), "password", blsKeyPath)
 	suite.Require().NoError(err)
 
-	suite.cfg = network.ClientConfig{
+	suite.cfg = client.Config{
 		GrpcURLs:                    []string{"127.0.0.1:9090"},
 		Chain:                       "mock",
 		EthereumURL:                 "http://localhost:8545",
@@ -53,7 +53,7 @@ func (suite *ClientTestSuite) SetupTest() {
 	suite.Require().NoError(err)
 	suite.manager.RunServer()
 	time.Sleep(1 * time.Second)
-	suite.client, err = network.NewClient(&suite.cfg, suite.manager.GetRpcConfig())
+	suite.client, err = client.NewClient(&suite.cfg, suite.manager.GetRpcConfig())
 	suite.Require().NoError(err)
 }
 
@@ -71,7 +71,7 @@ func (suite *ClientTestSuite) Test_Client_Start() {
 		stakeAddress := suite.client.GetStakeAddress()
 		node, err := suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress, suite.client.GetChainID())
 		require.NoError(t, err)
-		require.Equal(t, networktypes.NodeJoined, node.Status)
+		require.Equal(t, servertypes.NodeJoined, node.Status)
 	})
 }
 

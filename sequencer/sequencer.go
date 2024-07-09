@@ -13,11 +13,11 @@ import (
 	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	v2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
@@ -222,13 +222,13 @@ func (s *Sequencer) Start() error {
 }
 
 // fetch the operator information details from the committee smart contract.
-func (s *Sequencer) fetchOperatorInfos(blockNumber *big.Int, leafCount uint32) ([]networktypes.ClientNode, error) {
+func (s *Sequencer) fetchOperatorInfos(blockNumber *big.Int, leafCount uint32) ([]servertypes.ClientNode, error) {
 	logger.Info("start fetching operator infos")
 	opts := &bind.CallOpts{
 		BlockNumber: blockNumber,
 	}
 	// get the operator details
-	operators := make([]networktypes.ClientNode, leafCount)
+	operators := make([]servertypes.ClientNode, leafCount)
 	operatorIndex := int64(0)
 	leafIndex := uint32(0)
 	for leafIndex < leafCount {
@@ -256,7 +256,7 @@ func (s *Sequencer) fetchOperatorInfos(blockNumber *big.Int, leafCount uint32) (
 			pubKey := make([]byte, 0)
 			pubKey = append(pubKey, common.LeftPadBytes(blsPubKeys[i][0].Bytes(), 32)...)
 			pubKey = append(pubKey, common.LeftPadBytes(blsPubKeys[i][1].Bytes(), 32)...)
-			operators[leafIndex] = networktypes.ClientNode{
+			operators[leafIndex] = servertypes.ClientNode{
 				StakeAddress: addr.Hex(),
 				SignAddress:  operatorStatus.SignAddress.Hex(),
 				VotingPower:  votingPower.Uint64(),

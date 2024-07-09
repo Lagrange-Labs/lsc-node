@@ -10,9 +10,9 @@ import (
 	"go.mongodb.org/mongo-driver/mongo/options"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 	"github.com/Lagrange-Labs/lagrange-node/store/types"
 )
 
@@ -36,7 +36,7 @@ func NewMongoDB(uri string) (*MongoDB, error) {
 }
 
 // AddNode adds a joined client node to the network.
-func (db *MongoDB) AddNode(ctx context.Context, node *networktypes.ClientNode) error {
+func (db *MongoDB) AddNode(ctx context.Context, node *servertypes.ClientNode) error {
 	collection := db.client.Database("state").Collection("nodes")
 	_, err := collection.UpdateOne(ctx, bson.M{"stake_address": node.StakeAddress, "chain_id": node.ChainID}, bson.M{"$set": node}, options.Update().SetUpsert(true))
 	return err
@@ -238,9 +238,9 @@ func (db *MongoDB) GetLastEvidenceBlockNumber(ctx context.Context, chainID uint3
 }
 
 // GetNodeByStakeAddr returns the node for the given stake address.
-func (db *MongoDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*networktypes.ClientNode, error) {
+func (db *MongoDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*servertypes.ClientNode, error) {
 	collection := db.client.Database("state").Collection("nodes")
-	node := networktypes.ClientNode{}
+	node := servertypes.ClientNode{}
 	err := collection.FindOne(ctx, bson.M{"stake_address": stakeAddress, "chain_id": chainID}).Decode(&node)
 	if err == mongo.ErrNoDocuments {
 		return nil, types.ErrNodeNotFound
@@ -249,7 +249,7 @@ func (db *MongoDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string, 
 }
 
 // GetNodesByStatuses returns the nodes with the given statuses.
-func (db *MongoDB) GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error) {
+func (db *MongoDB) GetNodesByStatuses(ctx context.Context, statuses []servertypes.NodeStatus, chainID uint32) ([]servertypes.ClientNode, error) {
 	collection := db.client.Database("state").Collection("nodes")
 	filter := bson.M{
 		"status": bson.M{
@@ -264,10 +264,10 @@ func (db *MongoDB) GetNodesByStatuses(ctx context.Context, statuses []networktyp
 	}
 	defer cursor.Close(ctx)
 
-	nodes := []networktypes.ClientNode{}
+	nodes := []servertypes.ClientNode{}
 
 	for cursor.Next(ctx) {
-		node := networktypes.ClientNode{}
+		node := servertypes.ClientNode{}
 		err := cursor.Decode(&node)
 		if err != nil {
 			return nil, err

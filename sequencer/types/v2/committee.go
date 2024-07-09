@@ -1,7 +1,7 @@
 package v2
 
 import (
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
+	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 )
 
 // CommitteeRoot is the root of the committee.

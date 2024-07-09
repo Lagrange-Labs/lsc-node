@@ -3,9 +3,12 @@ package goleveldb
 import (
 	"bytes"
 
+	"github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )
+
+var _ types.KVStorage = (*DB)(nil)
 
 // DB is a LevelDB database.
 type DB struct {
