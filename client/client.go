@@ -1,4 +1,4 @@
-package network
+package client
 
 import (
 	"bytes"
@@ -7,7 +7,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/big"
 	"os"
 	"path/filepath"
 	"strings"
@@ -15,19 +14,17 @@ import (
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/lru"
 	ecrypto "github.com/ethereum/go-ethereum/crypto"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/protobuf/proto"
 
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
-	networkv2types "github.com/Lagrange-Labs/lagrange-node/network/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
-	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/server"
+	serverv2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/store/goleveldb"
+	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
@@ -50,30 +47,31 @@ type PreviousBatchInfo struct {
 
 // Client is a gRPC client to join the network
 type Client struct {
-	networkv2types.NetworkServiceClient
-	healthMgr   *healthManager
-	rpcClient   rpctypes.RpcClient
-	committeeSC *committee.Committee
-	blsScheme   crypto.BLSScheme
+	serverv2types.NetworkServiceClient
+	healthMgr *healthManager
+	blsScheme crypto.BLSScheme
+	adapter   *rpcAdapter
 
-	chainID               uint32
 	blsPrivateKey         []byte
 	blsPublicKey          string
 	signerECDSAPrivateKey *ecdsa.PrivateKey
 	jwToken               string
 	stakeAddress          string
-	genesisBlockNumber    uint64
 	pullInterval          time.Duration
-	committeeCache        *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
 	openL1BlockNumber     atomic.Uint64
 	isSetBeginBlockNumber atomic.Bool
 
-	db    *goleveldb.DB
+	db    storetypes.KVStorage
 	chErr chan error
 }
 
 // NewClient creates a new client.
-func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
+func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
+	adapter, err := NewRpcAdapter(rpcCfg, cfg)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the rpc adapter: %v", err)
+	}
+
 	if len(cfg.BLSKeystorePasswordPath) > 0 {
 		var err error
 		cfg.BLSKeystorePassword, err = crypto.ReadKeystorePasswordFromFile(cfg.BLSKeystorePasswordPath)
@@ -106,29 +104,6 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 		logger.Fatalf("failed to get the ecdsa private key: %v", err)
 	}
 
-	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg)
-	if err != nil {
-		logger.Fatalf("failed to create the rpc client: %v, please check the chain name, the chain name should look like 'optimism', 'base'", err)
-	}
-	etherClient, err := ethclient.Dial(cfg.EthereumURL)
-	if err != nil {
-		logger.Fatalf("failed to create the ethereum client: %v", err)
-	}
-	committeeSC, err := committee.NewCommittee(common.HexToAddress(cfg.CommitteeSCAddress), etherClient)
-	if err != nil {
-		logger.Fatalf("failed to create the committee smart contract: %v", err)
-	}
-
-	chainID, err := rpcClient.GetChainID()
-	if err != nil {
-		logger.Fatalf("failed to get the chain ID: %v", err)
-	}
-
-	params, err := committeeSC.CommitteeParams(nil, chainID)
-	if err != nil {
-		logger.Fatalf("failed to get the committee params: %v", err)
-	}
-
 	homePath, err := os.UserHomeDir()
 	if err != nil {
 		logger.Fatalf("failed to get the home directory: %v", err)
@@ -141,7 +116,7 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	if err != nil {
 		logger.Fatalf("failed to get the public key: %v", err)
 	}
-	dbPath = filepath.Join(dbPath, fmt.Sprintf("client_%d_%x.db", chainID, pubKey))
+	dbPath = filepath.Join(dbPath, fmt.Sprintf("client_%d_%x.db", adapter.chainID, pubKey))
 	db, err := goleveldb.NewDB(dbPath)
 	if err != nil {
 		logger.Fatalf("failed to create the database: %v", err)
@@ -159,17 +134,13 @@ func NewClient(cfg *ClientConfig, rpcCfg *rpcclient.Config) (*Client, error) {
 	c := &Client{
 		NetworkServiceClient:  healthClient,
 		healthMgr:             healthMgr,
+		adapter:               adapter,
 		blsScheme:             blsScheme,
 		blsPrivateKey:         blsPriv,
 		blsPublicKey:          utils.Bytes2Hex(pubkey),
 		signerECDSAPrivateKey: ecdsaPriv,
 		stakeAddress:          cfg.OperatorAddress,
 		pullInterval:          time.Duration(cfg.PullInterval),
-		rpcClient:             rpcClient,
-		committeeSC:           committeeSC,
-		chainID:               chainID,
-		genesisBlockNumber:    uint64(params.GenesisBlock.Int64() - params.L1Bias.Int64()),
-		committeeCache:        lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](CommitteeCacheSize),
 
 		db:    db,
 		chErr: make(chan error, CommitteeCacheSize),
@@ -186,7 +157,7 @@ func (c *Client) GetStakeAddress() string {
 
 // GetChainID returns the chain ID.
 func (c *Client) GetChainID() uint32 {
-	return c.chainID
+	return c.adapter.chainID
 }
 
 // Start starts the connection loop.
@@ -211,7 +182,7 @@ func (c *Client) Start() error {
 		case <-time.After(c.pullInterval):
 			batch, err := c.TryGetBatch()
 			if err != nil {
-				if errors.Is(err, ErrInvalidToken) {
+				if errors.Is(err, server.ErrInvalidToken) {
 					if err := c.TryJoinNetwork(); err != nil {
 						return err
 					}
@@ -234,7 +205,7 @@ func (c *Client) Start() error {
 			}
 
 			if err := c.TryCommitBatch(batch); err != nil {
-				if errors.Is(err, ErrInvalidToken) {
+				if errors.Is(err, server.ErrInvalidToken) {
 					if err := c.TryJoinNetwork(); err != nil {
 						return err
 					}
@@ -251,7 +222,7 @@ func (c *Client) Start() error {
 	}
 }
 
-// TryJoinNetwork tries to join the network.
+// TryJoinNetwork tries to join the server.
 func (c *Client) TryJoinNetwork() error {
 	for {
 		select {
@@ -269,9 +240,9 @@ func (c *Client) TryJoinNetwork() error {
 		default:
 			if err := c.joinNetwork(); err != nil {
 				logger.Infof("failed to join the network: %v", err)
-				if strings.Contains(err.Error(), ErrNotCommitteeMember.Error()) {
+				if strings.Contains(err.Error(), server.ErrNotCommitteeMember.Error()) {
 					logger.Warn("NOTE: If you just joined the network, please wait for the next committee rotation. If you have been observing this message for a long time, please check if the BLS public key and the operator address are set correctly in the config file or contact the Largrange team.")
-				} else if strings.Contains(err.Error(), ErrCheckCommitteeMember.Error()) {
+				} else if strings.Contains(err.Error(), server.ErrCheckCommitteeMember.Error()) {
 					logger.Warn("NOTE: The given round is not initialized yet. It may be because the sequencer is waiting for the next batch since it is almost caught up with the current block. Please wait for the next batch.")
 				}
 				time.Sleep(5 * time.Second)
@@ -284,7 +255,7 @@ func (c *Client) TryJoinNetwork() error {
 }
 
 func (c *Client) joinNetwork() error {
-	req := &networkv2types.JoinNetworkRequest{
+	req := &serverv2types.JoinNetworkRequest{
 		PublicKey:    c.blsPublicKey,
 		StakeAddress: c.stakeAddress,
 	}
@@ -350,7 +321,7 @@ func (c *Client) initBeginBlockNumber(blockNumber uint64) error {
 		}
 	}
 
-	res := c.rpcClient.SetBeginBlockNumber(blockNumber)
+	res := c.adapter.setBeginBlockNumber(blockNumber)
 	c.isSetBeginBlockNumber.Store(res)
 
 	return nil
@@ -359,7 +330,7 @@ func (c *Client) initBeginBlockNumber(blockNumber uint64) error {
 // startBatchFetching starts the batch fetching loop.
 func (c *Client) startBatchFetching() {
 	for {
-		batch, err := c.rpcClient.NextBatch()
+		batch, err := c.adapter.nextBatch()
 		if err != nil {
 			logger.Errorf("failed to get the next batch: %v", err)
 			c.chErr <- err
@@ -492,13 +463,13 @@ func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
 	return nil
 }
 
-// TryGetBatch tries to get the batch from the network.
+// TryGetBatch tries to get the batch from the server.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	ti := time.Now()
-	res, err := c.GetBatch(utils.GetContext(), &networkv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
+	res, err := c.GetBatch(utils.GetContext(), &serverv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
-		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
-			return nil, ErrInvalidToken
+		if strings.Contains(err.Error(), server.ErrInvalidToken.Error()) {
+			return nil, server.ErrInvalidToken
 		}
 		return nil, err
 	}
@@ -557,27 +528,10 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	return batch, nil
 }
 
-func (c *Client) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommitteeCommitteeData, error) { //nolint
-	if committeeData, ok := c.committeeCache.Get(blockNumber); ok {
-		return committeeData, nil
-	}
-
-	ti := time.Now()
-	defer telemetry.MeasureSince(ti, "client", "get_committee")
-
-	committeeData, err := c.committeeSC.GetCommittee(nil, c.chainID, big.NewInt(int64(blockNumber)))
-	if err != nil || committeeData.LeafCount == 0 {
-		return nil, fmt.Errorf("failed to get the committee data %+v: %v", committeeData, err)
-	}
-	c.committeeCache.Add(blockNumber, &committeeData)
-
-	return &committeeData, nil
-}
-
 func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 	blockNumber := batch.L1BlockNumber()
 	prevBatchL1Number := uint64(0)
-	isGenesis := c.genesisBlockNumber == blockNumber
+	isGenesis := c.adapter.genesisBlockNumber == blockNumber
 	// verify the previous batch's next committee root
 	if !isGenesis {
 		var err error
@@ -589,7 +543,7 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 			return ErrBatchNotFound
 		}
 	}
-	prevCommitteeData, err := c.getCommitteeRoot(prevBatchL1Number)
+	prevCommitteeData, err := c.adapter.getCommitteeRoot(prevBatchL1Number)
 	if err != nil {
 		return fmt.Errorf("failed to get the previous committee root: %v", err)
 	}
@@ -598,7 +552,7 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 	}
 
 	// verify the current batch's next committee root
-	curCommitteeData, err := c.getCommitteeRoot(blockNumber)
+	curCommitteeData, err := c.adapter.getCommitteeRoot(blockNumber)
 	if err != nil {
 		return fmt.Errorf("failed to get the current committee root: %v", err)
 	}
@@ -609,7 +563,7 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 	return nil
 }
 
-// TryCommitBatch tries to commit the signature to the network.
+// TryCommitBatch tries to commit the signature to the server.
 func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 	ti := time.Now()
 	defer telemetry.MeasureSince(ti, "client", "try_commit_batch")
@@ -629,7 +583,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 	}
 	blsSignature.EcdsaSignature = common.Bytes2Hex(sig)
 
-	req := &networkv2types.CommitBatchRequest{
+	req := &serverv2types.CommitBatchRequest{
 		BlsSignature: blsSignature,
 		StakeAddress: c.stakeAddress,
 		PublicKey:    c.blsPublicKey,
@@ -641,8 +595,8 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 
 	stream, err := c.CommitBatch(ctx, req)
 	if err != nil {
-		if strings.Contains(err.Error(), ErrInvalidToken.Error()) {
-			return ErrInvalidToken
+		if strings.Contains(err.Error(), server.ErrInvalidToken.Error()) {
+			return server.ErrInvalidToken
 		}
 		return fmt.Errorf("failed to upload signature: %v", err)
 	}

@@ -1,13 +1,13 @@
-package network
+package server
 
 import (
 	"context"
 	"time"
 
 	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/server/types"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 )
 

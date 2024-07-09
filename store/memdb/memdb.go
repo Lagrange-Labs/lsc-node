@@ -6,9 +6,9 @@ import (
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 	"github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
@@ -19,7 +19,7 @@ var _ types.Storage = (*MemDB)(nil)
 
 // DB is an in-memory database.
 type MemDB struct {
-	nodes          map[string]networktypes.ClientNode
+	nodes          map[string]servertypes.ClientNode
 	blocks         []*sequencertypes.Block
 	batches        []*sequencerv2types.Batch
 	evidences      []*contypes.Evidence
@@ -28,22 +28,22 @@ type MemDB struct {
 
 // NewMemDB creates a new in-memory database.
 func NewMemDB() (*MemDB, error) {
-	nodes := make(map[string]networktypes.ClientNode, 0)
+	nodes := make(map[string]servertypes.ClientNode, 0)
 	db := &MemDB{nodes: nodes, blocks: []*sequencertypes.Block{}}
 	go db.updateBlock(10 * time.Second)
 	return db, nil
 }
 
 // AddNode adds a client node to the network.
-func (d *MemDB) AddNode(ctx context.Context, node *networktypes.ClientNode) error {
-	node.Status = networktypes.NodeRegistered
+func (d *MemDB) AddNode(ctx context.Context, node *servertypes.ClientNode) error {
+	node.Status = servertypes.NodeRegistered
 	node.VotingPower = 1
 	d.nodes[node.PublicKey] = *node
 	return nil
 }
 
 // GetNodeByStakeAddr returns the node with the given IP address.
-func (d *MemDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*networktypes.ClientNode, error) {
+func (d *MemDB) GetNodeByStakeAddr(ctx context.Context, stakeAddress string, chainID uint32) (*servertypes.ClientNode, error) {
 	for _, node := range d.nodes {
 		if node.StakeAddress == stakeAddress && node.ChainID == chainID {
 			return &node, nil
@@ -174,8 +174,8 @@ func (d *MemDB) GetBatch(ctx context.Context, chainID uint32, batchNumber uint64
 }
 
 // GetNodesByStatuses returns the nodes with the given statuses.
-func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []networktypes.NodeStatus, chainID uint32) ([]networktypes.ClientNode, error) {
-	res := make([]networktypes.ClientNode, 0)
+func (d *MemDB) GetNodesByStatuses(ctx context.Context, statuses []servertypes.NodeStatus, chainID uint32) ([]servertypes.ClientNode, error) {
+	res := make([]servertypes.ClientNode, 0)
 	for _, node := range d.nodes {
 		isBelonged := false
 		for _, status := range statuses {
@@ -285,7 +285,7 @@ func (d *MemDB) GetLastEvidenceBlockNumber(ctx context.Context, chainID uint32) 
 
 // CleanUp cleans up the database.
 func (d *MemDB) CleanUp(ctx context.Context) error {
-	d.nodes = make(map[string]networktypes.ClientNode, 0)
+	d.nodes = make(map[string]servertypes.ClientNode, 0)
 	d.blocks = []*sequencertypes.Block{}
 	d.batches = []*sequencerv2types.Batch{}
 	d.evidences = []*contypes.Evidence{}

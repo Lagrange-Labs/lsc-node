@@ -1,4 +1,4 @@
-package network
+package client
 
 import (
 	"context"
@@ -10,7 +10,7 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
-	networkv2types "github.com/Lagrange-Labs/lagrange-node/network/types/v2"
+	serverv2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
@@ -59,14 +59,14 @@ func newHealthManager(serverURLs []string) (*healthManager, error) {
 }
 
 // getHealthClient gets the health client.
-func (hm *healthManager) getHealthClient() (networkv2types.NetworkServiceClient, error) {
+func (hm *healthManager) getHealthClient() (serverv2types.NetworkServiceClient, error) {
 	if err := hm.loadHealthClient(); err != nil {
 		return nil, err
 	}
 
 	go hm.healthCheck()
 
-	return networkv2types.NewNetworkServiceClient(hm.conn), nil
+	return serverv2types.NewNetworkServiceClient(hm.conn), nil
 }
 
 // loadHealthClient loads the health client.

@@ -10,10 +10,11 @@ import (
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
 
+	"github.com/Lagrange-Labs/lagrange-node/client"
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
-	"github.com/Lagrange-Labs/lagrange-node/network"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
+	"github.com/Lagrange-Labs/lagrange-node/server"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 )
@@ -25,8 +26,8 @@ const (
 
 type Config struct {
 	Node      sequencer.Config
-	Server    network.ServerConfig
-	Client    network.ClientConfig
+	Server    server.Config
+	Client    client.Config
 	Store     store.Config
 	Sequencer sequencer.Config
 	Consensus consensus.Config

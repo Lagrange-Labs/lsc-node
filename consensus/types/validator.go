@@ -1,7 +1,7 @@
 package types
 
 import (
-	networktypes "github.com/Lagrange-Labs/lagrange-node/network/types"
+	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 )
 
 // Validator defines a validator state.
@@ -19,7 +19,7 @@ type ValidatorSet struct {
 }
 
 // NewValidatorSet creates a new validator set.
-func NewValidatorSet(nodes []networktypes.ClientNode, committeeVotingPower uint64) *ValidatorSet {
+func NewValidatorSet(nodes []servertypes.ClientNode, committeeVotingPower uint64) *ValidatorSet {
 	validators := make(map[string]map[string]*Validator)
 	totalVotingPower := uint64(0)
 
