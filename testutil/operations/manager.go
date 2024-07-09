@@ -61,7 +61,7 @@ func (m *Manager) RunServer() {
 	state := consensus.NewState(&m.cfg.Consensus, m.Storage, m.chainInfo)
 	state.Start()
 	go func() {
-		if err := network.RunServer(&m.cfg.Server, m.Storage, state, m.chainInfo.ChainID); err != nil {
+		if err := server.RunServer(&m.cfg.Server, m.Storage, state, m.chainInfo.ChainID); err != nil {
 			panic(err)
 		}
 	}()
