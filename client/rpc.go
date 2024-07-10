@@ -5,7 +5,6 @@ import (
 	"errors"
 	"fmt"
 	"math"
-	"math/big"
 	"os"
 	"path/filepath"
 	"sync/atomic"
@@ -14,58 +13,38 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/store/goleveldb"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/common/lru"
-	"github.com/ethereum/go-ethereum/ethclient"
 	"google.golang.org/protobuf/proto"
 )
 
 const (
-	committeeCacheSize = 10
-	clientDBPath       = ".lagrange/db/"
-	pruningBlocks      = 1000
+	clientDBPath  = ".lagrange/db/"
+	pruningBlocks = 1000
 )
 
-type rpcAdapter struct {
-	client         rpctypes.RpcClient
-	committeeSC    *committee.Committee
-	committeeCache *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
-	db             storetypes.KVStorage
+// RpcAdapter is the adapter for the RPC client.
+type RpcAdapter struct {
+	client rpctypes.RpcClient
+	db     storetypes.KVStorage
 
 	isSetBeginBlockNumber atomic.Bool
 	openL1BlockNumber     atomic.Uint64
 	chainID               uint32
-	genesisBlockNumber    uint64
 }
 
 // newRpcAdapter creates a new rpc adapter.
-func newRpcAdapter(rpcCfg *rpcclient.Config, cfg *Config, pubkey []byte) (*rpcAdapter, error) {
+func newRpcAdapter(rpcCfg *rpcclient.Config, cfg *Config, pubkey []byte) (*RpcAdapter, uint32, error) {
 	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg)
 	if err != nil {
-		return nil, fmt.Errorf("failed to create the rpc client: %v, please check the chain name, the chain name should look like 'optimism', 'base'", err)
+		return nil, 0, fmt.Errorf("failed to create the rpc client: %v, please check the chain name, the chain name should look like 'optimism', 'base'", err)
 	}
 
 	chainID, err := rpcClient.GetChainID()
 	if err != nil {
-		return nil, fmt.Errorf("failed to get the chain ID: %v", err)
-	}
-
-	etherClient, err := ethclient.Dial(cfg.EthereumURL)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create the ethereum client: %v", err)
-	}
-	committeeSC, err := committee.NewCommittee(common.HexToAddress(cfg.CommitteeSCAddress), etherClient)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create the committee smart contract: %v", err)
-	}
-	params, err := committeeSC.CommitteeParams(nil, chainID)
-	if err != nil {
-		logger.Fatalf("failed to get the committee params: %v", err)
+		return nil, 0, fmt.Errorf("failed to get the chain ID: %v", err)
 	}
 
 	homePath, err := os.UserHomeDir()
@@ -82,18 +61,15 @@ func newRpcAdapter(rpcCfg *rpcclient.Config, cfg *Config, pubkey []byte) (*rpcAd
 		logger.Fatalf("failed to create the database: %v", err)
 	}
 
-	return &rpcAdapter{
-		client:             rpcClient,
-		committeeSC:        committeeSC,
-		committeeCache:     lru.NewCache[uint64, *committee.ILagrangeCommitteeCommitteeData](committeeCacheSize),
-		db:                 db,
-		chainID:            chainID,
-		genesisBlockNumber: uint64(params.GenesisBlock.Int64() - params.L1Bias.Int64()),
-	}, nil
+	return &RpcAdapter{
+		client:  rpcClient,
+		db:      db,
+		chainID: chainID,
+	}, chainID, nil
 }
 
 // startBatchFetching starts the batch fetching loop.
-func (r *rpcAdapter) startBatchFetching(chErr chan<- error) {
+func (r *RpcAdapter) startBatchFetching(chErr chan<- error) {
 	for {
 		batch, err := r.client.NextBatch()
 		if err != nil {
@@ -138,25 +114,8 @@ func (r *rpcAdapter) startBatchFetching(chErr chan<- error) {
 	}
 }
 
-func (r *rpcAdapter) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCommitteeCommitteeData, error) {
-	if committeeData, ok := r.committeeCache.Get(blockNumber); ok {
-		return committeeData, nil
-	}
-
-	ti := time.Now()
-	defer telemetry.MeasureSince(ti, "client", "get_committee")
-
-	committeeData, err := r.committeeSC.GetCommittee(nil, r.chainID, big.NewInt(int64(blockNumber)))
-	if err != nil || committeeData.LeafCount == 0 {
-		return nil, fmt.Errorf("failed to get the committee data %+v: %v", committeeData, err)
-	}
-	r.committeeCache.Add(blockNumber, &committeeData)
-
-	return &committeeData, nil
-}
-
 // initBeginBlockNumber initializes the begin block number for the RPC client.
-func (r *rpcAdapter) initBeginBlockNumber(blockNumber uint64) error {
+func (r *RpcAdapter) initBeginBlockNumber(blockNumber uint64) error {
 	// set the open block number
 	r.openL1BlockNumber.Store(blockNumber)
 
@@ -195,7 +154,7 @@ func (r *rpcAdapter) initBeginBlockNumber(blockNumber uint64) error {
 }
 
 // writeBatchHeader writes the batch header to the database.
-func (r *rpcAdapter) writeBatchHeader(batchHeader *sequencerv2types.BatchHeader) error {
+func (r *RpcAdapter) writeBatchHeader(batchHeader *sequencerv2types.BatchHeader) error {
 	key := make([]byte, 12)
 	binary.BigEndian.PutUint64(key, batchHeader.L1BlockNumber)
 	binary.BigEndian.PutUint32(key[8:], batchHeader.L1TxIndex)
@@ -207,8 +166,8 @@ func (r *rpcAdapter) writeBatchHeader(batchHeader *sequencerv2types.BatchHeader)
 	return r.db.Put(key, value)
 }
 
-// getPrevBatchL1Number gets the previous batch L1 number from the database.
-func (r *rpcAdapter) getPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (uint64, error) {
+// GetPrevBatchL1Number gets the previous batch L1 number from the database.
+func (r *RpcAdapter) GetPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (uint64, error) {
 	key := make([]byte, 12)
 	binary.BigEndian.PutUint64(key, l1BlockNumber)
 	binary.BigEndian.PutUint32(key[8:], l1TxIndex)
@@ -225,8 +184,8 @@ func (r *rpcAdapter) getPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32
 	return prevL1BlockNumber, nil
 }
 
-// getBatchHeader gets the batch header from the database.
-func (r *rpcAdapter) getBatchHeader(l1BlockNumber, l2BlockNumber uint64, l1TxIndex uint32) (*sequencerv2types.BatchHeader, error) {
+// GetBatchHeader gets the batch header from the database.
+func (r *RpcAdapter) GetBatchHeader(l1BlockNumber, l2BlockNumber uint64, l1TxIndex uint32) (*sequencerv2types.BatchHeader, error) {
 	ti := time.Now()
 	defer telemetry.MeasureSince(ti, "client", "get_batch_header")
 
@@ -271,6 +230,6 @@ func (r *rpcAdapter) getBatchHeader(l1BlockNumber, l2BlockNumber uint64, l1TxInd
 }
 
 // setOpenL1BlockNumber sets the open L1 block number.
-func (r *rpcAdapter) setOpenL1BlockNumber(blockNumber uint64) {
+func (r *RpcAdapter) setOpenL1BlockNumber(blockNumber uint64) {
 	r.openL1BlockNumber.Store(blockNumber)
 }
