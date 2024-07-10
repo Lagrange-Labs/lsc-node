@@ -3,14 +3,9 @@ package client
 import (
 	"bytes"
 	"crypto/ecdsa"
-	"encoding/binary"
 	"errors"
 	"fmt"
-	"math"
-	"os"
-	"path/filepath"
 	"strings"
-	"sync/atomic"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
@@ -23,16 +18,12 @@ import (
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/server"
 	serverv2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
-	"github.com/Lagrange-Labs/lagrange-node/store/goleveldb"
-	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 const (
 	CommitteeCacheSize = 10
-	ClientDBPath       = ".lagrange/db/"
-	PruningBlocks      = 1000
 )
 
 var (
@@ -58,20 +49,12 @@ type Client struct {
 	jwToken               string
 	stakeAddress          string
 	pullInterval          time.Duration
-	openL1BlockNumber     atomic.Uint64
-	isSetBeginBlockNumber atomic.Bool
 
-	db    storetypes.KVStorage
 	chErr chan error
 }
 
 // NewClient creates a new client.
 func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
-	adapter, err := NewRpcAdapter(rpcCfg, cfg)
-	if err != nil {
-		return nil, fmt.Errorf("failed to create the rpc adapter: %v", err)
-	}
-
 	if len(cfg.BLSKeystorePasswordPath) > 0 {
 		var err error
 		cfg.BLSKeystorePassword, err = crypto.ReadKeystorePasswordFromFile(cfg.BLSKeystorePasswordPath)
@@ -89,6 +72,11 @@ func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 		logger.Fatalf("failed to get the bls public key: %v", err)
 	}
 
+	adapter, err := newRpcAdapter(rpcCfg, cfg, pubkey)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the rpc adapter: %v", err)
+	}
+
 	if len(cfg.SignerECDSAKeystorePasswordPath) > 0 {
 		cfg.SignerECDSAKeystorePassword, err = crypto.ReadKeystorePasswordFromFile(cfg.SignerECDSAKeystorePasswordPath)
 		if err != nil {
@@ -102,24 +90,6 @@ func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 	ecdsaPriv, err := ecrypto.ToECDSA(ecdsaPrivKey)
 	if err != nil {
 		logger.Fatalf("failed to get the ecdsa private key: %v", err)
-	}
-
-	homePath, err := os.UserHomeDir()
-	if err != nil {
-		logger.Fatalf("failed to get the home directory: %v", err)
-	}
-	dbPath := filepath.Clean(filepath.Join(homePath, ClientDBPath))
-	if err := os.MkdirAll(dbPath, os.ModePerm); err != nil {
-		logger.Fatalf("failed to create the database directory: %v", err)
-	}
-	pubKey, err := blsScheme.GetPublicKey(blsPriv, false)
-	if err != nil {
-		logger.Fatalf("failed to get the public key: %v", err)
-	}
-	dbPath = filepath.Join(dbPath, fmt.Sprintf("client_%d_%x.db", adapter.chainID, pubKey))
-	db, err := goleveldb.NewDB(dbPath)
-	if err != nil {
-		logger.Fatalf("failed to create the database: %v", err)
 	}
 
 	healthMgr, err := newHealthManager(cfg.GrpcURLs)
@@ -142,10 +112,9 @@ func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 		stakeAddress:          cfg.OperatorAddress,
 		pullInterval:          time.Duration(cfg.PullInterval),
 
-		db:    db,
 		chErr: make(chan error, CommitteeCacheSize),
 	}
-	go c.startBatchFetching()
+	go adapter.startBatchFetching(c.chErr)
 
 	return c, nil
 }
@@ -190,7 +159,7 @@ func (c *Client) Start() error {
 				}
 				if errors.Is(err, ErrBatchNotFound) {
 					logger.Warnf("The batch is not found, please check the metrics for the RPC provider. There may be a delay or a performance issue.")
-					if err := c.initBeginBlockNumber(batch.L1BlockNumber()); err != nil {
+					if err := c.adapter.initBeginBlockNumber(batch.L1BlockNumber()); err != nil {
 						logger.Errorf("failed to initialize the begin block number: %v", err)
 					}
 					continue
@@ -280,178 +249,16 @@ func (c *Client) joinNetwork() error {
 
 	c.jwToken = res.Token
 
-	if err := c.initBeginBlockNumber(res.PrevL1BlockNumber); err != nil {
+	if err := c.adapter.initBeginBlockNumber(res.PrevL1BlockNumber); err != nil {
 		return fmt.Errorf("failed to initialize the begin block number: %v", err)
 	}
 
 	return c.verifyPrevBatch(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
 }
 
-// initBeginBlockNumber initializes the begin block number for the RPC client.
-func (c *Client) initBeginBlockNumber(blockNumber uint64) error {
-	// set the open block number
-	c.openL1BlockNumber.Store(blockNumber)
-
-	lastStoredBlockNumber := uint64(0)
-	// get the last stored block number
-	key := make([]byte, 12)
-	binary.BigEndian.PutUint64(key, math.MaxUint64)
-	binary.BigEndian.PutUint32(key[8:], math.MaxUint32)
-	pKey, _, err := c.db.Prev(key)
-	if err != nil {
-		return fmt.Errorf("failed to get the previous key: %v", err)
-	}
-	if pKey != nil {
-		lastStoredBlockNumber = binary.BigEndian.Uint64(pKey)
-	}
-	if lastStoredBlockNumber > blockNumber {
-		// check if the block number exists in the database
-		prefix := make([]byte, 12)
-		storedBlockNumber := uint64(0)
-		binary.BigEndian.PutUint64(prefix, blockNumber+1)
-		pKey, _, err := c.db.Prev(prefix)
-		if err != nil {
-			return fmt.Errorf("failed to get the previous key: %v", err)
-		}
-		if pKey != nil {
-			storedBlockNumber = binary.BigEndian.Uint64(pKey)
-		}
-		if storedBlockNumber == blockNumber {
-			blockNumber = lastStoredBlockNumber
-		}
-	}
-
-	res := c.adapter.setBeginBlockNumber(blockNumber)
-	c.isSetBeginBlockNumber.Store(res)
-
-	return nil
-}
-
-// startBatchFetching starts the batch fetching loop.
-func (c *Client) startBatchFetching() {
-	for {
-		batch, err := c.adapter.nextBatch()
-		if err != nil {
-			logger.Errorf("failed to get the next batch: %v", err)
-			c.chErr <- err
-			return
-		}
-		telemetry.SetGauge(float64(batch.L1BlockNumber), "client", "fetch_batch_l1_block_number")
-		logger.Infof("fetch the batch with L1 block number %d", batch.L1BlockNumber)
-
-		// block the writeBatchHeader if the batch is too far from the current block
-		for openBlockNumber := c.openL1BlockNumber.Load(); openBlockNumber > 0 && openBlockNumber+PruningBlocks/4 < batch.L1BlockNumber; openBlockNumber = c.openL1BlockNumber.Load() {
-			if c.isSetBeginBlockNumber.Load() {
-				break
-			}
-			time.Sleep(1 * time.Second)
-		}
-		openL1BlockNumber := c.openL1BlockNumber.Load()
-		if openL1BlockNumber > 0 && openL1BlockNumber+PruningBlocks/4 < batch.L1BlockNumber {
-			logger.Infof("Rolling back the batch fetching to the block number %d", c.openL1BlockNumber.Load())
-		} else if openL1BlockNumber > 0 && openL1BlockNumber+PruningBlocks/2 < batch.L1BlockNumber {
-			logger.Warnf("The batch %d fetching is too far from the current block number %d", batch.L1BlockNumber, openL1BlockNumber)
-			continue
-		} else if openL1BlockNumber > 0 && openL1BlockNumber+PruningBlocks/4 > batch.L1BlockNumber {
-			c.isSetBeginBlockNumber.Store(false)
-		}
-
-		if err := c.writeBatchHeader(batch); err != nil {
-			logger.Errorf("failed to write the batch header: %v", err)
-			c.chErr <- err
-			return
-		}
-		if openL1BlockNumber > PruningBlocks {
-			prunedBlockNumber := openL1BlockNumber - PruningBlocks
-			prefix := make([]byte, 12)
-			binary.BigEndian.PutUint64(prefix, prunedBlockNumber)
-			if err := c.db.Prune(prefix); err != nil {
-				logger.Errorf("failed to prune the database: %v", err)
-			}
-		}
-		time.Sleep(10 * time.Millisecond)
-	}
-}
-
-// writeBatchHeader writes the batch header to the database.
-func (c *Client) writeBatchHeader(batchHeader *sequencerv2types.BatchHeader) error {
-	key := make([]byte, 12)
-	binary.BigEndian.PutUint64(key, batchHeader.L1BlockNumber)
-	binary.BigEndian.PutUint32(key[8:], batchHeader.L1TxIndex)
-	value, err := proto.Marshal(batchHeader)
-	if err != nil {
-		return fmt.Errorf("failed to marshal the batch header: %v", err)
-	}
-
-	return c.db.Put(key, value)
-}
-
-// getPrevBatchL1Number gets the previous batch L1 number from the database.
-func (c *Client) getPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (uint64, error) {
-	key := make([]byte, 12)
-	binary.BigEndian.PutUint64(key, l1BlockNumber)
-	binary.BigEndian.PutUint32(key[8:], l1TxIndex)
-
-	prevKey, _, err := c.db.Prev(key)
-	if err != nil {
-		return 0, fmt.Errorf("failed to get the previous key: %v", err)
-	}
-	var prevL1BlockNumber uint64
-	if prevKey != nil {
-		prevL1BlockNumber = binary.BigEndian.Uint64(prevKey[:8])
-	}
-
-	return prevL1BlockNumber, nil
-}
-
-// getBatchHeader gets the batch header from the database.
-func (c *Client) getBatchHeader(l1BlockNumber, l2BlockNumber uint64, l1TxIndex uint32) (*sequencerv2types.BatchHeader, error) {
-	ti := time.Now()
-	defer telemetry.MeasureSince(ti, "client", "get_batch_header")
-
-	if l1TxIndex > 0 {
-		key := make([]byte, 12)
-		binary.BigEndian.PutUint64(key, l1BlockNumber)
-		binary.BigEndian.PutUint32(key[8:], l1TxIndex)
-		value, err := c.db.Get(key)
-		if err != nil {
-			return nil, err
-		}
-		var batchHeader sequencerv2types.BatchHeader
-		if err := proto.Unmarshal(value, &batchHeader); err != nil {
-			return nil, fmt.Errorf("failed to unmarshal the batch header: %v", err)
-		}
-		return &batchHeader, nil
-	}
-
-	var res *sequencerv2types.BatchHeader
-
-	prefix := make([]byte, 8)
-	binary.BigEndian.PutUint64(prefix, l1BlockNumber)
-
-	errFound := fmt.Errorf("found")
-	if err := c.db.Iterate(prefix, func(key, value []byte) error {
-		var batchHeader sequencerv2types.BatchHeader
-		if err := proto.Unmarshal(value, &batchHeader); err != nil {
-			return fmt.Errorf("failed to unmarshal the batch header: %v", err)
-		}
-		if batchHeader.FromBlockNumber() == l2BlockNumber {
-			res = &batchHeader
-			return errFound
-		}
-		return nil
-	}); errors.Is(errFound, err) {
-		return res, nil
-	} else if err != nil {
-		return nil, fmt.Errorf("failed to iterate the database: %v", err)
-	} else {
-		return nil, fmt.Errorf("the batch header is not found for L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
-	}
-}
-
 // verifyPrevBatch verifies the previous batch.
 func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
-	batchHeader, err := c.getBatchHeader(l1BlockNumber, l2BlockNumber, 0)
+	batchHeader, err := c.adapter.getBatchHeader(l1BlockNumber, l2BlockNumber, 0)
 	if err != nil {
 		return fmt.Errorf("failed to get the previous batch header for L1 block number %d, L2 block number %d: %v", l1BlockNumber, l2BlockNumber, err)
 	}
@@ -481,11 +288,11 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	batch := res.Batch
 	fromBlockNumber := batch.BatchHeader.FromBlockNumber()
 	toBlockNumber := batch.BatchHeader.ToBlockNumber()
-	c.openL1BlockNumber.Store(batch.L1BlockNumber())
+	c.adapter.setOpenL1BlockNumber(batch.L1BlockNumber())
 	logger.Infof("get the batch with L1 block number %d with L2 block number from %d to %d", batch.L1BlockNumber(), fromBlockNumber, toBlockNumber)
 
 	// verify the L1 block number
-	batchHeader, err := c.getBatchHeader(batch.L1BlockNumber(), fromBlockNumber, batch.BatchHeader.L1TxIndex)
+	batchHeader, err := c.adapter.getBatchHeader(batch.L1BlockNumber(), fromBlockNumber, batch.BatchHeader.L1TxIndex)
 	if err != nil || batchHeader == nil {
 		logger.Errorf("failed to get the batch header for L1BlockNumber %d, L2FromBlockNumber %d, L1TxIndex %d: %v", batch.L1BlockNumber(), fromBlockNumber, batch.BatchHeader.L1TxIndex, err)
 		return batch, ErrBatchNotFound
@@ -535,7 +342,7 @@ func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 	// verify the previous batch's next committee root
 	if !isGenesis {
 		var err error
-		prevBatchL1Number, err = c.getPrevBatchL1Number(batch.L1BlockNumber(), batch.BatchHeader.L1TxIndex)
+		prevBatchL1Number, err = c.adapter.getPrevBatchL1Number(batch.L1BlockNumber(), batch.BatchHeader.L1TxIndex)
 		if err != nil {
 			return fmt.Errorf("failed to get the previous batch L1 number: %v", err)
 		}
