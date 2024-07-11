@@ -11,3 +11,5 @@ gen() {
 
 gen committee committee
 gen arbitrum_sequencer_inbox arbinbox
+gen voteweigher voteweigher
+gen eigendm eigendm
