@@ -1,0 +1,380 @@
+[
+    {
+        "type": "constructor",
+        "inputs": [
+            {
+                "name": "_stakeManager",
+                "type": "address",
+                "internalType": "contract IStakeManager"
+            }
+        ],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "WEIGHTING_DIVISOR",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "addQuorumMultiplier",
+        "inputs": [
+            {
+                "name": "quorumNumber",
+                "type": "uint8",
+                "internalType": "uint8"
+            },
+            {
+                "name": "multipliers",
+                "type": "tuple[]",
+                "internalType": "struct IVoteWeigher.TokenMultiplier[]",
+                "components": [
+                    {
+                        "name": "token",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "multiplier",
+                        "type": "uint96",
+                        "internalType": "uint96"
+                    }
+                ]
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "getTokenList",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address[]",
+                "internalType": "address[]"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "getTokenListForQuorumNumbers",
+        "inputs": [
+            {
+                "name": "quorumNumbers_",
+                "type": "uint8[]",
+                "internalType": "uint8[]"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address[]",
+                "internalType": "address[]"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "initialize",
+        "inputs": [
+            {
+                "name": "initialOwner",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "owner",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "quorumMultipliers",
+        "inputs": [
+            {
+                "name": "",
+                "type": "uint8",
+                "internalType": "uint8"
+            },
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "token",
+                "type": "address",
+                "internalType": "address"
+            },
+            {
+                "name": "multiplier",
+                "type": "uint96",
+                "internalType": "uint96"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "quorumNumbers",
+        "inputs": [
+            {
+                "name": "",
+                "type": "uint256",
+                "internalType": "uint256"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint8",
+                "internalType": "uint8"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "removeQuorumMultiplier",
+        "inputs": [
+            {
+                "name": "quorumNumber",
+                "type": "uint8",
+                "internalType": "uint8"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "renounceOwnership",
+        "inputs": [],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "stakeManager",
+        "inputs": [],
+        "outputs": [
+            {
+                "name": "",
+                "type": "address",
+                "internalType": "contract IStakeManager"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "function",
+        "name": "transferOwnership",
+        "inputs": [
+            {
+                "name": "newOwner",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "updateQuorumMultiplier",
+        "inputs": [
+            {
+                "name": "quorumNumber",
+                "type": "uint8",
+                "internalType": "uint8"
+            },
+            {
+                "name": "index",
+                "type": "uint256",
+                "internalType": "uint256"
+            },
+            {
+                "name": "multiplier",
+                "type": "tuple",
+                "internalType": "struct IVoteWeigher.TokenMultiplier",
+                "components": [
+                    {
+                        "name": "token",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "multiplier",
+                        "type": "uint96",
+                        "internalType": "uint96"
+                    }
+                ]
+            }
+        ],
+        "outputs": [],
+        "stateMutability": "nonpayable"
+    },
+    {
+        "type": "function",
+        "name": "weightOfOperator",
+        "inputs": [
+            {
+                "name": "quorumNumber",
+                "type": "uint8",
+                "internalType": "uint8"
+            },
+            {
+                "name": "operator",
+                "type": "address",
+                "internalType": "address"
+            }
+        ],
+        "outputs": [
+            {
+                "name": "",
+                "type": "uint96",
+                "internalType": "uint96"
+            }
+        ],
+        "stateMutability": "view"
+    },
+    {
+        "type": "event",
+        "name": "Initialized",
+        "inputs": [
+            {
+                "name": "version",
+                "type": "uint8",
+                "indexed": false,
+                "internalType": "uint8"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "OwnershipTransferred",
+        "inputs": [
+            {
+                "name": "previousOwner",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            },
+            {
+                "name": "newOwner",
+                "type": "address",
+                "indexed": true,
+                "internalType": "address"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "QuorumAdded",
+        "inputs": [
+            {
+                "name": "quorumNumber",
+                "type": "uint8",
+                "indexed": true,
+                "internalType": "uint8"
+            },
+            {
+                "name": "multipliers",
+                "type": "tuple[]",
+                "indexed": false,
+                "internalType": "struct IVoteWeigher.TokenMultiplier[]",
+                "components": [
+                    {
+                        "name": "token",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "multiplier",
+                        "type": "uint96",
+                        "internalType": "uint96"
+                    }
+                ]
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "QuorumRemoved",
+        "inputs": [
+            {
+                "name": "quorumNumber",
+                "type": "uint8",
+                "indexed": true,
+                "internalType": "uint8"
+            }
+        ],
+        "anonymous": false
+    },
+    {
+        "type": "event",
+        "name": "QuorumUpdated",
+        "inputs": [
+            {
+                "name": "quorumNumber",
+                "type": "uint8",
+                "indexed": true,
+                "internalType": "uint8"
+            },
+            {
+                "name": "index",
+                "type": "uint256",
+                "indexed": false,
+                "internalType": "uint256"
+            },
+            {
+                "name": "multiplier",
+                "type": "tuple",
+                "indexed": false,
+                "internalType": "struct IVoteWeigher.TokenMultiplier",
+                "components": [
+                    {
+                        "name": "token",
+                        "type": "address",
+                        "internalType": "address"
+                    },
+                    {
+                        "name": "multiplier",
+                        "type": "uint96",
+                        "internalType": "uint96"
+                    }
+                ]
+            }
+        ],
+        "anonymous": false
+    }
+]
