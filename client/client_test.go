@@ -80,7 +80,7 @@ func TestRPCStorage(t *testing.T) {
 	require.NoError(t, err)
 	chBatch := make(chan *sequencerv2types.BatchHeader, 10)
 	chBeginBlockNumber := make(chan uint64, 1)
-	adapter := &rpcAdapter{
+	adapter := &RpcAdapter{
 		client: &mockRPC{
 			chBatch:            chBatch,
 			chBeginBlockNumber: chBeginBlockNumber,
@@ -108,26 +108,26 @@ func TestRPCStorage(t *testing.T) {
 	}
 
 	// get previous batch
-	prev, err := adapter.getPrevBatchL1Number(3, 0)
+	prev, err := adapter.GetPrevBatchL1Number(3, 0)
 	require.NoError(t, err)
 	require.Equal(t, uint64(2), prev)
-	prev, err = adapter.getPrevBatchL1Number(3, 1)
+	prev, err = adapter.GetPrevBatchL1Number(3, 1)
 	require.NoError(t, err)
 	require.Equal(t, uint64(2), prev)
-	prev, err = adapter.getPrevBatchL1Number(8, 2)
+	prev, err = adapter.GetPrevBatchL1Number(8, 2)
 	require.NoError(t, err)
 	require.Equal(t, uint64(8), prev)
 
 	// get batch by L1 block number
-	_, err = adapter.getBatchHeader(3, 2, 0)
+	_, err = adapter.GetBatchHeader(3, 2, 0)
 	require.Error(t, err)
-	batch, err := adapter.getBatchHeader(5, 5, 1)
+	batch, err := adapter.GetBatchHeader(5, 5, 1)
 	require.NoError(t, err)
 	require.Equal(t, uint64(5), batch.L1BlockNumber)
 	require.Equal(t, uint32(1), batch.L1TxIndex)
-	_, err = adapter.getBatchHeader(5, 5, 2)
+	_, err = adapter.GetBatchHeader(5, 5, 2)
 	require.Error(t, err)
-	batch, err = adapter.getBatchHeader(8, 8, 0)
+	batch, err = adapter.GetBatchHeader(8, 8, 0)
 	require.NoError(t, err)
 	require.Equal(t, uint64(8), batch.L1BlockNumber)
 

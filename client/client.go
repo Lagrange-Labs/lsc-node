@@ -1,7 +1,6 @@
 package client
 
 import (
-	"bytes"
 	"crypto/ecdsa"
 	"errors"
 	"fmt"
@@ -41,7 +40,8 @@ type Client struct {
 	serverv2types.NetworkServiceClient
 	healthMgr *healthManager
 	blsScheme crypto.BLSScheme
-	adapter   *rpcAdapter
+	adapter   *RpcAdapter
+	verifier  *Verifier
 
 	blsPrivateKey         []byte
 	blsPublicKey          string
@@ -72,9 +72,14 @@ func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 		logger.Fatalf("failed to get the bls public key: %v", err)
 	}
 
-	adapter, err := newRpcAdapter(rpcCfg, cfg, pubkey)
+	adapter, chainID, err := newRpcAdapter(rpcCfg, cfg, pubkey)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the rpc adapter: %v", err)
+	}
+
+	verifier, err := newVerifier(cfg, adapter, chainID)
+	if err != nil {
+		return nil, fmt.Errorf("failed to create the verifier: %v", err)
 	}
 
 	if len(cfg.SignerECDSAKeystorePasswordPath) > 0 {
@@ -105,6 +110,7 @@ func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 		NetworkServiceClient:  healthClient,
 		healthMgr:             healthMgr,
 		adapter:               adapter,
+		verifier:              verifier,
 		blsScheme:             blsScheme,
 		blsPrivateKey:         blsPriv,
 		blsPublicKey:          utils.Bytes2Hex(pubkey),
@@ -253,21 +259,7 @@ func (c *Client) joinNetwork() error {
 		return fmt.Errorf("failed to initialize the begin block number: %v", err)
 	}
 
-	return c.verifyPrevBatch(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
-}
-
-// verifyPrevBatch verifies the previous batch.
-func (c *Client) verifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
-	batchHeader, err := c.adapter.getBatchHeader(l1BlockNumber, l2BlockNumber, 0)
-	if err != nil {
-		return fmt.Errorf("failed to get the previous batch header for L1 block number %d, L2 block number %d: %v", l1BlockNumber, l2BlockNumber, err)
-	}
-
-	if batchHeader == nil {
-		return fmt.Errorf("the batch header is not found for L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
-	}
-
-	return nil
+	return c.verifier.VerifyPrevBatch(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
 }
 
 // TryGetBatch tries to get the batch from the server.
@@ -286,88 +278,16 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	telemetry.MeasureSince(ti, "client", "get_batch_request")
 
 	batch := res.Batch
-	fromBlockNumber := batch.BatchHeader.FromBlockNumber()
-	toBlockNumber := batch.BatchHeader.ToBlockNumber()
 	c.adapter.setOpenL1BlockNumber(batch.L1BlockNumber())
-	logger.Infof("get the batch with L1 block number %d with L2 block number from %d to %d", batch.L1BlockNumber(), fromBlockNumber, toBlockNumber)
+	logger.Infof("get the batch with L1 block number %d with L2 block number from %d to %d", batch.L1BlockNumber(), batch.BatchHeader.FromBlockNumber(), batch.BatchHeader.ToBlockNumber())
 
-	// verify the L1 block number
-	batchHeader, err := c.adapter.getBatchHeader(batch.L1BlockNumber(), fromBlockNumber, batch.BatchHeader.L1TxIndex)
-	if err != nil || batchHeader == nil {
-		logger.Errorf("failed to get the batch header for L1BlockNumber %d, L2FromBlockNumber %d, L1TxIndex %d: %v", batch.L1BlockNumber(), fromBlockNumber, batch.BatchHeader.L1TxIndex, err)
-		return batch, ErrBatchNotFound
-	}
-	if batch.L1BlockNumber() != batchHeader.L1BlockNumber {
-		return batch, fmt.Errorf("the batch L1 block number %d is not equal to the rpc L1 block number %d", res.Batch.L1BlockNumber(), batchHeader.L1BlockNumber)
-	}
-	if fromBlockNumber != batchHeader.FromBlockNumber() {
-		return batch, fmt.Errorf("the batch from block number %d is not equal to the rpc from block number %d", fromBlockNumber, batchHeader.FromBlockNumber())
-	}
-	if toBlockNumber != batchHeader.ToBlockNumber() {
-		return batch, fmt.Errorf("the batch to block number %d is not equal to the rpc to block number %d", toBlockNumber, batchHeader.ToBlockNumber())
-	}
-
-	// verify the committee root
-	if err := c.verifyCommitteeRoot(batch); err != nil {
-		logger.Warnf("failed to verify the committee root: %v", err)
+	// verify the batch
+	if err := c.verifier.VerifyBatch(batch); err != nil {
+		logger.Warnf("failed to verify the batch: %v", err)
 		return batch, err
 	}
 
-	// verify if the batch hash is correct
-	batchHash := batch.BatchHeader.Hash()
-	bhHash := batchHeader.Hash()
-	if !bytes.Equal(batchHash, bhHash) {
-		return batch, fmt.Errorf("the batch hash %s is not equal to the batch header hash %s", batchHash, utils.Bytes2Hex(bhHash))
-	}
-
-	// verify the proposer signature
-	if len(batch.ProposerPubKey) == 0 {
-		return batch, fmt.Errorf("the block %d proposer key is empty", batch.BatchNumber())
-	}
-	blsSigHash := batch.BlsSignature().Hash()
-	verified, err := c.blsScheme.VerifySignature(common.FromHex(batch.ProposerPubKey), blsSigHash, common.FromHex(batch.ProposerSignature))
-	if err != nil || !verified {
-		return batch, fmt.Errorf("failed to verify the proposer signature: %v", err)
-	}
-
-	telemetry.SetGauge(float64(batch.BatchNumber()), "client", "current_batch_number")
-
 	return batch, nil
-}
-
-func (c *Client) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
-	blockNumber := batch.L1BlockNumber()
-	prevBatchL1Number := uint64(0)
-	isGenesis := c.adapter.genesisBlockNumber == blockNumber
-	// verify the previous batch's next committee root
-	if !isGenesis {
-		var err error
-		prevBatchL1Number, err = c.adapter.getPrevBatchL1Number(batch.L1BlockNumber(), batch.BatchHeader.L1TxIndex)
-		if err != nil {
-			return fmt.Errorf("failed to get the previous batch L1 number: %v", err)
-		}
-		if prevBatchL1Number == 0 {
-			return ErrBatchNotFound
-		}
-	}
-	prevCommitteeData, err := c.adapter.getCommitteeRoot(prevBatchL1Number)
-	if err != nil {
-		return fmt.Errorf("failed to get the previous committee root: %v", err)
-	}
-	if !bytes.Equal(utils.Hex2Bytes(batch.CurrentCommittee()), prevCommitteeData.Root[:]) {
-		return fmt.Errorf("the current batch committee root %s is not equal to the previous batch next committee root %s", batch.CurrentCommittee(), utils.Bytes2Hex(prevCommitteeData.Root[:]))
-	}
-
-	// verify the current batch's next committee root
-	curCommitteeData, err := c.adapter.getCommitteeRoot(blockNumber)
-	if err != nil {
-		return fmt.Errorf("failed to get the current committee root: %v", err)
-	}
-	if !bytes.Equal(utils.Hex2Bytes(batch.NextCommittee()), curCommitteeData.Root[:]) {
-		return fmt.Errorf("the current batch next committee root %s is not equal to the current committee root %s", batch.NextCommittee(), utils.Bytes2Hex(curCommitteeData.Root[:]))
-	}
-
-	return nil
 }
 
 // TryCommitBatch tries to commit the signature to the server.
