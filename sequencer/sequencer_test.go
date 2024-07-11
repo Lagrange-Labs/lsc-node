@@ -12,11 +12,11 @@ import (
 )
 
 func TestFetchCommittee(t *testing.T) {
-	ethURL := os.Getenv("ETH_RPC")
+	ethURL := os.Getenv("ETH_MAIN_RPC")
 	if len(ethURL) == 0 {
 		t.Skip("ETH_RPC not set")
 	}
-	optURL := os.Getenv("OPT_RPC")
+	optURL := os.Getenv("OPT_MAIN_RPC")
 	if len(optURL) == 0 {
 		t.Skip("OPT_RPC not set")
 	}
