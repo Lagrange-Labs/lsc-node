@@ -11,6 +11,8 @@ type Config struct {
 	EthereumURL string `mapstructure:"EthereumURL"`
 	// CommitteeSCAddress is the address of the committee smart contract.
 	CommitteeSCAddress string `mapstructure:"CommitteeSCAddress"`
+	// EigenDMSCAddress is the address of the Eigen DelegationManager smart contract.
+	EigenDMSCAddress string `mapstructure:"EigenDMSCAddress"`
 	// StakingCheckInterval is the interval to check the staking status.
 	StakingCheckInterval utils.TimeDuration `mapstructure:"StakingCheckInterval"`
 }
