@@ -35,7 +35,7 @@ const (
 var (
 	operatorSharesIncreased = crypto.Keccak256Hash([]byte("OperatorSharesIncreased(address,address,address,uint256)"))
 	operatorSharesDecreased = crypto.Keccak256Hash([]byte("OperatorSharesDecreased(address,address,address,uint256)"))
-	updateCommittee         = crypto.Keccak256Hash([]byte("updateCommittee(uint256,uint256,bytes32)"))
+	updateCommittee         = crypto.Keccak256Hash([]byte("UpdateCommittee(uint256,uint256,bytes32)"))
 )
 
 // CommitteeParams is the committee parameters.
@@ -48,9 +48,9 @@ type CommitteeParams struct {
 	QuorumNumber     uint8
 	MinWeight        uint64
 	MaxWeight        uint64
-	WeightingDivisor int64
+	WeightingDivisor *big.Int
 
-	tokenMultipliers  map[common.Address]int64
+	tokenMultipliers  map[common.Address]*big.Int
 	committeeSCAddr   common.Address
 	voteweigherSCAddr common.Address
 	eigenDMSCAddr     common.Address
@@ -124,14 +124,14 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 	if err != nil {
 		return nil, fmt.Errorf("failed to get weighting divisor: %v", err)
 	}
-	tokenMultipliers := make(map[common.Address]int64)
+	tokenMultipliers := make(map[common.Address]*big.Int)
 	for i := uint8(0); i < 255; i++ {
 		tokenMultiplier, err := voteweigherSC.QuorumMultipliers(nil, committeeParams.QuorumNumber, big.NewInt(int64(i)))
 		if err != nil {
 			logger.Warnf("failed to get token multiplier: %v", err)
 			break
 		}
-		tokenMultipliers[tokenMultiplier.Token] = tokenMultiplier.Multiplier.Int64()
+		tokenMultipliers[tokenMultiplier.Token] = tokenMultiplier.Multiplier
 	}
 
 	eigendmSCAddr := common.HexToAddress(cfg.EigenDMSCAddress)
@@ -181,7 +181,7 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 		fromL1BlockNumber: fromL1BlockNumber,
 		fromL1TxIndex:     fromL1TxIndex,
 		lastBatchNumber:   batchNumber,
-		chainID:           uint32(chainID),
+		chainID:           chainID,
 
 		etherClient:        client,
 		committeeSC:        committeeSC,
@@ -199,7 +199,7 @@ func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterfac
 			QuorumNumber:      committeeParams.QuorumNumber,
 			MinWeight:         committeeParams.MinWeight.Uint64(),
 			MaxWeight:         committeeParams.MaxWeight.Uint64(),
-			WeightingDivisor:  weightingDivisor.Int64(),
+			WeightingDivisor:  weightingDivisor,
 			tokenMultipliers:  tokenMultipliers,
 			voteweigherSCAddr: voteweigherSCAddr,
 			committeeSCAddr:   committeeSCAddr,
@@ -368,6 +368,10 @@ func (s *Sequencer) updateCommittee() error {
 		if err != nil {
 			return err
 		}
+		if err := committeeRoot.Verify(); err != nil {
+			logger.Errorf("failed to verify committee root: %v", err)
+			return err
+		}
 		if err := s.storage.UpdateCommitteeRoot(s.ctx, committeeRoot); err != nil {
 			return err
 		}
@@ -449,7 +453,7 @@ func (s *Sequencer) getVoteWeightChanges(blockNumber *big.Int) (map[common.Addre
 		FromBlock: blockNumber,
 		ToBlock:   blockNumber,
 		Addresses: []common.Address{s.committeeParams.eigenDMSCAddr},
-		Topics:    [][]common.Hash{{operatorSharesIncreased}, {operatorSharesDecreased}},
+		Topics:    [][]common.Hash{{operatorSharesIncreased, operatorSharesDecreased}},
 	}
 
 	logs, err = s.etherClient.FilterLogs(s.ctx, queryFilter)
@@ -458,6 +462,7 @@ func (s *Sequencer) getVoteWeightChanges(blockNumber *big.Int) (map[common.Addre
 		return nil, err
 	}
 
+	operatorTokenShareChanges := make(map[common.Address]map[common.Address]*big.Int)
 	for _, vLog := range logs {
 		if vLog.Index < updateLogIndex {
 			continue
@@ -468,7 +473,7 @@ func (s *Sequencer) getVoteWeightChanges(blockNumber *big.Int) (map[common.Addre
 		var (
 			operator common.Address
 			token    common.Address
-			shares   int64
+			shares   *big.Int
 		)
 		if vLog.Topics[0] == operatorSharesIncreased {
 			event, err := s.eigendmSC.ParseOperatorSharesIncreased(vLog)
@@ -478,7 +483,7 @@ func (s *Sequencer) getVoteWeightChanges(blockNumber *big.Int) (map[common.Addre
 			}
 			operator = event.Operator
 			token = event.Strategy
-			shares = event.Shares.Int64()
+			shares = event.Shares
 		} else if vLog.Topics[0] == operatorSharesDecreased {
 			event, err := s.eigendmSC.ParseOperatorSharesDecreased(vLog)
 			if err != nil {
@@ -487,18 +492,41 @@ func (s *Sequencer) getVoteWeightChanges(blockNumber *big.Int) (map[common.Addre
 			}
 			operator = event.Operator
 			token = event.Strategy
-			shares = -event.Shares.Int64()
+			shares = big.NewInt(0).Neg(event.Shares)
 		}
 
-		if multiplier, ok := s.committeeParams.tokenMultipliers[token]; ok {
-			if _, ok := voteWeightChanges[operator]; !ok {
-				voteWeightChanges[operator] = 0
+		if _, ok := s.committeeParams.tokenMultipliers[token]; ok {
+			if _, ok := operatorTokenShareChanges[operator]; !ok {
+				operatorTokenShareChanges[operator] = make(map[common.Address]*big.Int)
 			}
-			voteWeightChanges[operator] = voteWeightChanges[operator] + shares*multiplier/s.committeeParams.WeightingDivisor
+			if _, ok := operatorTokenShareChanges[operator][token]; !ok {
+				operatorTokenShareChanges[operator][token] = big.NewInt(0)
+			}
+			operatorTokenShareChanges[operator][token] = big.NewInt(0).Add(operatorTokenShareChanges[operator][token], shares)
+		}
+	}
+
+	opts := &bind.CallOpts{
+		BlockNumber: blockNumber,
+	}
+
+	for operator, tokenShareChanges := range operatorTokenShareChanges {
+		voteWeightChanges[operator] = 0
+		for token, shareChange := range tokenShareChanges {
+			multiplier := s.committeeParams.tokenMultipliers[token]
+			orgShares, err := s.eigendmSC.OperatorShares(opts, operator, token)
+			if err != nil {
+				return nil, err
+			}
+			voteWeightChanges[operator] += s.calcVotingPower(orgShares, multiplier) - s.calcVotingPower(big.NewInt(0).Sub(orgShares, shareChange), multiplier)
 		}
 	}
 
 	return voteWeightChanges, nil
+}
+
+func (s *Sequencer) calcVotingPower(share *big.Int, multiplier *big.Int) int64 {
+	return big.NewInt(0).Div(big.NewInt(0).Mul(share, multiplier), s.committeeParams.WeightingDivisor).Int64()
 }
 
 func (s *Sequencer) distributeVotingPowers(voteWeight uint64, blsKeysCnt uint64, minWeight uint64, maxWeight uint64) ([]*big.Int, error) {
