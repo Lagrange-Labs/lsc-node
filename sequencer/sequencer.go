@@ -263,6 +263,8 @@ func (s *Sequencer) Start() error {
 
 			s.lastBatchNumber++
 			batchHeader.BatchNumber = s.lastBatchNumber
+			batchHeader.L2FromBlockNumber = batchHeader.FromBlockNumber()
+			batchHeader.L2ToBlockNumber = batchHeader.ToBlockNumber()
 			if err := s.storage.AddBatch(context.Background(), &v2types.Batch{
 				BatchHeader:   batchHeader,
 				SequencedTime: fmt.Sprintf("%d", time.Now().UnixMicro()),
