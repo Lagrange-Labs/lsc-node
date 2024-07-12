@@ -18,6 +18,8 @@ message BatchHeader {
     uint64 l1_block_number = 4;
     string l1_tx_hash = 5;
     uint32 l1_tx_index = 6;
+    uint64 l2_from_block_number = 7;
+    uint64 l2_to_block_number = 8;
 }
 
 // CommitteeHeader is the header for the given committee
