@@ -58,6 +58,7 @@ services:
       - LAGRANGE_NODE_STORE_DBPATH=mongodb://192.168.20.101:27017
       - LAGRANGE_NODE_CONSENSUS_PROPOSERBLSKEYSTOREPATH=/app/config/bls_0.json
       - LAGRANGE_NODE_CONSENSUS_PROPOSERBLSKEYSTOREPASSWORD=password_localtest
+      - LAGRANGE_NODE_SEQUENCER_ETHEREUMURL=http://192.168.20.100:8545
   simserver1:
     container_name: server1
     image: lagrange-node
@@ -238,7 +239,7 @@ services:
       - "/app/lagrange-node run-client"
   lagrangesc:
     container_name: lagrange-smart-contract
-    image: lagrangelabs/lagrange-contracts:v0.2.2
+    image: lagrangelabs/lagrange-contracts:v0.3.2
     networks:
       localnet:
         ipv4_address: 192.168.20.100

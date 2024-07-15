@@ -51,6 +51,7 @@ func newVerifier(cfg *Config, adapter Adapter, chainID uint32) (*Verifier, error
 	if err != nil {
 		logger.Fatalf("failed to get the committee params: %v", err)
 	}
+	logger.Infof("committee params: %+v", params)
 	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
 
 	return &Verifier{
@@ -73,7 +74,7 @@ func (v *Verifier) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCom
 
 	committeeData, err := v.committeeSC.GetCommittee(nil, v.chainID, big.NewInt(int64(blockNumber)))
 	if err != nil || committeeData.LeafCount == 0 {
-		return nil, fmt.Errorf("failed to get the committee data %+v: %v", committeeData, err)
+		return nil, fmt.Errorf("failed to get the committee data for block number %d: %v", blockNumber, err)
 	}
 	v.committeeCache.Add(blockNumber, &committeeData)
 
@@ -143,25 +144,28 @@ func (v *Verifier) verifyBatchHeader(batch *sequencerv2types.Batch) error {
 // verifyCommitteeRoot verifies the committee root.
 func (v *Verifier) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 	blockNumber := batch.L1BlockNumber()
-	prevBatchL1Number := uint64(0)
-	isGenesis := v.genesisBlockNumber == blockNumber
 	// verify the previous batch's next committee root
-	if !isGenesis {
+	if v.genesisBlockNumber == blockNumber { // the genesis block
+		if batch.CurrentCommittee() != batch.NextCommittee() {
+			return fmt.Errorf("the genesis block current committee root %s is not equal to the next committee root %s", batch.CurrentCommittee(), batch.NextCommittee())
+		}
+	} else {
 		var err error
-		prevBatchL1Number, err = v.adapter.GetPrevBatchL1Number(batch.L1BlockNumber(), batch.BatchHeader.L1TxIndex)
+		prevBatchL1Number, err := v.adapter.GetPrevBatchL1Number(batch.L1BlockNumber(), batch.BatchHeader.L1TxIndex)
 		if err != nil {
 			return fmt.Errorf("failed to get the previous batch L1 number: %v", err)
 		}
 		if prevBatchL1Number == 0 {
 			return ErrBatchNotFound
 		}
-	}
-	prevCommitteeData, err := v.getCommitteeRoot(prevBatchL1Number)
-	if err != nil {
-		return fmt.Errorf("failed to get the previous committee root: %v", err)
-	}
-	if !bytes.Equal(utils.Hex2Bytes(batch.CurrentCommittee()), prevCommitteeData.Root[:]) {
-		return fmt.Errorf("the current batch committee root %s is not equal to the previous batch next committee root %s", batch.CurrentCommittee(), utils.Bytes2Hex(prevCommitteeData.Root[:]))
+
+		prevCommitteeData, err := v.getCommitteeRoot(prevBatchL1Number)
+		if err != nil {
+			return fmt.Errorf("failed to get the previous committee root: %v", err)
+		}
+		if !bytes.Equal(utils.Hex2Bytes(batch.CurrentCommittee()), prevCommitteeData.Root[:]) {
+			return fmt.Errorf("the current batch committee root %s is not equal to the previous batch next committee root %s", batch.CurrentCommittee(), utils.Bytes2Hex(prevCommitteeData.Root[:]))
+		}
 	}
 
 	// verify the current batch's next committee root
