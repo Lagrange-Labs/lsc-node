@@ -2,6 +2,6 @@ package mock
 
 // Config is the configuration for the Mock client.
 type Config struct {
-	// RPCURL is the URL of the Mock RPC node
-	RPCURL string `mapstructure:"RPCURL"`
+	// RPCURLs is the URL list of the Mock RPC node
+	RPCURLs []string `mapstructure:"RPCURL"`
 }

@@ -89,11 +89,11 @@ type Fetcher struct {
 
 // NewFetcher creates a new Fetcher instance.
 func NewFetcher(cfg *Config, isLight bool) (*Fetcher, error) {
-	l1Client, err := evmclient.NewClient(cfg.L1RPCURL)
+	l1Client, err := evmclient.NewClient(cfg.L1RPCURLs)
 	if err != nil {
 		return nil, err
 	}
-	l2Client, err := evmclient.NewClient(cfg.RPCURL)
+	l2Client, err := evmclient.NewClient(cfg.RPCURLs)
 	if err != nil {
 		return nil, err
 	}

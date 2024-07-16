@@ -29,24 +29,25 @@ var _ types.EvmClient = (*Client)(nil)
 type Client struct {
 	rpcClient *rpc.Client
 	ethClient *ethclient.Client
-	rpcURL    string
+	rpcURLs   []string
+	index     int
 
 	cache *lru.Cache[uint64, json.RawMessage] // block number -> raw header
 }
 
 // NewClient creates a new EvmClient instance.
-func NewClient(rpcURL string) (*Client, error) {
-	client, err := rpc.DialContext(utils.GetContext(), rpcURL)
-	if err != nil {
+func NewClient(rpcURLs []string) (*Client, error) {
+	c := &Client{
+		rpcURLs: rpcURLs,
+		index:   len(rpcURLs) - 1,
+		cache:   lru.NewCache[uint64, json.RawMessage](CacheSize),
+	}
+
+	if err := c.switchRPCURL(); err != nil {
 		return nil, err
 	}
 
-	return &Client{
-		rpcClient: client,
-		ethClient: ethclient.NewClient(client),
-		rpcURL:    rpcURL,
-		cache:     lru.NewCache[uint64, json.RawMessage](CacheSize),
-	}, nil
+	return c, nil
 }
 
 // GetEthClient returns the ethclient.Client.
@@ -54,13 +55,55 @@ func (c *Client) GetEthClient() *ethclient.Client {
 	return c.ethClient
 }
 
+// switchRPCURL switches the RPC URL.
+func (c *Client) switchRPCURL() error {
+	if c.rpcClient != nil {
+		c.rpcClient.Close()
+	}
+	for i := 0; i < len(c.rpcURLs); i++ {
+		c.index = (c.index + 1) % len(c.rpcURLs)
+		rpcClient, err := rpc.DialContext(utils.GetContext(), c.rpcURLs[c.index])
+		if err != nil {
+			logger.Errorf("failed to dial the RPC URL error: %w", err)
+			continue
+		}
+		c.rpcClient = rpcClient
+		c.ethClient = ethclient.NewClient(rpcClient)
+		return nil
+	}
+
+	return fmt.Errorf("failed to switch the RPC URL")
+}
+
+// switchCall tries to switch the RPC URL and call the given method.
+func (c *Client) switchCall(fn func() (interface{}, error)) (interface{}, error) {
+	var (
+		res interface{}
+		err error
+	)
+	for i := 0; i <= 1; i++ {
+		if res, err = fn(); err == nil {
+			return res, nil
+		}
+		if err := c.switchRPCURL(); err != nil {
+			return nil, err
+		}
+	}
+
+	return nil, fmt.Errorf("failed to call the method error: %w", err)
+}
+
 // GetCurrentBlockNumber returns the current block number.
 func (c *Client) GetCurrentBlockNumber() (uint64, error) {
-	header, err := c.ethClient.HeaderByNumber(utils.GetContext(), nil)
+	fn := func() (interface{}, error) {
+		return c.ethClient.HeaderByNumber(utils.GetContext(), nil)
+	}
+	header, err := c.switchCall(fn)
 	if err != nil {
 		return 0, err
 	}
-	return header.Number.Uint64(), nil
+
+	return header.(*ethtypes.Header).Number.Uint64(), nil
 }
 
 // GetBlockHashByNumber returns the block hash by the given block number.
@@ -71,7 +114,7 @@ func (c *Client) GetBlockHashByNumber(blockNumber uint64) (common.Hash, error) {
 	}
 	if err != nil {
 		logger.Errorf("failed to get the raw header error: %v", err)
-		return common.Hash{}, fmt.Errorf("failed to get the raw header error: %w", err)
+		return common.Hash{}, err
 	}
 	return getHashFromRawHeader(rawHeader)
 }
@@ -89,46 +132,60 @@ func getHashFromRawHeader(rawHeader json.RawMessage) (common.Hash, error) {
 
 // GetBlockNumberByHash returns the block number by the given block hash.
 func (c *Client) GetBlockNumberByHash(blockHash common.Hash) (uint64, error) {
-	header, err := c.ethClient.HeaderByHash(utils.GetContext(), blockHash)
+	fn := func() (interface{}, error) {
+		return c.ethClient.HeaderByHash(utils.GetContext(), blockHash)
+	}
+	header, err := c.switchCall(fn)
 	if err != nil {
 		return 0, err
 	}
-	return header.Number.Uint64(), nil
+	return header.(*ethtypes.Header).Number.Uint64(), nil
 }
 
 // GetBlockNumberByTxHash returns the block number by the given transaction hash.
 func (c *Client) GetBlockNumberByTxHash(txHash common.Hash) (uint64, error) {
-	receipt, err := c.ethClient.TransactionReceipt(utils.GetContext(), txHash)
+	fn := func() (interface{}, error) {
+		return c.ethClient.TransactionReceipt(utils.GetContext(), txHash)
+	}
+	receipt, err := c.switchCall(fn)
 	if err != nil {
 		return 0, err
 	}
-	return receipt.BlockNumber.Uint64(), nil
+	return receipt.(*ethtypes.Receipt).BlockNumber.Uint64(), nil
 }
 
 // GetChainID returns the chain ID.
 func (c *Client) GetChainID() (uint32, error) {
-	chainID, err := c.ethClient.ChainID(utils.GetContext())
+	fn := func() (interface{}, error) {
+		return c.ethClient.ChainID(utils.GetContext())
+	}
+	chainID, err := c.switchCall(fn)
 	if err != nil {
 		return 0, err
 	}
-	return uint32(chainID.Int64()), err
+	return uint32(chainID.(*big.Int).Int64()), nil
 }
 
 // GetBlockHeadersByRange returns the block headers by the given block number range.
 // The range is [start, end).
 func (c *Client) GetBlockHeadersByRange(start, end uint64) ([]sequencerv2types.BlockHeader, error) {
-	batchElems := make([]rpc.BatchElem, 0, int(end-start))
-	for i := start; i < end; i++ {
-		batchElems = append(batchElems, rpc.BatchElem{
-			Method: "eth_getBlockByNumber",
-			Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(i))), false},
-			Result: &json.RawMessage{},
-		})
+	fn := func() (interface{}, error) {
+		batchElems := make([]rpc.BatchElem, 0, int(end-start))
+		for i := start; i < end; i++ {
+			batchElems = append(batchElems, rpc.BatchElem{
+				Method: "eth_getBlockByNumber",
+				Args:   []interface{}{hexutil.EncodeBig(big.NewInt(int64(i))), false},
+				Result: &json.RawMessage{},
+			})
+		}
+		err := c.rpcClient.BatchCallContext(utils.GetContext(), batchElems)
+		return batchElems, err
 	}
-	err := c.rpcClient.BatchCallContext(utils.GetContext(), batchElems)
+	res, err := c.switchCall(fn)
 	if err != nil {
 		return nil, err
 	}
+	batchElems := res.([]rpc.BatchElem)
 	blockHeaders := make([]sequencerv2types.BlockHeader, len(batchElems))
 	var buffer bytes.Buffer
 	for i, batch := range batchElems {
@@ -160,20 +217,27 @@ func (c *Client) GetBlockHeadersByRange(start, end uint64) ([]sequencerv2types.B
 
 // GetFinalizedBlockNumber returns the finalized block number.
 func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
-	var header *ethtypes.Header
-	if err := c.rpcClient.CallContext(utils.GetContext(), &header, "eth_getBlockByNumber", "finalized", false); err != nil {
+	fn := func(tag string) func() (interface{}, error) {
+		return func() (interface{}, error) {
+			var header *ethtypes.Header
+			err := c.rpcClient.CallContext(utils.GetContext(), &header, "eth_getBlockByNumber", tag, false)
+			return header, err
+		}
+	}
+	res, err := c.switchCall(fn("finalized"))
+	if err != nil {
 		if strings.Contains(err.Error(), "'finalized' tag not supported on pre-merge network") {
-			err := c.rpcClient.CallContext(utils.GetContext(), &header, "eth_getBlockByNumber", "latest", false)
+			res, err := c.switchCall(fn("latest"))
 			if err != nil {
 				logger.Errorf("failed to get latest block number error: %v", err)
 				return 0, err
 			}
-			return header.Number.Uint64(), nil
+			return res.(*ethtypes.Header).Number.Uint64(), nil
 		}
 		logger.Errorf("failed to get finalized block number error: %v", err)
 		return 0, err
 	}
-	return header.Number.Uint64(), nil
+	return res.(*ethtypes.Header).Number.Uint64(), nil
 }
 
 // GetRawHeaderByNumber returns the raw message of block header by the given block number.
@@ -182,14 +246,20 @@ func (c *Client) GetRawHeaderByNumber(blockNumber uint64) (json.RawMessage, erro
 		return raw, nil
 	}
 
-	var rawHeader json.RawMessage
-	if err := c.rpcClient.CallContext(utils.GetContext(), &rawHeader, "eth_getBlockByNumber",
-		hexutil.EncodeBig(big.NewInt(int64(blockNumber))), false); err != nil {
-		if errors.Is(err, rpc.ErrNoResult) {
+	fn := func() (interface{}, error) {
+		var rawHeader json.RawMessage
+		err := c.rpcClient.CallContext(utils.GetContext(), &rawHeader, "eth_getBlockByNumber",
+			hexutil.EncodeBig(big.NewInt(int64(blockNumber))), false)
+		return rawHeader, err
+	}
+	res, err := c.switchCall(fn)
+	if err != nil {
+		if strings.Contains(err.Error(), rpc.ErrNoResult.Error()) {
 			return nil, types.ErrNoResult
 		}
 		return nil, err
 	}
+	rawHeader := res.(json.RawMessage)
 	if len(rawHeader) < 5 { // to detect empty response and "null" response
 		return nil, types.ErrNoResult
 	}
@@ -201,5 +271,12 @@ func (c *Client) GetRawHeaderByNumber(blockNumber uint64) (json.RawMessage, erro
 
 // GetBlockByNumber returns the block header by the given block number.
 func (c *Client) GetBlockByNumber(blockNumber uint64) (*ethtypes.Block, error) {
-	return c.ethClient.BlockByNumber(utils.GetContext(), big.NewInt(int64(blockNumber)))
+	fn := func() (interface{}, error) {
+		return c.ethClient.BlockByNumber(utils.GetContext(), big.NewInt(int64(blockNumber)))
+	}
+	b, err := c.switchCall(fn)
+	if err != nil {
+		return nil, err
+	}
+	return b.(*ethtypes.Block), nil
 }
