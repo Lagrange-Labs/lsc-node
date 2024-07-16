@@ -84,7 +84,7 @@ type Sequencer struct {
 func NewSequencer(cfg *Config, rpcCfg *rpcclient.Config, storage storageInterface) (*Sequencer, error) {
 	logger.Infof("Creating sequencer for chain: %s", cfg.Chain)
 
-	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg)
+	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg, false)
 	if err != nil {
 		logger.Errorf("failed to create rpc client: %v", err)
 		return nil, err

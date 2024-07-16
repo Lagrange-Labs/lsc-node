@@ -65,7 +65,7 @@ func TestBlocksByRange(t *testing.T) {
 
 	start := uint64(1)
 	end := uint64(10)
-	hashes, err := c.GetBlockHashesByRange(start, end)
+	headers, err := c.GetBlockHeadersByRange(start, end)
 	require.NoError(t, err)
-	require.Len(t, hashes, int(end-start))
+	require.Len(t, headers, int(end-start))
 }

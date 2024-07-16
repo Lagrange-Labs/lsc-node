@@ -2,7 +2,7 @@
 // versions:
 // - protoc-gen-go-grpc v1.4.0
 // - protoc             (unknown)
-// source: network/v2/network.proto
+// source: server/v2/network.proto
 
 package v2
 
@@ -220,5 +220,5 @@ var NetworkService_ServiceDesc = grpc.ServiceDesc{
 			ServerStreams: true,
 		},
 	},
-	Metadata: "network/v2/network.proto",
+	Metadata: "server/v2/network.proto",
 }

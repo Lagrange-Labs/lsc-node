@@ -8,6 +8,7 @@ option go_package = "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2";
 message BlockHeader {
     uint64 block_number = 1;
     string block_hash = 2;
+    string block_rlp = 3;
 }
 
 // BatchHeader is the header for the given batch of the specific chain

@@ -31,7 +31,7 @@ func NewManager() (*Manager, error) {
 	if err != nil {
 		return nil, err
 	}
-	rpcClient, err := rpcclient.NewClient(cfg.Sequencer.Chain, &cfg.RpcClient)
+	rpcClient, err := rpcclient.NewClient(cfg.Sequencer.Chain, &cfg.RpcClient, true)
 	if err != nil {
 		return nil, err
 	}

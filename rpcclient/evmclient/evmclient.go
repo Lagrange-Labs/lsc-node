@@ -1,6 +1,7 @@
 package evmclient
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -16,6 +17,7 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
@@ -112,9 +114,9 @@ func (c *Client) GetChainID() (uint32, error) {
 	return uint32(chainID.Int64()), err
 }
 
-// GetBlockHashesByRange returns the block hashes by the given block number range.
+// GetBlockHeadersByRange returns the block headers by the given block number range.
 // The range is [start, end).
-func (c *Client) GetBlockHashesByRange(start, end uint64) ([]common.Hash, error) {
+func (c *Client) GetBlockHeadersByRange(start, end uint64) ([]sequencerv2types.BlockHeader, error) {
 	batchElems := make([]rpc.BatchElem, 0, int(end-start))
 	for i := start; i < end; i++ {
 		batchElems = append(batchElems, rpc.BatchElem{
@@ -127,20 +129,33 @@ func (c *Client) GetBlockHashesByRange(start, end uint64) ([]common.Hash, error)
 	if err != nil {
 		return nil, err
 	}
-	hashes := make([]common.Hash, 0, len(batchElems))
+	blockHeaders := make([]sequencerv2types.BlockHeader, len(batchElems))
+	var buffer bytes.Buffer
 	for i, batch := range batchElems {
 		if batch.Error != nil {
 			return nil, batch.Error
 		}
 		rawHeader := batch.Result.(*json.RawMessage)
 		c.cache.Add(start+uint64(i), *rawHeader)
-		hash, err := getHashFromRawHeader(*rawHeader)
+		blockHash, err := getHashFromRawHeader(*rawHeader)
 		if err != nil {
 			return nil, err
 		}
-		hashes = append(hashes, hash)
+		header := &ethtypes.Header{}
+		if err := json.Unmarshal(*rawHeader, &header); err != nil {
+			return nil, err
+		}
+		buffer.Reset()
+		if err := header.EncodeRLP(&buffer); err != nil {
+			return nil, err
+		}
+		blockHeaders[i] = sequencerv2types.BlockHeader{
+			BlockNumber: start + uint64(i),
+			BlockHash:   blockHash.Hex(),
+			BlockRlp:    common.Bytes2Hex(buffer.Bytes()),
+		}
 	}
-	return hashes, nil
+	return blockHeaders, nil
 }
 
 // GetFinalizedBlockNumber returns the finalized block number.

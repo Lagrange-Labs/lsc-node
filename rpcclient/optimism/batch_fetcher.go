@@ -71,6 +71,7 @@ type Fetcher struct {
 	signer            coretypes.Signer
 	batchHeaders      chan *BatchesRef
 
+	isLight                 bool
 	lastSyncedL1BlockNumber atomic.Uint64
 	lastPulledL1BlockNumber atomic.Uint64
 	lastSyncedL2BlockNumber uint64
@@ -87,7 +88,7 @@ type Fetcher struct {
 }
 
 // NewFetcher creates a new Fetcher instance.
-func NewFetcher(cfg *Config) (*Fetcher, error) {
+func NewFetcher(cfg *Config, isLight bool) (*Fetcher, error) {
 	l1Client, err := evmclient.NewClient(cfg.L1RPCURL)
 	if err != nil {
 		return nil, err
@@ -112,6 +113,7 @@ func NewFetcher(cfg *Config) (*Fetcher, error) {
 		l1Client:          l1Client,
 		l2Client:          l2Client,
 		l1BlobFetcher:     l1BlobFetcher,
+		isLight:           isLight,
 		chainID:           big.NewInt(int64(l2ChainID)),
 		batchInboxAddress: common.HexToAddress(cfg.BatchInbox),
 		batchSender:       common.HexToAddress(cfg.BatchSender),
@@ -226,15 +228,15 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
 	}
 }
 
-// getL2BlockHashes gets the L2 block hashes for the given range.
+// getL2BlockHeaders gets the L2 block headers for the given range.
 // The range is [start, end].
-func (f *Fetcher) getL2BlockHashes(start, end uint64) ([]*sequencerv2types.BlockHeader, error) {
+func (f *Fetcher) getL2BlockHeaders(start, end uint64) ([]*sequencerv2types.BlockHeader, error) {
 	ti := time.Now()
-	defer telemetry.MeasureSince(ti, "rpc", "fetch_l2_block_hashes")
+	defer telemetry.MeasureSince(ti, "rpc", "fetch_l2_block_headers")
 
 	g, ctx := errgroup.WithContext(context.Background())
 	g.SetLimit(f.concurrentFetcher)
-	hashesMap := sync.Map{}
+	headersMap := sync.Map{}
 	for i := start; i <= end; i += ParallelBlocks {
 		if err := ctx.Err(); err != nil {
 			logger.Errorf("fetch l2 block context error: %v", err)
@@ -246,12 +248,12 @@ func (f *Fetcher) getL2BlockHashes(start, end uint64) ([]*sequencerv2types.Block
 			endBlockNumber = (end + 1)
 		}
 		g.Go(func() error {
-			blockHashes, err := f.l2Client.GetBlockHashesByRange(startBlockNumber, endBlockNumber)
+			blockHeaders, err := f.l2Client.GetBlockHeadersByRange(startBlockNumber, endBlockNumber)
 			if err != nil {
 				return err
 			}
-			for i, hash := range blockHashes {
-				hashesMap.Store(startBlockNumber+uint64(i), hash)
+			for i := range blockHeaders {
+				headersMap.Store(startBlockNumber+uint64(i), &blockHeaders[i])
 			}
 			return nil
 		})
@@ -259,18 +261,15 @@ func (f *Fetcher) getL2BlockHashes(start, end uint64) ([]*sequencerv2types.Block
 	if err := g.Wait(); err != nil {
 		return nil, err
 	}
-	blockHashes := make([]*sequencerv2types.BlockHeader, 0, end-start+1)
+	blockHeaders := make([]*sequencerv2types.BlockHeader, end-start+1)
 	for i := start; i <= end; i++ {
-		hash, ok := hashesMap.Load(i)
+		blockHeader, ok := headersMap.Load(i)
 		if !ok {
 			return nil, errors.New("block hash is not found")
 		}
-		blockHashes = append(blockHashes, &sequencerv2types.BlockHeader{
-			BlockNumber: i,
-			BlockHash:   hash.(common.Hash).Hex(),
-		})
+		blockHeaders[i-start] = blockHeader.(*sequencerv2types.BlockHeader)
 	}
-	return blockHashes, nil
+	return blockHeaders, nil
 }
 
 // Stop stops the Fetcher.
@@ -472,21 +471,36 @@ func (f *Fetcher) nextBatchHeader() (*sequencerv2types.BatchHeader, error) {
 	defer f.lastPulledL1BlockNumber.Store(batchesRef.L1BlockNumber)
 
 	header := sequencerv2types.BatchHeader{
-		L1BlockNumber: batchesRef.L1BlockNumber,
-		L1TxHash:      batchesRef.L1TxHash.Hex(),
-		L1TxIndex:     uint32(batchesRef.L1TxIndex),
-		ChainId:       uint32(f.chainID.Uint64()),
+		L1BlockNumber:     batchesRef.L1BlockNumber,
+		L1TxHash:          batchesRef.L1TxHash.Hex(),
+		L1TxIndex:         uint32(batchesRef.L1TxIndex),
+		ChainId:           uint32(f.chainID.Uint64()),
+		L2FromBlockNumber: batchesRef.L2BlockNumber,
+		L2ToBlockNumber:   batchesRef.L2BlockNumber + uint64(batchesRef.L2BlockCount) - 1,
 	}
 
+	if f.isLight {
+		firstBlockHash, err := f.l2Client.GetBlockHashByNumber(batchesRef.L2BlockNumber)
+		if err != nil {
+			return nil, err
+		}
+		header.L2Blocks = []*sequencerv2types.BlockHeader{
+			{
+				BlockNumber: batchesRef.L2BlockNumber,
+				BlockHash:   firstBlockHash.Hex(),
+			},
+		}
+		return &header, nil
+	}
 	l2Blocks := make([]*sequencerv2types.BlockHeader, 0)
 	fromBlockNumber := batchesRef.L2BlockNumber
 	for _, batch := range batchesRef.Batches {
 		toBlockNumber := fromBlockNumber + uint64(batch.BlockCount) - 1
-		l2BlockHashes, err := f.getL2BlockHashes(fromBlockNumber, toBlockNumber)
+		l2BlockHeaders, err := f.getL2BlockHeaders(fromBlockNumber, toBlockNumber)
 		if err != nil {
 			return nil, err
 		}
-		l2Blocks = append(l2Blocks, l2BlockHashes...)
+		l2Blocks = append(l2Blocks, l2BlockHeaders...)
 		fromBlockNumber = toBlockNumber + 1
 	}
 	header.L2Blocks = l2Blocks
