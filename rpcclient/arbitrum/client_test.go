@@ -16,7 +16,7 @@ func TestErrorHandling(t *testing.T) {
 		BatchInbox:         common.Address{}.Hex(),
 		ConcurrentFetchers: 4,
 	}
-	client, err := NewClient(cfg)
+	client, err := NewClient(cfg, true)
 	require.NoError(t, err)
 
 	client.SetBeginBlockNumber(10)

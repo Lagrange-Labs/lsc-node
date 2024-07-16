@@ -37,7 +37,7 @@ type RpcAdapter struct {
 
 // newRpcAdapter creates a new rpc adapter.
 func newRpcAdapter(rpcCfg *rpcclient.Config, cfg *Config, pubkey []byte) (*RpcAdapter, uint32, error) {
-	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg)
+	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg, false)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to create the rpc client: %v, please check the chain name, the chain name should look like 'optimism', 'base'", err)
 	}

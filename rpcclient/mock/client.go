@@ -23,12 +23,11 @@ type Client struct {
 
 	mtx               sync.Mutex
 	fromL1BlockNumber uint64
-
-	chainID uint32
+	chainID           uint32
 }
 
 // NewClient creates a new Client instance.
-func NewClient(cfg *Config) (*Client, error) {
+func NewClient(cfg *Config, _ bool) (*Client, error) {
 	client, err := evmclient.NewClient(cfg.RPCURL)
 	if err != nil {
 		return nil, err
