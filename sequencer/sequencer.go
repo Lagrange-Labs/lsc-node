@@ -437,7 +437,7 @@ func (s *Sequencer) getVoteWeightChanges(blockNumber *big.Int) (map[common.Addre
 		FromBlock: blockNumber,
 		ToBlock:   blockNumber,
 		Addresses: []common.Address{s.committeeParams.committeeSCAddr},
-		Topics:    [][]common.Hash{{updateCommittee}},
+		Topics:    [][]common.Hash{{updateCommittee}, {common.HexToHash(fmt.Sprintf("%x", s.chainID))}},
 	}
 	logs, err := s.etherClient.FilterLogs(s.ctx, queryFilter)
 	if err != nil {
