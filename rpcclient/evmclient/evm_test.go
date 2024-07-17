@@ -8,7 +8,7 @@ import (
 )
 
 func TestEndpoints(t *testing.T) {
-	c, err := NewClient("http://localhost:8545")
+	c, err := NewClient([]string{"http://localhost:8545"})
 	require.NoError(t, err)
 	id, err := c.GetChainID()
 	require.NoError(t, err)
@@ -32,7 +32,7 @@ func TestFinalizedL2BlockNumber(t *testing.T) {
 	if optURL == "" {
 		t.Skip("OPT_RPC not set")
 	}
-	c, err := NewClient(optURL)
+	c, err := NewClient([]string{optURL})
 	require.NoError(t, err)
 
 	cNum, err := c.GetCurrentBlockNumber()
@@ -47,7 +47,7 @@ func TestFinalizedL2BlockNumber(t *testing.T) {
 	if arbURL == "" {
 		t.Skip("ARB_RPC not set")
 	}
-	c, err = NewClient(arbURL)
+	c, err = NewClient([]string{arbURL})
 	require.NoError(t, err)
 
 	cNum, err = c.GetCurrentBlockNumber()
@@ -60,7 +60,7 @@ func TestFinalizedL2BlockNumber(t *testing.T) {
 }
 
 func TestBlocksByRange(t *testing.T) {
-	c, err := NewClient("http://localhost:8545")
+	c, err := NewClient([]string{"http://localhost:8545"})
 	require.NoError(t, err)
 
 	start := uint64(1)

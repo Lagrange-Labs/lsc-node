@@ -30,8 +30,8 @@ func TestFetchCommittee(t *testing.T) {
 	}
 	rpcConfig := rpcclient.Config{
 		Optimism: &optimism.Config{
-			RPCURL:      optURL,
-			L1RPCURL:    ethURL,
+			RPCURLs:     []string{optURL},
+			L1RPCURLs:   []string{ethURL},
 			BeaconURL:   "http://localhost:8545",
 			BatchInbox:  "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f",
 			BatchSender: "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f",

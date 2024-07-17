@@ -10,8 +10,8 @@ import (
 
 func TestErrorHandling(t *testing.T) {
 	cfg := &Config{
-		RPCURL:             "http://localhost:8545",
-		L1RPCURL:           "http://localhost:8545",
+		RPCURLs:            []string{"http://localhost:8545"},
+		L1RPCURLs:          []string{"http://localhost:8545"},
 		BeaconURL:          "http://localhost:8545",
 		BatchInbox:         common.Address{}.Hex(),
 		BatchSender:        common.Address{}.Hex(),

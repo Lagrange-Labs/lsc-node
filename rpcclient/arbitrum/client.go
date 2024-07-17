@@ -18,7 +18,7 @@ type Client struct {
 
 // NewClient creates a new Client instance.
 func NewClient(cfg *Config, isLight bool) (*Client, error) {
-	client, err := evmclient.NewClient(cfg.RPCURL)
+	client, err := evmclient.NewClient(cfg.RPCURLs)
 	if err != nil {
 		return nil, err
 	}

@@ -8,7 +8,6 @@ import (
 	"github.com/ethereum/go-ethereum"
 	"github.com/ethereum/go-ethereum/accounts/abi"
 	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
@@ -23,7 +22,7 @@ var _ types.RpcClient = (*Client)(nil)
 type Client struct {
 	evmclient.Client
 
-	ethClient    *ethclient.Client
+	ethClient    *evmclient.Client
 	batchStorage common.Address // Address of the L1BatchStorage contract
 }
 
@@ -46,12 +45,12 @@ func init() {
 
 // NewClient creates a new Client instance.
 func NewClient(cfg *Config, isLight bool) (*Client, error) {
-	client, err := evmclient.NewClient(cfg.RPCURL)
+	client, err := evmclient.NewClient(cfg.RPCURLs)
 	if err != nil {
 		return nil, err
 	}
 
-	ethClient, err := ethclient.Dial(cfg.L1RPCURL)
+	ethClient, err := evmclient.NewClient(cfg.L1RPCURLs)
 	if err != nil {
 		return nil, err
 	}
@@ -65,7 +64,7 @@ func NewClient(cfg *Config, isLight bool) (*Client, error) {
 
 // GetFinalizedBlockNumber returns the L2 finalized block number.
 func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
-	b, err := c.ethClient.BlockNumber(utils.GetContext())
+	b, err := c.ethClient.GetEthClient().BlockNumber(utils.GetContext())
 	if err != nil {
 		logger.Errorf("failed to get block number: %v", err)
 		return 0, err
@@ -81,7 +80,7 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 		Data: abiInput,
 	}
 
-	result, err := c.ethClient.CallContract(utils.GetContext(), msg, big.NewInt(int64(b-64)))
+	result, err := c.ethClient.GetEthClient().CallContract(utils.GetContext(), msg, big.NewInt(int64(b-64)))
 	if err != nil {
 		if strings.Contains(err.Error(), "missing trie node") {
 			// TODO: This is a temporary workaround for the missing trie node error.
