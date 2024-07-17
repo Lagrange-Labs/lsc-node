@@ -226,7 +226,7 @@ func (f *Fetcher) getL2BlockHeaders(start, end uint64) ([]*sequencerv2types.Bloc
 		if !ok {
 			return nil, errors.New("block hash is not found")
 		}
-		blockHeaders[i] = blockHeader.(*sequencerv2types.BlockHeader)
+		blockHeaders[i-start] = blockHeader.(*sequencerv2types.BlockHeader)
 	}
 	return blockHeaders, nil
 }
