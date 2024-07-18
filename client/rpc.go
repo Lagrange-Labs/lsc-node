@@ -26,7 +26,10 @@ const (
 	pruningBlocks = 1000
 )
 
-var _ Adapter = (*RpcAdapter)(nil)
+var (
+	_ AdapterCaller  = (*RpcAdapter)(nil)
+	_ AdapterTrigger = (*RpcAdapter)(nil)
+)
 
 // RpcAdapter is the adapter for the RPC client.
 type RpcAdapter struct {
@@ -117,10 +120,10 @@ func (r *RpcAdapter) startBatchFetching(chErr chan<- error) {
 	}
 }
 
-// initBeginBlockNumber initializes the begin block number for the RPC client.
-func (r *RpcAdapter) initBeginBlockNumber(blockNumber uint64) error {
+// InitBeginBlockNumber initializes the begin block number for the RPC client.
+func (r *RpcAdapter) InitBeginBlockNumber(blockNumber uint64) error {
 	// set the open block number
-	r.openL1BlockNumber.Store(blockNumber)
+	r.SetOpenL1BlockNumber(blockNumber)
 
 	lastStoredBlockNumber := uint64(0)
 	// get the last stored block number
@@ -232,8 +235,8 @@ func (r *RpcAdapter) GetBatchHeader(l1BlockNumber, l2BlockNumber uint64, l1TxInd
 	}
 }
 
-// setOpenL1BlockNumber sets the open L1 block number.
-func (r *RpcAdapter) setOpenL1BlockNumber(blockNumber uint64) {
+// SetOpenL1BlockNumber sets the open L1 block number.
+func (r *RpcAdapter) SetOpenL1BlockNumber(blockNumber uint64) {
 	r.openL1BlockNumber.Store(blockNumber)
 }
 

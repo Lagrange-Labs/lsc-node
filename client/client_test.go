@@ -136,12 +136,12 @@ func TestRPCStorage(t *testing.T) {
 	require.Equal(t, uint64(8), batch.L1BlockNumber)
 
 	// init begin block number
-	err = adapter.initBeginBlockNumber(5)
+	err = adapter.InitBeginBlockNumber(5)
 	require.NoError(t, err)
 	beginBlockNumber := <-chBeginBlockNumber
 	require.Equal(t, uint64(10), beginBlockNumber)
 
-	err = adapter.initBeginBlockNumber(11)
+	err = adapter.InitBeginBlockNumber(11)
 	require.NoError(t, err)
 	beginBlockNumber = <-chBeginBlockNumber
 	require.Equal(t, uint64(11), beginBlockNumber)
