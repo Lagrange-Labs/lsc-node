@@ -13,6 +13,7 @@ import (
 	"github.com/ethereum/go-ethereum/common/lru"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
+	"github.com/ethereum/go-ethereum/rlp"
 	"github.com/ethereum/go-ethereum/rpc"
 
 	"github.com/Lagrange-Labs/lagrange-node/logger"
@@ -203,7 +204,7 @@ func (c *Client) GetBlockHeadersByRange(start, end uint64) ([]sequencerv2types.B
 			return nil, err
 		}
 		buffer.Reset()
-		if err := header.EncodeRLP(&buffer); err != nil {
+		if err := rlp.Encode(&buffer, header); err != nil {
 			return nil, err
 		}
 		blockHeaders[i] = sequencerv2types.BlockHeader{
@@ -279,4 +280,14 @@ func (c *Client) GetBlockByNumber(blockNumber uint64) (*ethtypes.Block, error) {
 		return nil, err
 	}
 	return b.(*ethtypes.Block), nil
+}
+
+// GetBlockHashFromRLPHeader returns the block hash and the parent hash from the rlp encoded block header.
+func (c *Client) GetBlockHashFromRLPHeader(rlpHeader []byte) (common.Hash, common.Hash, error) {
+	header := &ethtypes.Header{}
+	if err := rlp.Decode(bytes.NewReader(rlpHeader), header); err != nil {
+		return common.Hash{}, common.Hash{}, err
+	}
+
+	return header.Hash(), header.ParentHash, nil
 }

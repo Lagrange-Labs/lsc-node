@@ -86,6 +86,10 @@ func (b *Batch) TotalVotingPower() uint64 {
 
 // FromBlockNumber returns the block number of the first block in the batch header.
 func (bh *BatchHeader) FromBlockNumber() uint64 {
+	if bh.L2FromBlockNumber > 0 {
+		return bh.L2FromBlockNumber
+	}
+
 	if len(bh.L2Blocks) == 0 {
 		return 0
 	}
@@ -95,6 +99,10 @@ func (bh *BatchHeader) FromBlockNumber() uint64 {
 
 // ToBlockNumber returns the block number of the last block in the batch header.
 func (bh *BatchHeader) ToBlockNumber() uint64 {
+	if bh.L2ToBlockNumber > 0 {
+		return bh.L2ToBlockNumber
+	}
+
 	if len(bh.L2Blocks) == 0 {
 		return 0
 	}

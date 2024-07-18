@@ -1,6 +1,7 @@
 package mock
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -9,11 +10,15 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
+	"github.com/ethereum/go-ethereum/rlp"
 
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
+
+const batchBlockCount = 5
 
 var _ types.RpcClient = (*Client)(nil)
 
@@ -21,13 +26,14 @@ var _ types.RpcClient = (*Client)(nil)
 type Client struct {
 	evmclient.Client
 
+	isLight           bool
 	mtx               sync.Mutex
 	fromL1BlockNumber uint64
 	chainID           uint32
 }
 
 // NewClient creates a new Client instance.
-func NewClient(cfg *Config, _ bool) (*Client, error) {
+func NewClient(cfg *Config, isLight bool) (*Client, error) {
 	client, err := evmclient.NewClient(cfg.RPCURLs)
 	if err != nil {
 		return nil, err
@@ -39,6 +45,7 @@ func NewClient(cfg *Config, _ bool) (*Client, error) {
 
 	return &Client{
 		Client:  *client,
+		isLight: isLight,
 		chainID: chainID,
 	}, nil
 }
@@ -74,14 +81,15 @@ func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) bool {
 // NextBatch returns the next batch after SetBeginBlockNumber.
 func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
 	c.mtx.Lock()
-	l2BlockNumber := c.fromL1BlockNumber
+	l1BlockNumber := c.fromL1BlockNumber
 	c.mtx.Unlock()
-	blockHeader, err := c.GetBlockHeaderByNumber(l2BlockNumber, common.Hash{})
+	l2BlockNumber := l1BlockNumber + batchBlockCount - 1
+	_, err := c.GetBlockHeaderByNumber(l2BlockNumber, common.Hash{})
 	if err != nil {
 		if errors.Is(err, types.ErrNoResult) {
 			// wait for the block to be available
 			for {
-				blockHeader, err = c.GetBlockHeaderByNumber(l2BlockNumber, common.Hash{})
+				_, err = c.GetBlockHeaderByNumber(l2BlockNumber, common.Hash{})
 				if errors.Is(err, types.ErrNoResult) {
 					time.Sleep(1 * time.Second)
 					continue
@@ -96,20 +104,45 @@ func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
 		}
 	}
 
+	l2Blocks := make([]*sequencerv2types.BlockHeader, 0, batchBlockCount)
+	if c.isLight {
+		blockHeader, err := c.GetBlockHeaderByNumber(l2BlockNumber-batchBlockCount+1, common.Hash{})
+		if err != nil {
+			return nil, fmt.Errorf("failed to get the block header for block number: %d  error: %w", l2BlockNumber-batchBlockCount, err)
+		}
+		l2Blocks = append(l2Blocks, &sequencerv2types.BlockHeader{
+			BlockNumber: l2BlockNumber - batchBlockCount + 1,
+			BlockHash:   blockHeader.Hash().Hex(),
+		})
+	} else {
+		for i := uint64(0); i < batchBlockCount; i++ {
+			blockHeader, err := c.GetBlockHeaderByNumber(l2BlockNumber-batchBlockCount+i+1, common.Hash{})
+			if err != nil {
+				return nil, fmt.Errorf("failed to get the block header for block number: %d  error: %w", l2BlockNumber-batchBlockCount+i, err)
+			}
+			var buffer bytes.Buffer
+			if err := rlp.Encode(&buffer, blockHeader); err != nil {
+				return nil, fmt.Errorf("failed to encode the block header: %v", err)
+			}
+			l2Blocks = append(l2Blocks, &sequencerv2types.BlockHeader{
+				BlockNumber: l2BlockNumber - batchBlockCount + i + 1,
+				BlockHash:   blockHeader.Hash().Hex(),
+				BlockRlp:    utils.Bytes2Hex(buffer.Bytes()),
+			})
+		}
+	}
+
 	c.mtx.Lock()
-	c.fromL1BlockNumber++
+	c.fromL1BlockNumber += batchBlockCount
 	c.mtx.Unlock()
 
 	return &sequencerv2types.BatchHeader{
-		BatchNumber: blockHeader.Number.Uint64(),
-		ChainId:     c.chainID,
-		L2Blocks: []*sequencerv2types.BlockHeader{
-			{
-				BlockNumber: l2BlockNumber,
-				BlockHash:   blockHeader.Hash().Hex(),
-			},
-		},
-		L1BlockNumber: blockHeader.Number.Uint64(),
-		L1TxHash:      blockHeader.Hash().Hex(),
+		BatchNumber:       l1BlockNumber,
+		ChainId:           c.chainID,
+		L2Blocks:          l2Blocks,
+		L1BlockNumber:     l1BlockNumber,
+		L2FromBlockNumber: l2BlockNumber - batchBlockCount + 1,
+		L2ToBlockNumber:   l2BlockNumber,
+		L1TxHash:          l2Blocks[0].BlockHash,
 	}, nil
 }

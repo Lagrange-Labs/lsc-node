@@ -52,19 +52,23 @@ func TestConvertProtobufToMongo(t *testing.T) {
 	// Test with batch
 	batch := &sequencerv2types.Batch{
 		BatchHeader: &sequencerv2types.BatchHeader{
-			BatchNumber:   1,
-			L1BlockNumber: 1,
-			L1TxHash:      utils.RandomHex(32),
-			L1TxIndex:     1,
-			ChainId:       1,
+			BatchNumber:       1,
+			L1BlockNumber:     1,
+			L1TxHash:          utils.RandomHex(32),
+			L1TxIndex:         1,
+			ChainId:           1,
+			L2FromBlockNumber: 1,
+			L2ToBlockNumber:   2,
 			L2Blocks: []*sequencerv2types.BlockHeader{
 				{
 					BlockNumber: 1,
 					BlockHash:   utils.RandomHex(32),
+					BlockRlp:    utils.RandomHex(100),
 				},
 				{
 					BlockNumber: 2,
 					BlockHash:   utils.RandomHex(32),
+					BlockRlp:    utils.RandomHex(120),
 				},
 			},
 		},
@@ -88,9 +92,12 @@ func TestConvertProtobufToMongo(t *testing.T) {
 	require.Equal(t, batch.BatchHeader.L1TxHash, mBatch["batch_header"].(primitive.M)["l1_tx_hash"])
 	require.Equal(t, batch.BatchHeader.L1TxIndex, mBatch["batch_header"].(primitive.M)["l1_tx_index"])
 	require.Equal(t, batch.BatchHeader.ChainId, mBatch["batch_header"].(primitive.M)["chain_id"])
+	require.Equal(t, batch.BatchHeader.L2FromBlockNumber, mBatch["batch_header"].(primitive.M)["l2_from_block_number"])
+	require.Equal(t, batch.BatchHeader.L2ToBlockNumber, mBatch["batch_header"].(primitive.M)["l2_to_block_number"])
 	require.Equal(t, len(batch.BatchHeader.L2Blocks), len(mBatch["batch_header"].(primitive.M)["l2_blocks"].(primitive.A)))
 	require.Equal(t, batch.BatchHeader.L2Blocks[0].BlockNumber, mBatch["batch_header"].(primitive.M)["l2_blocks"].(primitive.A)[0].(primitive.M)["block_number"])
 	require.Equal(t, batch.BatchHeader.L2Blocks[1].BlockHash, mBatch["batch_header"].(primitive.M)["l2_blocks"].(primitive.A)[1].(primitive.M)["block_hash"])
+	require.Equal(t, batch.BatchHeader.L2Blocks[1].BlockRlp, mBatch["batch_header"].(primitive.M)["l2_blocks"].(primitive.A)[1].(primitive.M)["block_rlp"])
 	require.Equal(t, batch.CommitteeHeader.CurrentCommittee, mBatch["committee_header"].(primitive.M)["current_committee"])
 	require.Equal(t, batch.CommitteeHeader.NextCommittee, mBatch["committee_header"].(primitive.M)["next_committee"])
 	require.Equal(t, batch.CommitteeHeader.TotalVotingPower, mBatch["committee_header"].(primitive.M)["total_voting_power"])
@@ -141,19 +148,23 @@ func TestConvertMongoToBlock(t *testing.T) {
 func TestConvertMongoToBatch(t *testing.T) {
 	m := bson.M{
 		"batch_header": bson.M{
-			"batch_number":    int64(1),
-			"l1_block_number": int64(1),
-			"l1_tx_hash":      utils.RandomHex(32),
-			"l1_tx_index":     int64(1),
-			"chain_id":        int64(1),
+			"batch_number":         int64(1),
+			"l1_block_number":      int64(1),
+			"l1_tx_hash":           utils.RandomHex(32),
+			"l1_tx_index":          int64(1),
+			"chain_id":             int64(1),
+			"l2_from_block_number": int64(1),
+			"l2_to_block_number":   int64(2),
 			"l2_blocks": bson.A{
 				bson.M{
 					"block_number": int64(1),
 					"block_hash":   utils.RandomHex(32),
+					"block_rlp":    utils.RandomHex(100),
 				},
 				bson.M{
 					"block_number": int64(2),
 					"block_hash":   utils.RandomHex(32),
+					"block_rlp":    utils.RandomHex(120),
 				},
 			},
 		},
@@ -176,6 +187,7 @@ func TestConvertMongoToBatch(t *testing.T) {
 	require.Equal(t, len(m["batch_header"].(bson.M)["l2_blocks"].(bson.A)), len(batch.BatchHeader.L2Blocks))
 	require.Equal(t, m["batch_header"].(bson.M)["l2_blocks"].(bson.A)[0].(bson.M)["block_number"], int64(batch.BatchHeader.L2Blocks[0].BlockNumber))
 	require.Equal(t, m["batch_header"].(bson.M)["l2_blocks"].(bson.A)[1].(bson.M)["block_hash"], batch.BatchHeader.L2Blocks[1].BlockHash)
+	require.Equal(t, m["batch_header"].(bson.M)["l2_blocks"].(bson.A)[1].(bson.M)["block_rlp"], batch.BatchHeader.L2Blocks[1].BlockRlp)
 	require.Equal(t, m["committee_header"].(bson.M)["current_committee"], batch.CommitteeHeader.CurrentCommittee)
 	require.Equal(t, m["committee_header"].(bson.M)["next_committee"], batch.CommitteeHeader.NextCommittee)
 	require.Equal(t, m["committee_header"].(bson.M)["total_voting_power"], int64(batch.CommitteeHeader.TotalVotingPower))
