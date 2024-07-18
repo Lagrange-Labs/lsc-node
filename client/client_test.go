@@ -62,6 +62,10 @@ func (m *mockRPC) GetChainID() (uint32, error) {
 	return 0, nil
 }
 
+func (m *mockRPC) GetBlockHashFromRLPHeader(rlpHeader []byte) (common.Hash, common.Hash, error) {
+	return common.Hash{}, common.Hash{}, nil
+}
+
 func (m *mockRPC) SetBeginBlockNumber(l1BlockNumber uint64) bool {
 	m.chBeginBlockNumber <- l1BlockNumber
 	return true

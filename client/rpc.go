@@ -17,6 +17,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/store/goleveldb"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
+	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/protobuf/proto"
 )
 
@@ -24,6 +25,8 @@ const (
 	clientDBPath  = ".lagrange/db/"
 	pruningBlocks = 1000
 )
+
+var _ Adapter = (*RpcAdapter)(nil)
 
 // RpcAdapter is the adapter for the RPC client.
 type RpcAdapter struct {
@@ -37,7 +40,7 @@ type RpcAdapter struct {
 
 // newRpcAdapter creates a new rpc adapter.
 func newRpcAdapter(rpcCfg *rpcclient.Config, cfg *Config, pubkey []byte) (*RpcAdapter, uint32, error) {
-	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg, false)
+	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg, true)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to create the rpc client: %v, please check the chain name, the chain name should look like 'optimism', 'base'", err)
 	}
@@ -232,4 +235,9 @@ func (r *RpcAdapter) GetBatchHeader(l1BlockNumber, l2BlockNumber uint64, l1TxInd
 // setOpenL1BlockNumber sets the open L1 block number.
 func (r *RpcAdapter) setOpenL1BlockNumber(blockNumber uint64) {
 	r.openL1BlockNumber.Store(blockNumber)
+}
+
+// GetBlockHash implements the Adapter interface.
+func (r *RpcAdapter) GetBlockHash(rlpHeader []byte) (common.Hash, common.Hash, error) {
+	return r.client.GetBlockHashFromRLPHeader(rlpHeader)
 }

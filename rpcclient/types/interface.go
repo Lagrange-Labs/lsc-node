@@ -30,6 +30,8 @@ type RpcClient interface {
 	SetBeginBlockNumber(l1BlockNumber uint64) bool
 	// NextBatch returns the next batch after SetBeginBlockNumber.
 	NextBatch() (*sequencerv2types.BatchHeader, error)
+	// GetBlockHashFromRLPHeader returns the block hash and the parent hash from the rlp encoded block header.
+	GetBlockHashFromRLPHeader(rlpHeader []byte) (common.Hash, common.Hash, error)
 }
 
 type EvmClient interface {
