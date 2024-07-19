@@ -69,7 +69,7 @@ func (suite *ClientTestSuite) Test_Client_Start() {
 		require.NoError(t, err)
 
 		stakeAddress := suite.client.GetStakeAddress()
-		node, err := suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress, suite.client.GetChainID())
+		node, err := suite.manager.Storage.GetNodeByStakeAddr(context.Background(), stakeAddress, suite.manager.GetChainID())
 		require.NoError(t, err)
 		require.Equal(t, servertypes.NodeJoined, node.Status)
 	})

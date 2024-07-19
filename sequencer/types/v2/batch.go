@@ -112,6 +112,17 @@ func (bh *BatchHeader) ToBlockNumber() uint64 {
 
 // Hash returns the hash of the batch header.
 func (bh *BatchHeader) Hash() []byte {
+	h := append([]byte{}, utils.Hex2Bytes(bh.L1TxHash)...)
+	h = append(h, utils.Uint64ToBytes(bh.L1BlockNumber)...)
+	for _, block := range bh.L2Blocks {
+		h = append(h, utils.Uint64ToBytes(block.BlockNumber)...)
+		h = append(h, utils.Hex2Bytes(block.BlockHash)...)
+	}
+	return utils.Hash(h)
+}
+
+// MerkleHash returns the hash of the batch header.
+func (bh *BatchHeader) MerkleHash() []byte {
 	h := append([]byte{}, utils.Uint64ToBytes(uint64(bh.ChainId))...)
 	h = append(h, utils.Hex2Bytes(bh.L1TxHash)...)
 	h = append(h, utils.Uint64ToBytes(bh.L1BlockNumber)...)

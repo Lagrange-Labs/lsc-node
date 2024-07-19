@@ -12,6 +12,7 @@ import (
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/utils"
+	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/lru"
 	"github.com/ethereum/go-ethereum/ethclient"
@@ -21,30 +22,38 @@ const (
 	committeeCacheSize = 10
 )
 
-type Adapter interface {
+// AdapterCaller is the interface to get the batch header from the rpc client.
+type AdapterCaller interface {
 	GetBatchHeader(l1BlockNumber, l2BlockNumber uint64, l1TxIndex uint32) (*sequencerv2types.BatchHeader, error)
 	GetPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (uint64, error)
 	GetBlockHash(rlpHeader []byte) (common.Hash, common.Hash, error)
 }
 
+// CommitteeBackend is the interface to get the committee data from the smart contract.
+type CommitteeBackend interface {
+	GetCommittee(opts *bind.CallOpts, chainID uint32, blockNumber *big.Int) (committee.ILagrangeCommitteeCommitteeData, error)
+}
+
+var _ VerifierCaller = (*Verifier)(nil)
+
 // Verifier is the struct to verify the batch from the sequencer.
 type Verifier struct {
-	adapter   Adapter
+	adapter   AdapterCaller
 	blsScheme crypto.BLSScheme
 
-	committeeSC        *committee.Committee
+	committeeSC        CommitteeBackend
 	committeeCache     *lru.Cache[uint64, *committee.ILagrangeCommitteeCommitteeData]
 	genesisBlockNumber uint64
 	chainID            uint32
 }
 
 // newVerifier creates a new verifier.
-func newVerifier(cfg *Config, adapter Adapter, chainID uint32) (*Verifier, error) {
+func newVerifier(cfg *Config, adapter AdapterCaller, chainID uint32) (*Verifier, error) {
 	etherClient, err := ethclient.Dial(cfg.EthereumURL)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the ethereum client: %v", err)
 	}
-	committeeSC, err := committee.NewCommittee(common.HexToAddress(cfg.CommitteeSCAddress), etherClient)
+	committeeSC, err := committee.NewCommitteeCaller(common.HexToAddress(cfg.CommitteeSCAddress), etherClient)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the committee smart contract: %v", err)
 	}
@@ -71,7 +80,7 @@ func (v *Verifier) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCom
 	}
 
 	ti := time.Now()
-	defer telemetry.MeasureSince(ti, "client", "get_committee")
+	defer telemetry.MeasureSince(ti, "client", "get_committee_root")
 
 	committeeData, err := v.committeeSC.GetCommittee(nil, v.chainID, big.NewInt(int64(blockNumber)))
 	if err != nil || committeeData.LeafCount == 0 {

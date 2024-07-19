@@ -21,18 +21,27 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
-const (
-	CommitteeCacheSize = 10
-)
-
 var (
 	// ErrBatchNotFinalized is returned when the current batch is not finalized yet.
 	ErrBatchNotFinalized = errors.New("the current batch is not finalized yet")
 )
 
+// PreviousBatchInfo is the struct to store the previous batch information.
 type PreviousBatchInfo struct {
 	NextCommitteeRoot string
 	L1BlockNumber     uint64
+}
+
+// AdapterTrigger is the interface to trigger the adapter.
+type AdapterTrigger interface {
+	InitBeginBlockNumber(uint64) error
+	SetOpenL1BlockNumber(uint64)
+}
+
+// VerifierCaller is the interface to verify the batch.
+type VerifierCaller interface {
+	VerifyBatch(*sequencerv2types.Batch) error
+	VerifyPrevBatch(uint64, uint64) error
 }
 
 // Client is a gRPC client to join the network
@@ -40,8 +49,8 @@ type Client struct {
 	serverv2types.NetworkServiceClient
 	healthMgr *healthManager
 	blsScheme crypto.BLSScheme
-	adapter   *RpcAdapter
-	verifier  *Verifier
+	adapter   AdapterTrigger
+	verifier  VerifierCaller
 
 	blsPrivateKey         []byte
 	blsPublicKey          string
@@ -106,7 +115,10 @@ func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 		logger.Fatalf("failed to get the health client: %v", err)
 	}
 
-	c := &Client{
+	chErr := make(chan error, committeeCacheSize)
+	go adapter.startBatchFetching(chErr)
+
+	return &Client{
 		NetworkServiceClient:  healthClient,
 		healthMgr:             healthMgr,
 		adapter:               adapter,
@@ -118,21 +130,13 @@ func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 		stakeAddress:          cfg.OperatorAddress,
 		pullInterval:          time.Duration(cfg.PullInterval),
 
-		chErr: make(chan error, CommitteeCacheSize),
-	}
-	go adapter.startBatchFetching(c.chErr)
-
-	return c, nil
+		chErr: chErr,
+	}, nil
 }
 
 // GetStakeAddress returns the stake address.
 func (c *Client) GetStakeAddress() string {
 	return c.stakeAddress
-}
-
-// GetChainID returns the chain ID.
-func (c *Client) GetChainID() uint32 {
-	return c.adapter.chainID
 }
 
 // Start starts the connection loop.
@@ -165,7 +169,7 @@ func (c *Client) Start() error {
 				}
 				if errors.Is(err, ErrBatchNotFound) {
 					logger.Warnf("The batch is not found, please check the metrics for the RPC provider. There may be a delay or a performance issue.")
-					if err := c.adapter.initBeginBlockNumber(batch.L1BlockNumber()); err != nil {
+					if err := c.adapter.InitBeginBlockNumber(batch.L1BlockNumber()); err != nil {
 						logger.Errorf("failed to initialize the begin block number: %v", err)
 					}
 					continue
@@ -255,7 +259,7 @@ func (c *Client) joinNetwork() error {
 
 	c.jwToken = res.Token
 
-	if err := c.adapter.initBeginBlockNumber(res.PrevL1BlockNumber); err != nil {
+	if err := c.adapter.InitBeginBlockNumber(res.PrevL1BlockNumber); err != nil {
 		return fmt.Errorf("failed to initialize the begin block number: %v", err)
 	}
 
@@ -278,7 +282,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	telemetry.MeasureSince(ti, "client", "get_batch_request")
 
 	batch := res.Batch
-	c.adapter.setOpenL1BlockNumber(batch.L1BlockNumber())
+	c.adapter.SetOpenL1BlockNumber(batch.L1BlockNumber())
 	logger.Infof("get the batch with L1 block number %d with L2 block number from %d to %d", batch.L1BlockNumber(), batch.BatchHeader.FromBlockNumber(), batch.BatchHeader.ToBlockNumber())
 
 	// verify the batch
