@@ -215,7 +215,7 @@ func initMetrics(cfg telemetry.Config, module string) error {
 
 func versionCmd(*cli.Context) error {
 	w := os.Stdout
-	fmt.Fprintf(w, "Version:      %s\n", "v0.1.0")
+	fmt.Fprintf(w, "Version:      %s\n", "v1.0.x")
 	fmt.Fprintf(w, "Go version:   %s\n", runtime.Version())
 	fmt.Fprintf(w, "OS/Arch:      %s/%s\n", runtime.GOOS, runtime.GOARCH)
 	return nil
