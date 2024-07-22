@@ -31,6 +31,7 @@ func up_0003(client *mongo.Client) error {
 				"$gte": batchNumber,
 				"$lt":  endBatchNumber,
 			},
+			"batch_header.l2_from_block_number": bson.M{"$exists": false},
 		}
 		cursor, err := db.Collection("batches").Find(context.Background(), filter)
 		if err != nil {
@@ -56,8 +57,8 @@ func up_0003(client *mongo.Client) error {
 				toL2BlockNumber := batch.BatchHeader.L2Blocks[len(batch.BatchHeader.L2Blocks)-1].BlockNumber
 				update := bson.M{
 					"$set": bson.M{
-						"l2_from_block_number": fromL2BlockNumber,
-						"l2_to_block_number":   toL2BlockNumber,
+						"batch_header.l2_from_block_number": fromL2BlockNumber,
+						"batch_header.l2_to_block_number":   toL2BlockNumber,
 					},
 				}
 				_, err := db.Collection("batches").UpdateOne(context.Background(), bson.M{
