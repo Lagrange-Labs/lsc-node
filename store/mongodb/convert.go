@@ -124,14 +124,22 @@ func ConvertMongoToBatch(m bson.M) *sequencerv2types.Batch {
 		batch.BatchHeader.L1TxIndex = uint32(mBatchHeader["l1_tx_index"].(int64))
 		batch.BatchHeader.ChainId = uint32(mBatchHeader["chain_id"].(int64))
 		batch.BatchHeader.L2Blocks = make([]*sequencerv2types.BlockHeader, 0)
-		batch.BatchHeader.L2FromBlockNumber = uint64(mBatchHeader["l2_from_block_number"].(int64))
-		batch.BatchHeader.L2ToBlockNumber = uint64(mBatchHeader["l2_to_block_number"].(int64))
+		if val, ok := mBatchHeader["l2_from_block_number"]; ok && val != nil {
+			batch.BatchHeader.L2FromBlockNumber = uint64(val.(int64))
+		}
+		if val, ok := mBatchHeader["l2_to_block_number"]; ok && val != nil {
+			batch.BatchHeader.L2ToBlockNumber = uint64(val.(int64))
+		}
 		for _, l2Block := range mBatchHeader["l2_blocks"].(primitive.A) {
 			mL2Block := l2Block.(bson.M)
+			rlpBlock := "0x"
+			if val, ok := mL2Block["block_rlp"]; ok && val != nil {
+				rlpBlock = val.(string)
+			}
 			batch.BatchHeader.L2Blocks = append(batch.BatchHeader.L2Blocks, &sequencerv2types.BlockHeader{
 				BlockNumber: uint64(mL2Block["block_number"].(int64)),
 				BlockHash:   mL2Block["block_hash"].(string),
-				BlockRlp:    mL2Block["block_rlp"].(string),
+				BlockRlp:    rlpBlock,
 			})
 		}
 	}
@@ -149,6 +157,11 @@ func ConvertMongoToBatch(m bson.M) *sequencerv2types.Batch {
 		batch.PubKeys = make([]string, 0)
 		for _, pubKey := range m["pub_keys"].(primitive.A) {
 			batch.PubKeys = append(batch.PubKeys, pubKey.(string))
+		}
+		if operators, ok := m["operators"]; ok {
+			for _, operator := range operators.(primitive.A) {
+				batch.Operators = append(batch.Operators, operator.(string))
+			}
 		}
 	}
 
