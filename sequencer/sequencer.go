@@ -30,12 +30,16 @@ import (
 const (
 	// SyncInterval is the interval between two block syncs after fully synced.
 	SyncInterval = 1 * time.Second
+
+	maskBitLen = 112
 )
 
 var (
 	operatorSharesIncreased = crypto.Keccak256Hash([]byte("OperatorSharesIncreased(address,address,address,uint256)"))
 	operatorSharesDecreased = crypto.Keccak256Hash([]byte("OperatorSharesDecreased(address,address,address,uint256)"))
 	updateCommittee         = crypto.Keccak256Hash([]byte("UpdateCommittee(uint256,uint256,bytes32)"))
+	// This is the mask to get the block number from the UpdatedBlockNumber in Holesky network.
+	l1BlockNumberMask = new(big.Int).Sub(new(big.Int).Lsh(big.NewInt(1), maskBitLen), big.NewInt(1))
 )
 
 // CommitteeParams is the committee parameters.
@@ -388,23 +392,22 @@ func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRo
 	ti := time.Now()
 	defer telemetry.MeasureSince(ti, "sequencer", "fetch_committee_root")
 
-	epoch, err := s.committeeSC.GetEpochInterval(nil, s.chainID, big.NewInt(int64(epochNumber)))
+	committeeData, err := s.committeeSC.Committees(nil, s.chainID, big.NewInt(int64(epochNumber)))
 	if err != nil {
-		return nil, fmt.Errorf("failed to get epoch interval for epoch number %d: %w", epochNumber, err)
-	}
-
-	epochStartBlockNumber := uint64(epoch.StartBlock.Int64() - s.committeeParams.L1Bias)
-	committeeData, err := s.committeeSC.GetCommittee(nil, s.chainID, big.NewInt(int64(epochStartBlockNumber)))
-	if err != nil {
-		logger.Errorf("failed to get committee data for block number %d, epoch number %d: %w", epochStartBlockNumber, epochNumber, err)
+		logger.Errorf("failed to get committee data for epoch number %d: %w", epochNumber, err)
 		return nil, err
 	}
 	if committeeData.LeafCount == 0 {
-		logger.Warnf("no operator in the committee for block number %d, epoch number %d", epochStartBlockNumber, epochNumber)
+		logger.Warnf("no operator in the committee for epoch number %d", epochNumber)
 		return nil, fmt.Errorf("no operator in the committee epoch number %d", epochNumber)
 	}
 
-	operators, err := s.fetchOperatorInfos(committeeData.UpdatedBlock, committeeData.LeafCount)
+	epochStartBlockNumber := big.NewInt(0).Rsh(committeeData.UpdatedBlock, maskBitLen).Uint64()
+	updatedBlockNumber := big.NewInt(0).And(committeeData.UpdatedBlock, l1BlockNumberMask)
+	if epochStartBlockNumber == 0 {
+		epochStartBlockNumber = uint64(updatedBlockNumber.Int64() - s.committeeParams.L1Bias)
+	}
+	operators, err := s.fetchOperatorInfos(updatedBlockNumber, committeeData.LeafCount)
 	if err != nil {
 		logger.Errorf("failed to fetch operator infos: %w", err)
 		return nil, err
