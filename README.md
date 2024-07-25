@@ -1,6 +1,6 @@
-# Lagrange Node
+# Lagrange State Committee Node
 
-This is the Lagrange Node, a node that can be used to run a Lagrange network.
+This is the LSC Node, a node that can be used to run a Lagrange State Committee network.
 
 ## Table of Contents
 
@@ -11,7 +11,7 @@ This is the Lagrange Node, a node that can be used to run a Lagrange network.
 
 ## Architecture
 
-The Lagrange Node consists of the following components:
+The LSC Node consists of the following components:
 
 - Sequencer
 - AVS-Synchronizer
