@@ -56,8 +56,8 @@ func up_0003(client *mongo.Client) error {
 				toL2BlockNumber := batch.BatchHeader.L2Blocks[len(batch.BatchHeader.L2Blocks)-1].BlockNumber
 				update := bson.M{
 					"$set": bson.M{
-						"l2_from_block_number": fromL2BlockNumber,
-						"l2_to_block_number":   toL2BlockNumber,
+						"batch_header.l2_from_block_number": fromL2BlockNumber,
+						"batch_header.l2_to_block_number":   toL2BlockNumber,
 					},
 				}
 				_, err := db.Collection("batches").UpdateOne(context.Background(), bson.M{
@@ -94,7 +94,7 @@ func down_0003(client *mongo.Client) error {
 	res, err := batchesCollection.UpdateMany(
 		context.Background(),
 		filter,
-		bson.M{"$unset": bson.M{"l2_from_block_number": "", "l2_to_block_number": ""}},
+		bson.M{"$unset": bson.M{"batch_header.l2_from_block_number": "", "batch_header.l2_to_block_number": ""}},
 	)
 	if err != nil {
 		return err
