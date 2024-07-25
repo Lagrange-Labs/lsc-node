@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/andybalholm/brotli v1.1.0
-	github.com/consensys/gnark-crypto v0.12.1
+	github.com/consensys/gnark-crypto v0.13.0
 	github.com/ethereum-optimism/optimism v1.7.6
 	github.com/ethereum/go-ethereum v1.13.15
 	github.com/golang-jwt/jwt/v5 v5.2.1
