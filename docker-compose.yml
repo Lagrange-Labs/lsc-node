@@ -239,7 +239,7 @@ services:
       - "/app/lagrange-node run-client"
   lagrangesc:
     container_name: lagrange-smart-contract
-    image: lagrangelabs/lagrange-contracts:v0.2.2
+    image: lagrangelabs/lagrange-contracts:develop
     networks:
       localnet:
         ipv4_address: 192.168.20.100
