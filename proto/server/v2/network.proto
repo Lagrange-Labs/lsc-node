@@ -21,6 +21,7 @@ message JoinNetworkRequest {
     string public_key = 1;
     string stake_address = 2;
     string signature = 3;
+    string node_version = 4;
 }
 
 // JoinNetworkResponse is the response for joining the network
