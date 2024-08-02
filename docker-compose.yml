@@ -172,7 +172,7 @@ services:
       - "/app/lagrange-node run-client"
   simnode5:
     container_name: node4
-    image: lagrange-node
+    image: lagrangelabs/lagrange-node:v1.0.0
     environment:
       - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.23s
@@ -194,7 +194,7 @@ services:
       - "/app/lagrange-node run-client"
   simnode6:
     container_name: node5
-    image: lagrange-node
+    image: lagrangelabs/lagrange-node:v1.0.0
     environment:
       - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
       - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.38s

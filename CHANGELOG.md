@@ -39,6 +39,8 @@ Change Categories
 
 ### Features
 
+* [#525](https://github.com/Lagrange-Labs/lsc-node/pull/525) Add the logic to check the version compatibility.
+
 ### Enhancements
 
 ### Fixes
