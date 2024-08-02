@@ -24,6 +24,9 @@ import (
 var (
 	// ErrBatchNotFinalized is returned when the current batch is not finalized yet.
 	ErrBatchNotFinalized = errors.New("the current batch is not finalized yet")
+
+	// NodeVersion is used to check the compatibility between the client and the server.
+	NodeVersion = "v1.0.0"
 )
 
 // PreviousBatchInfo is the struct to store the previous batch information.
@@ -237,6 +240,7 @@ func (c *Client) joinNetwork() error {
 	req := &serverv2types.JoinNetworkRequest{
 		PublicKey:    c.blsPublicKey,
 		StakeAddress: c.stakeAddress,
+		NodeVersion:  NodeVersion,
 	}
 	reqMsg, err := proto.Marshal(req)
 	if err != nil {

@@ -28,6 +28,11 @@ var (
 	ErrNotCommitteeMember = errors.New("the given operator is not a member of the current committee")
 	// ErrCheckCommitteeMember is returned when the check committee member failed.
 	ErrCheckCommitteeMember = errors.New("failed to check the committee member")
+
+	// MinCompatibleVersion is the minimum compatible version.
+	MinCompatibleVersion = utils.Version{Major: 0, Minor: 0, Patch: 0}
+	// ExpectedVersion is the expected version.
+	ExpectedVersion = utils.Version{Major: 1, Minor: 0, Patch: 0}
 )
 
 type sequencerService struct {
@@ -57,6 +62,23 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *v2types.JoinNet
 	logger.Infof("JoinNetwork request: %+v", req)
 	ti := time.Now()
 	defer telemetry.MeasureSince(ti, "server", "join_network")
+
+	// Verify the node version
+	if len(req.NodeVersion) == 0 {
+		logger.Warnf("The node version is empty, expected version: %s", ExpectedVersion.String())
+	} else {
+		nv, err := utils.GetVersion(req.NodeVersion)
+		if err != nil {
+			return nil, fmt.Errorf("failed to parse the node version: %v", err)
+		}
+		if MinCompatibleVersion.Compare(nv) > 0 {
+			logger.Warnf("The node version is not compatible, the minimum compatible version: %s", MinCompatibleVersion.String())
+			return nil, fmt.Errorf("the node version is not compatible, the minimum compatible version: %s", MinCompatibleVersion.String())
+		}
+		if ExpectedVersion.Compare(nv) > 0 {
+			logger.Warnf("The node version is not expected, the expected version: %s", ExpectedVersion)
+		}
+	}
 
 	// Verify signature
 	sigMessage := req.Signature
