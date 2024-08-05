@@ -8,11 +8,10 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/ethereum/go-ethereum/accounts/keystore"
+	"github.com/ethereum/go-ethereum/common"
 	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	"github.com/google/uuid"
-
-	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/ethereum/go-ethereum/accounts/keystore"
 )
 
 type CryptoCurve string
@@ -83,7 +82,7 @@ func saveBLSKey(curve BLSCurve, privKey []byte, password, filePath string) error
 	}
 
 	encKey := encryptedBLSKey{
-		PubKey: utils.Bytes2Hex(pubKey),
+		PubKey: common.Bytes2Hex(pubKey),
 		Crypto: encryptedKey,
 	}
 	encKeyData, err := json.Marshal(encKey)
