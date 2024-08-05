@@ -1,0 +1,24 @@
+syntax = "proto3";
+
+package signer.v1;
+
+option go_package = "github.com/Lagrange-Labs/lagrange-node/signer/types";
+
+// SignerService is the service that provides the Sign method.
+service SignerService {
+  // Sign signs the given message with the given key.
+  rpc Sign(SignRequest) returns (SignResponse);
+}
+
+// SignRequest is the request message for the Sign method.
+message SignRequest {
+  string account_id = 1;
+  uint64 request_id = 2;
+  string sign_method = 3;
+  string message = 4; 
+}
+
+// SignResponse is the response message for the Sign method.
+message SignResponse {
+  string signature = 1;
+}
