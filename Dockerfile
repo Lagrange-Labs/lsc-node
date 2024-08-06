@@ -8,6 +8,7 @@ ENV CGO_CFLAGS_ALLOW="-O -D__BLST_PORTABLE__"
 
 # INSTALL DEPENDENCIES
 COPY go.mod go.sum /src/
+COPY crypto/go.mod crypto/go.sum /src/crypto/
 RUN cd /src && go mod download
 
 # BUILD BINARY
