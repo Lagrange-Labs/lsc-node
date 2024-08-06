@@ -1,7 +1,5 @@
 package crypto
 
-import "github.com/Lagrange-Labs/lagrange-node/utils"
-
 var (
 	LeafPrefix  = []byte{1}
 	InnerPrefix = []byte{2}
@@ -11,7 +9,7 @@ var (
 func MerkleRoot(data [][]byte) []byte {
 
 	if len(data) == 0 {
-		return utils.Hash([]byte{})
+		return Hash([]byte{})
 	}
 
 	emptyLeaf := make([]byte, 32)
@@ -55,9 +53,9 @@ func nextPowerOfTwo(n int) int {
 }
 
 func leafHash(data []byte) []byte {
-	return utils.Hash(LeafPrefix, data)
+	return Hash(LeafPrefix, data)
 }
 
 func innerHash(left, right []byte) []byte {
-	return utils.Hash(InnerPrefix, left, right)
+	return Hash(InnerPrefix, left, right)
 }
