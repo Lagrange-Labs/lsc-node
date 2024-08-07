@@ -3,6 +3,7 @@ package main
 import (
 	"fmt"
 	"os"
+	"os/signal"
 	"runtime"
 
 	"github.com/Lagrange-Labs/lagrange-node/signer"
@@ -82,6 +83,11 @@ func runServer(ctx *cli.Context) error {
 	if err := signer.RunServer(cfg.GRPCPort, signers); err != nil {
 		return err
 	}
+
+	// Wait for an in interrupt.
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	<-ch
 
 	return nil
 }

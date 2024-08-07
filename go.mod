@@ -4,6 +4,7 @@ go 1.21
 
 require (
 	github.com/Lagrange-Labs/lagrange-node/crypto v0.1.0
+	github.com/Lagrange-Labs/lagrange-node/signer v0.1.0
 	github.com/andybalholm/brotli v1.1.0
 	github.com/ethereum-optimism/optimism v1.7.6
 	github.com/ethereum/go-ethereum v1.13.15
@@ -101,7 +102,7 @@ require (
 	github.com/prometheus/common v0.53.0 // indirect
 	github.com/prometheus/procfs v0.12.0 // indirect
 	github.com/rivo/uniseg v0.4.7 // indirect
-	github.com/rogpeppe/go-internal v1.10.0 // indirect
+	github.com/rogpeppe/go-internal v1.11.0 // indirect
 	github.com/rs/cors v1.9.0 // indirect
 	github.com/russross/blackfriday/v2 v2.1.0 // indirect
 	github.com/sagikazarmark/locafero v0.4.0 // indirect
@@ -145,3 +146,5 @@ require (
 replace github.com/ethereum/go-ethereum => github.com/ethereum-optimism/op-geth v1.101315.1-rc.5
 
 replace github.com/Lagrange-Labs/lagrange-node/crypto => ./crypto
+
+replace github.com/Lagrange-Labs/lagrange-node/signer => ./signer

@@ -42,7 +42,7 @@ type RpcAdapter struct {
 }
 
 // newRpcAdapter creates a new rpc adapter.
-func newRpcAdapter(rpcCfg *rpcclient.Config, cfg *Config, pubkey []byte) (*RpcAdapter, uint32, error) {
+func newRpcAdapter(rpcCfg *rpcclient.Config, cfg *Config, accountID string) (*RpcAdapter, uint32, error) {
 	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg, true)
 	if err != nil {
 		return nil, 0, fmt.Errorf("failed to create the rpc client: %v, please check the chain name, the chain name should look like 'optimism', 'base'", err)
@@ -61,7 +61,7 @@ func newRpcAdapter(rpcCfg *rpcclient.Config, cfg *Config, pubkey []byte) (*RpcAd
 	if err := os.MkdirAll(dbPath, os.ModePerm); err != nil {
 		logger.Fatalf("failed to create the database directory: %v", err)
 	}
-	dbPath = filepath.Join(dbPath, fmt.Sprintf("client_%d_%x.db", chainID, pubkey))
+	dbPath = filepath.Join(dbPath, fmt.Sprintf("client_%d_%s.db", chainID, accountID))
 	db, err := goleveldb.NewDB(dbPath)
 	if err != nil {
 		logger.Fatalf("failed to create the database: %v", err)

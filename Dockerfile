@@ -17,5 +17,6 @@ RUN cd /src && make build
 
 FROM alpine:edge
 COPY --from=build /src/dist/lagrange-node /app/lagrange-node
+COPY --from=build /src/dist/lagrange-signer /app/lagrange-signer
 EXPOSE 9090
 CMD ["/bin/sh", "-c", "/app/lagrange-node run-server"]
