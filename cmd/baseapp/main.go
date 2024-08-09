@@ -19,6 +19,8 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/server"
+	"github.com/Lagrange-Labs/lagrange-node/signer"
+	signerlocal "github.com/Lagrange-Labs/lagrange-node/signer/local"
 	"github.com/Lagrange-Labs/lagrange-node/store"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 )
@@ -78,6 +80,13 @@ func main() {
 			Aliases: []string{},
 			Usage:   "Run the lagrange sequencer node",
 			Action:  runSequencer,
+			Flags:   flags,
+		},
+		{
+			Name:    "run-signer",
+			Aliases: []string{},
+			Usage:   "Run the lagrange signer server",
+			Action:  runSingerServer,
 			Flags:   flags,
 		},
 	}
@@ -188,6 +197,40 @@ func runSequencer(ctx *cli.Context) error {
 	if err := sequencer.Start(); err != nil {
 		return fmt.Errorf("failed to start sequencer: %w", err)
 	}
+
+	return nil
+}
+
+func runSingerServer(ctx *cli.Context) error {
+	cfg, err := signer.Load(ctx)
+	if err != nil {
+		return err
+	}
+
+	signers := make(map[string]signer.Signer)
+	for _, providerCfg := range cfg.ProviderConfigs {
+		switch providerCfg.Type {
+		case "local":
+			signer, err := signerlocal.NewProvider(providerCfg.LocalConfig)
+			if err != nil {
+				return fmt.Errorf("failed to create local signer: %w", err)
+			}
+			signers[providerCfg.LocalConfig.AccountID] = signer
+		case "awskms":
+			return fmt.Errorf("AWS KMS provider not implemented")
+		default:
+			return fmt.Errorf("invalid provider type: %s", providerCfg.Type)
+		}
+	}
+
+	if err := signer.RunServer(cfg.GRPCPort, signers); err != nil {
+		return err
+	}
+
+	// Wait for an in interrupt.
+	ch := make(chan os.Signal, 1)
+	signal.Notify(ch, os.Interrupt)
+	<-ch
 
 	return nil
 }

@@ -1,17 +1,14 @@
 package client
 
 import (
-	"crypto/ecdsa"
 	"errors"
 	"fmt"
 	"strings"
 	"time"
 
 	"github.com/ethereum/go-ethereum/common"
-	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
@@ -47,44 +44,41 @@ type VerifierCaller interface {
 	VerifyPrevBatch(uint64, uint64) error
 }
 
+// SignerCaller is the interface to sign the batch.
+type SignerCaller interface {
+	Sign(keyType string, msg []byte) ([]byte, error)
+	GetPublicKey(keyType string) (string, error)
+}
+
 // Client is a gRPC client to join the network
 type Client struct {
 	serverv2types.NetworkServiceClient
 	healthMgr *healthManager
-	blsScheme crypto.BLSScheme
 	adapter   AdapterTrigger
 	verifier  VerifierCaller
+	signer    SignerCaller
 
-	blsPrivateKey         []byte
-	blsPublicKey          string
-	signerECDSAPrivateKey *ecdsa.PrivateKey
-	jwToken               string
-	stakeAddress          string
-	pullInterval          time.Duration
+	blsPublicKey string
+	jwToken      string
+	stakeAddress string
+	pullInterval time.Duration
 
 	chErr chan error
 }
 
 // NewClient creates a new client.
 func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
-	if len(cfg.BLSKeystorePasswordPath) > 0 {
-		var err error
-		cfg.BLSKeystorePassword, err = crypto.ReadKeystorePasswordFromFile(cfg.BLSKeystorePasswordPath)
-		if err != nil {
-			logger.Fatalf("failed to read the bls keystore password from %s: %v", cfg.BLSKeystorePasswordPath, err)
-		}
-	}
-	blsPriv, err := crypto.LoadPrivateKey(crypto.CryptoCurve(cfg.BLSCurve), cfg.BLSKeystorePassword, cfg.BLSKeystorePath)
+	signer, err := NewSignerClient(cfg)
 	if err != nil {
-		logger.Fatalf("failed to load the bls keystore from %s: %v", cfg.BLSKeystorePath, err)
-	}
-	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
-	pubkey, err := blsScheme.GetPublicKey(blsPriv, false)
-	if err != nil {
-		logger.Fatalf("failed to get the bls public key: %v", err)
+		return nil, fmt.Errorf("failed to create the signer client: %v", err)
 	}
 
-	adapter, chainID, err := newRpcAdapter(rpcCfg, cfg, pubkey)
+	blsPublicKey, err := signer.GetPublicKey("BLS")
+	if err != nil {
+		return nil, fmt.Errorf("failed to get the BLS public key: %v", err)
+	}
+
+	adapter, chainID, err := newRpcAdapter(rpcCfg, cfg, cfg.BLSKeyAccountID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the rpc adapter: %v", err)
 	}
@@ -92,21 +86,6 @@ func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 	verifier, err := newVerifier(cfg, adapter, chainID)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the verifier: %v", err)
-	}
-
-	if len(cfg.SignerECDSAKeystorePasswordPath) > 0 {
-		cfg.SignerECDSAKeystorePassword, err = crypto.ReadKeystorePasswordFromFile(cfg.SignerECDSAKeystorePasswordPath)
-		if err != nil {
-			logger.Fatalf("failed to read the ecdsa keystore password from %s: %v", cfg.SignerECDSAKeystorePasswordPath, err)
-		}
-	}
-	ecdsaPrivKey, err := crypto.LoadPrivateKey(crypto.CryptoCurve("ECDSA"), cfg.SignerECDSAKeystorePassword, cfg.SignerECDSAKeystorePath)
-	if err != nil {
-		logger.Fatalf("failed to load the ecdsa keystore from %s: %v", cfg.SignerECDSAKeystorePath, err)
-	}
-	ecdsaPriv, err := ecrypto.ToECDSA(ecdsaPrivKey)
-	if err != nil {
-		logger.Fatalf("failed to get the ecdsa private key: %v", err)
 	}
 
 	healthMgr, err := newHealthManager(cfg.GrpcURLs)
@@ -122,16 +101,14 @@ func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 	go adapter.startBatchFetching(chErr)
 
 	return &Client{
-		NetworkServiceClient:  healthClient,
-		healthMgr:             healthMgr,
-		adapter:               adapter,
-		verifier:              verifier,
-		blsScheme:             blsScheme,
-		blsPrivateKey:         blsPriv,
-		blsPublicKey:          utils.Bytes2Hex(pubkey),
-		signerECDSAPrivateKey: ecdsaPriv,
-		stakeAddress:          cfg.OperatorAddress,
-		pullInterval:          time.Duration(cfg.PullInterval),
+		NetworkServiceClient: healthClient,
+		signer:               signer,
+		healthMgr:            healthMgr,
+		adapter:              adapter,
+		verifier:             verifier,
+		blsPublicKey:         blsPublicKey,
+		stakeAddress:         cfg.OperatorAddress,
+		pullInterval:         time.Duration(cfg.PullInterval),
 
 		chErr: chErr,
 	}, nil
@@ -246,7 +223,7 @@ func (c *Client) joinNetwork() error {
 	if err != nil {
 		return fmt.Errorf("failed to marshal the request: %v", err)
 	}
-	sig, err := c.blsScheme.Sign(c.blsPrivateKey, reqMsg)
+	sig, err := c.signer.Sign("BLS", reqMsg)
 	if err != nil {
 		return fmt.Errorf("failed to sign the request: %v", err)
 	}
@@ -304,7 +281,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 	defer telemetry.MeasureSince(ti, "client", "try_commit_batch")
 
 	blsSignature := batch.BlsSignature()
-	blsSig, err := c.blsScheme.Sign(c.blsPrivateKey, blsSignature.Hash())
+	blsSig, err := c.signer.Sign("BLS", blsSignature.Hash())
 	if err != nil {
 		return fmt.Errorf("failed to sign the BLS signature: %v", err)
 	}
@@ -312,7 +289,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 
 	// generate the ECDSA signature
 	msg := blsSignature.CommitHash()
-	sig, err := ecrypto.Sign(msg, c.signerECDSAPrivateKey)
+	sig, err := c.signer.Sign("ECDSA", msg)
 	if err != nil {
 		return fmt.Errorf("failed to ecdsa sign the block: %v", err)
 	}

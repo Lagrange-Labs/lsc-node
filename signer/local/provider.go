@@ -19,8 +19,13 @@ type provider struct {
 	scheme          crypto.BLSScheme
 }
 
+// NewProvider creates a new local provider.
 func NewProvider(cfg *signer.LocalConfig) (signer.Signer, error) {
-	privateKey, err := crypto.LoadPrivateKey(crypto.CryptoCurve(cfg.KeyType), cfg.PasswordKeyPath, cfg.PrivateKeyPath)
+	password, err := crypto.ReadKeystorePasswordFromFile(cfg.PasswordKeyPath)
+	if err != nil {
+		return nil, err
+	}
+	privateKey, err := crypto.LoadPrivateKey(crypto.CryptoCurve(cfg.KeyType), password, cfg.PrivateKeyPath)
 	if err != nil {
 		return nil, err
 	}
@@ -44,12 +49,26 @@ func NewProvider(cfg *signer.LocalConfig) (signer.Signer, error) {
 	return p, err
 }
 
+// Sign signs the message.
 func (p *provider) Sign(msg []byte) ([]byte, error) {
 	switch p.keyType {
 	case string(crypto.BLS12381), string(crypto.BN254):
 		return p.scheme.Sign(p.privateKey, msg)
 	case "ECDSA":
 		return ecrypto.Sign(msg, p.ecdsaPrivateKey)
+	default:
+		return nil, errors.New("invalid curve")
+	}
+}
+
+// GetPubKey gets the public key.
+func (p *provider) GetPubKey() ([]byte, error) {
+	switch p.keyType {
+	case string(crypto.BLS12381), string(crypto.BN254):
+		return p.scheme.GetPublicKey(p.privateKey, true)
+	case "ECDSA":
+		addr := ecrypto.PubkeyToAddress(p.ecdsaPrivateKey.PublicKey)
+		return addr.Bytes(), nil
 	default:
 		return nil, errors.New("invalid curve")
 	}

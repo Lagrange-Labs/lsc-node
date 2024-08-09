@@ -49,15 +49,24 @@ type Config struct {
 }
 
 const DefaultValues = `
-[ProviderConfig]
-  [ProviderConfig.LocalConfig]
-    AccountID = ""
-	KeyType = "ECDSA"
-	PrivateKeyPath = ""
-	PasswordKeyPath = ""
-
 CertKeyPath = ""
 GRPCPort = "50051"
+
+[[ProviderConfigs]]
+	Type = "local"
+	[ProviderConfigs.LocalConfig]
+		AccountID = "ecdsa-signer-key"
+		KeyType = "ECDSA"
+		PrivateKeyPath = "/home/lagrange/Lagrange/lagrange-node/testutil/vector/config/ecdsa_0.json"
+		PasswordKeyPath = "/home/lagrange/Lagrange/lagrange-node/testutil/vector/config/keystore_password"
+
+[[ProviderConfigs]]
+	Type = "local"
+	[ProviderConfigs.LocalConfig]
+		AccountID = "bls-sign-key"
+		KeyType = "BN254"
+		PrivateKeyPath = "/home/lagrange/Lagrange/lagrange-node/testutil/vector/config/bls_0.json"
+		PasswordKeyPath = "/home/lagrange/Lagrange/lagrange-node/testutil/vector/config/keystore_password"
 `
 
 // Default parses the default configuration values.

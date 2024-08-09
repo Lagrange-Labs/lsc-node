@@ -1,6 +1,6 @@
 module github.com/Lagrange-Labs/lagrange-node/signer
 
-go 1.22.3
+go 1.21
 
 require (
 	github.com/Lagrange-Labs/lagrange-node/crypto v0.0.0-00010101000000-000000000000

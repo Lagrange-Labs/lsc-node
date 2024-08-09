@@ -13,6 +13,11 @@ import (
 	"google.golang.org/grpc/health/grpc_health_v1"
 )
 
+const (
+	// PublicKeyMethod is the method to get the public key.
+	PublicKeyMethod = "public_key"
+)
+
 var (
 	// ErrSignerNotFound is returned when the signer is not found.
 	ErrSignerNotFound = errors.New("signer not found")
@@ -103,6 +108,17 @@ func (s *signerService) Sign(ctx context.Context, req *types.SignRequest) (*type
 	signer, ok := s.signers[req.AccountId]
 	if !ok {
 		return nil, ErrSignerNotFound
+	}
+
+	if req.SignMethod == PublicKeyMethod {
+		pubKey, err := signer.GetPubKey()
+		if err != nil {
+			return nil, err
+		}
+
+		return &types.SignResponse{
+			Signature: common.Bytes2Hex(pubKey),
+		}, nil
 	}
 
 	sig, err := signer.Sign(common.Hex2Bytes(req.Message))
