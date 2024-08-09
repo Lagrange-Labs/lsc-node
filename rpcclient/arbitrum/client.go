@@ -1,7 +1,7 @@
 package arbitrum
 
 import (
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"

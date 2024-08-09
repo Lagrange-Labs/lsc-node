@@ -1,8 +1,8 @@
 package v2
 
 import (
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
 )
 
 // BatchNumber returns the batch number of the batch.
@@ -112,28 +112,28 @@ func (bh *BatchHeader) ToBlockNumber() uint64 {
 
 // Hash returns the hash of the batch header.
 func (bh *BatchHeader) Hash() []byte {
-	h := append([]byte{}, utils.Hex2Bytes(bh.L1TxHash)...)
-	h = append(h, utils.Uint64ToBytes(bh.L1BlockNumber)...)
+	h := append([]byte{}, core.Hex2Bytes(bh.L1TxHash)...)
+	h = append(h, core.Uint64ToBytes(bh.L1BlockNumber)...)
 	for _, block := range bh.L2Blocks {
-		h = append(h, utils.Uint64ToBytes(block.BlockNumber)...)
-		h = append(h, utils.Hex2Bytes(block.BlockHash)...)
+		h = append(h, core.Uint64ToBytes(block.BlockNumber)...)
+		h = append(h, core.Hex2Bytes(block.BlockHash)...)
 	}
-	return utils.Hash(h)
+	return crypto.Hash(h)
 }
 
 // MerkleHash returns the hash of the batch header.
 func (bh *BatchHeader) MerkleHash() []byte {
-	h := append([]byte{}, utils.Uint64ToBytes(uint64(bh.ChainId))...)
-	h = append(h, utils.Hex2Bytes(bh.L1TxHash)...)
-	h = append(h, utils.Uint64ToBytes(bh.L1BlockNumber)...)
-	h = append(h, utils.Uint64ToBytes(bh.FromBlockNumber())...)
-	h = append(h, utils.Uint64ToBytes(bh.ToBlockNumber())...)
+	h := append([]byte{}, core.Uint64ToBytes(uint64(bh.ChainId))...)
+	h = append(h, core.Hex2Bytes(bh.L1TxHash)...)
+	h = append(h, core.Uint64ToBytes(bh.L1BlockNumber)...)
+	h = append(h, core.Uint64ToBytes(bh.FromBlockNumber())...)
+	h = append(h, core.Uint64ToBytes(bh.ToBlockNumber())...)
 	hashes := make([][]byte, 0, len(bh.L2Blocks))
 	for _, block := range bh.L2Blocks {
-		hashes = append(hashes, utils.Hex2Bytes(block.BlockHash))
+		hashes = append(hashes, core.Hex2Bytes(block.BlockHash))
 	}
 	h = append(h, crypto.MerkleRoot(hashes)...)
-	return utils.Hash(h)
+	return crypto.Hash(h)
 }
 
 // BatchNumber returns the batch number of the bls signature.
@@ -147,17 +147,17 @@ func (b *BlsSignature) BatchNumber() uint64 {
 // Hash returns the hash of the bls signature.
 func (b *BlsSignature) Hash() []byte {
 	h := append([]byte{}, b.BatchHeader.Hash()...)
-	h = append(h, utils.Hex2Bytes(b.CommitteeHeader.CurrentCommittee)...)
-	h = append(h, utils.Hex2Bytes(b.CommitteeHeader.NextCommittee)...)
-	h = append(h, utils.Uint64ToBytes(b.CommitteeHeader.TotalVotingPower)...)
-	return utils.Hash(h)
+	h = append(h, core.Hex2Bytes(b.CommitteeHeader.CurrentCommittee)...)
+	h = append(h, core.Hex2Bytes(b.CommitteeHeader.NextCommittee)...)
+	h = append(h, core.Uint64ToBytes(b.CommitteeHeader.TotalVotingPower)...)
+	return crypto.Hash(h)
 }
 
 // CommitHash returns the hash of the commit bls signature.
 func (b *BlsSignature) CommitHash() []byte {
 	h := append([]byte{}, b.Hash()...)
-	h = append(h, utils.Hex2Bytes(b.BlsSignature)...)
-	return utils.Hash(h)
+	h = append(h, core.Hex2Bytes(b.BlsSignature)...)
+	return crypto.Hash(h)
 }
 
 // CurrentCommittee returns the current committee root of the bls signature.

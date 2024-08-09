@@ -6,16 +6,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/server"
 	serverv2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 var (
@@ -227,9 +226,9 @@ func (c *Client) joinNetwork() error {
 	if err != nil {
 		return fmt.Errorf("failed to sign the request: %v", err)
 	}
-	req.Signature = utils.Bytes2Hex(sig)
+	req.Signature = core.Bytes2Hex(sig)
 	ti := time.Now()
-	res, err := c.NetworkServiceClient.JoinNetwork(utils.GetContext(), req)
+	res, err := c.NetworkServiceClient.JoinNetwork(core.GetContext(), req)
 	if err != nil {
 		return fmt.Errorf("failed to join the network: %v", err)
 	}
@@ -250,7 +249,7 @@ func (c *Client) joinNetwork() error {
 // TryGetBatch tries to get the batch from the server.
 func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	ti := time.Now()
-	res, err := c.GetBatch(utils.GetContext(), &serverv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
+	res, err := c.GetBatch(core.GetContext(), &serverv2types.GetBatchRequest{StakeAddress: c.stakeAddress, Token: c.jwToken})
 	if err != nil {
 		if strings.Contains(err.Error(), server.ErrInvalidToken.Error()) {
 			return nil, server.ErrInvalidToken
@@ -285,7 +284,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 	if err != nil {
 		return fmt.Errorf("failed to sign the BLS signature: %v", err)
 	}
-	blsSignature.BlsSignature = utils.Bytes2Hex(blsSig)
+	blsSignature.BlsSignature = core.Bytes2Hex(blsSig)
 
 	// generate the ECDSA signature
 	msg := blsSignature.CommitHash()
@@ -293,7 +292,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 	if err != nil {
 		return fmt.Errorf("failed to ecdsa sign the block: %v", err)
 	}
-	blsSignature.EcdsaSignature = common.Bytes2Hex(sig)
+	blsSignature.EcdsaSignature = core.Bytes2Hex(sig)
 
 	req := &serverv2types.CommitBatchRequest{
 		BlsSignature: blsSignature,
@@ -302,7 +301,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 		Token:        c.jwToken,
 	}
 
-	ctx, cancel := utils.GetContextWithCancel()
+	ctx, cancel := core.GetContextWithCancel()
 	defer cancel()
 
 	stream, err := c.CommitBatch(ctx, req)

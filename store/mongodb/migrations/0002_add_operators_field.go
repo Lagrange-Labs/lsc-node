@@ -5,7 +5,7 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 	"go.mongodb.org/mongo-driver/mongo"
@@ -15,11 +15,11 @@ import (
 func up_0002(client *mongo.Client) error {
 	db := client.Database("state")
 	batchesCollection := db.Collection("batches")
-	batchSize := 2 // for testing purposes
+	batchSize := 2            // for testing purposes
 	chainId := uint64(421614) // keeping chainId static to avoid migration issues
 	lastBatchNumber := int64(0)
 	maxBatchNumber := int64(2) // for testing purposes
-	
+
 	// cache committee details for a range of batches to reduce the number of queries
 	var cachedCommitteeDetails map[string]interface{}
 	logger.Info("Updating operators field in batches")
@@ -27,12 +27,12 @@ func up_0002(client *mongo.Client) error {
 		logger.Infof("Fetching batches from %d to %d", lastBatchNumber, lastBatchNumber+int64(batchSize))
 		filter := bson.M{
 			"batch_header.batch_number": bson.M{
-				"$gt": lastBatchNumber,
+				"$gt":  lastBatchNumber,
 				"$lte": maxBatchNumber,
-				},
+			},
 			"batch_header.chain_id": chainId,
-			"agg_signature": bson.M{"$ne": ""},
-			"operators": bson.M{"$exists": false},
+			"agg_signature":         bson.M{"$ne": ""},
+			"operators":             bson.M{"$exists": false},
 		}
 		// Fetch the batch of documents from the database
 		cursor, err := batchesCollection.Find(context.Background(), filter, options.Find().SetLimit(int64(batchSize)).SetSort(bson.M{"batch_header.batch_number": 1}))
@@ -66,7 +66,7 @@ func up_0002(client *mongo.Client) error {
 				}
 				cachedCommitteeDetails = committee_details
 			}
-			
+
 			operators := make([]string, len(batch["pub_keys"].(primitive.A)))
 			for i, pubkey := range batch["pub_keys"].(primitive.A) {
 				pubkeyStr, ok := pubkey.(string)
@@ -92,7 +92,7 @@ func up_0002(client *mongo.Client) error {
 				context.Background(),
 				bson.M{
 					"batch_header.batch_number": batchNumber,
-					"batch_header.chain_id": chainId,
+					"batch_header.chain_id":     chainId,
 				},
 				bson.M{"$set": bson.M{"operators": operators}},
 			)
@@ -115,7 +115,7 @@ func down_0002(client *mongo.Client) error {
 	db := client.Database("state")
 	batchesCollection := db.Collection("batches")
 
-	fromBatchNumber := 0 // for testing purposes
+	fromBatchNumber := 0  // for testing purposes
 	toBatchNumber := 3700 // for testing purposes
 	chainId := 42161
 

@@ -6,16 +6,17 @@ import (
 	"math/big"
 	"time"
 
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/logger"
-	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	"github.com/Lagrange-Labs/lagrange-node/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/common/lru"
 	"github.com/ethereum/go-ethereum/ethclient"
+
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
+	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 )
 
 const (
@@ -139,7 +140,7 @@ func (v *Verifier) verifyBatchHeader(batch *sequencerv2types.Batch) error {
 	batchHash := batch.BatchHeader.Hash()
 	bhHash := batchHeader.Hash()
 	if !bytes.Equal(batchHash, bhHash) {
-		return fmt.Errorf("the batch hash %s is not equal to the batch header hash %s", utils.Bytes2Hex(batchHash), utils.Bytes2Hex(bhHash))
+		return fmt.Errorf("the batch hash %s is not equal to the batch header hash %s", core.Bytes2Hex(batchHash), core.Bytes2Hex(bhHash))
 	}
 
 	// verify the sequencer signature
@@ -147,7 +148,7 @@ func (v *Verifier) verifyBatchHeader(batch *sequencerv2types.Batch) error {
 		return fmt.Errorf("the block %d proposer key is empty", batch.BatchNumber())
 	}
 	blsSigHash := batch.BlsSignature().Hash()
-	verified, err := v.blsScheme.VerifySignature(common.FromHex(batch.ProposerPubKey), blsSigHash, common.FromHex(batch.ProposerSignature))
+	verified, err := v.blsScheme.VerifySignature(core.Hex2Bytes(batch.ProposerPubKey), blsSigHash, core.Hex2Bytes(batch.ProposerSignature))
 	if err != nil || !verified {
 		return fmt.Errorf("failed to verify the proposer signature: %v", err)
 	}
@@ -165,28 +166,28 @@ func (v *Verifier) verifyL2Blocks(batch *sequencerv2types.Batch, lightBatchHeade
 		return fmt.Errorf("the light batch to block number %d is not equal to the batch to block number %d", lightBatchHeader.ToBlockNumber(), batch.BatchHeader.ToBlockNumber())
 	}
 	// compare the fromBlockHash
-	if !bytes.Equal(utils.Hex2Bytes(lightBatchHeader.L2Blocks[0].BlockHash), utils.Hex2Bytes(batch.BatchHeader.L2Blocks[0].BlockHash)) {
+	if !bytes.Equal(core.Hex2Bytes(lightBatchHeader.L2Blocks[0].BlockHash), core.Hex2Bytes(batch.BatchHeader.L2Blocks[0].BlockHash)) {
 		return fmt.Errorf("the light batch from block hash %s is not equal to the batch from block hash %s", lightBatchHeader.L2Blocks[0].BlockHash, batch.BatchHeader.L2Blocks[0].BlockHash)
 	}
 	// compare the parent hash of the next block
 	for i := 0; i <= int(lightBatchHeader.ToBlockNumber()-lightBatchHeader.FromBlockNumber()); i++ {
-		curHash, parentHash, err := v.adapter.GetBlockHash(utils.Hex2Bytes(batch.BatchHeader.L2Blocks[i].BlockRlp))
+		curHash, parentHash, err := v.adapter.GetBlockHash(core.Hex2Bytes(batch.BatchHeader.L2Blocks[i].BlockRlp))
 		if err != nil {
 			return fmt.Errorf("failed to decode the block header: %v", err)
 		}
-		if !bytes.Equal(curHash[:], utils.Hex2Bytes(batch.BatchHeader.L2Blocks[i].BlockHash)) {
-			return fmt.Errorf("the block hash %s is not equal to the block header hash %s", batch.BatchHeader.L2Blocks[i].BlockHash, utils.Bytes2Hex(curHash[:]))
+		if !bytes.Equal(curHash[:], core.Hex2Bytes(batch.BatchHeader.L2Blocks[i].BlockHash)) {
+			return fmt.Errorf("the block hash %s is not equal to the block header hash %s", batch.BatchHeader.L2Blocks[i].BlockHash, core.Bytes2Hex(curHash[:]))
 		}
 		if i > 0 {
-			if !bytes.Equal(parentHash[:], utils.Hex2Bytes(batch.BatchHeader.L2Blocks[i-1].BlockHash)) {
-				return fmt.Errorf("the parent hash %s is not equal to the previous block hash %s", utils.Bytes2Hex(parentHash[:]), batch.BatchHeader.L2Blocks[i-1].BlockHash)
+			if !bytes.Equal(parentHash[:], core.Hex2Bytes(batch.BatchHeader.L2Blocks[i-1].BlockHash)) {
+				return fmt.Errorf("the parent hash %s is not equal to the previous block hash %s", core.Bytes2Hex(parentHash[:]), batch.BatchHeader.L2Blocks[i-1].BlockHash)
 			}
 			lightBatchHeader.L2Blocks = append(lightBatchHeader.L2Blocks, &sequencerv2types.BlockHeader{
 				BlockNumber: lightBatchHeader.FromBlockNumber() + uint64(i),
 			})
 		}
 
-		lightBatchHeader.L2Blocks[i].BlockHash = utils.Bytes2Hex(curHash[:])
+		lightBatchHeader.L2Blocks[i].BlockHash = core.Bytes2Hex(curHash[:])
 	}
 
 	return nil
@@ -214,8 +215,8 @@ func (v *Verifier) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 		if err != nil {
 			return fmt.Errorf("failed to get the previous committee root: %v", err)
 		}
-		if !bytes.Equal(utils.Hex2Bytes(batch.CurrentCommittee()), prevCommitteeData.Root[:]) {
-			return fmt.Errorf("the current batch committee root %s is not equal to the previous batch next committee root %s", batch.CurrentCommittee(), utils.Bytes2Hex(prevCommitteeData.Root[:]))
+		if !bytes.Equal(core.Hex2Bytes(batch.CurrentCommittee()), prevCommitteeData.Root[:]) {
+			return fmt.Errorf("the current batch committee root %s is not equal to the previous batch next committee root %s", batch.CurrentCommittee(), core.Bytes2Hex(prevCommitteeData.Root[:]))
 		}
 	}
 
@@ -224,8 +225,8 @@ func (v *Verifier) verifyCommitteeRoot(batch *sequencerv2types.Batch) error {
 	if err != nil {
 		return fmt.Errorf("failed to get the current committee root: %v", err)
 	}
-	if !bytes.Equal(utils.Hex2Bytes(batch.NextCommittee()), curCommitteeData.Root[:]) {
-		return fmt.Errorf("the current batch next committee root %s is not equal to the current committee root %s", batch.NextCommittee(), utils.Bytes2Hex(curCommitteeData.Root[:]))
+	if !bytes.Equal(core.Hex2Bytes(batch.NextCommittee()), curCommitteeData.Root[:]) {
+		return fmt.Errorf("the current batch next committee root %s is not equal to the current committee root %s", batch.NextCommittee(), core.Bytes2Hex(curCommitteeData.Root[:]))
 	}
 
 	return nil

@@ -7,11 +7,11 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
+	"github.com/Lagrange-Labs/lagrange-node/core"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
 	"github.com/Lagrange-Labs/lagrange-node/store/mongodb"
 	"github.com/Lagrange-Labs/lagrange-node/store/types"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 type StorageTestSuite struct {
@@ -29,22 +29,22 @@ func (s *StorageTestSuite) TestBatch() {
 		BatchHeader: &sequencerv2types.BatchHeader{
 			BatchNumber:   1,
 			L1BlockNumber: 1,
-			L1TxHash:      utils.RandomHex(32),
+			L1TxHash:      core.RandomHex(32),
 			ChainId:       chainID,
 			L2Blocks: []*sequencerv2types.BlockHeader{
 				{
 					BlockNumber: 1,
-					BlockHash:   utils.RandomHex(32),
+					BlockHash:   core.RandomHex(32),
 				},
 				{
 					BlockNumber: 2,
-					BlockHash:   utils.RandomHex(32),
+					BlockHash:   core.RandomHex(32),
 				},
 			},
 		},
 		CommitteeHeader: &sequencerv2types.CommitteeHeader{
-			CurrentCommittee: utils.RandomHex(32),
-			NextCommittee:    utils.RandomHex(32),
+			CurrentCommittee: core.RandomHex(32),
+			NextCommittee:    core.RandomHex(32),
 			TotalVotingPower: 100,
 		},
 		SequencedTime: time.Now().Format("2024-01-01 00:00:00.000000"),
@@ -53,22 +53,22 @@ func (s *StorageTestSuite) TestBatch() {
 		BatchHeader: &sequencerv2types.BatchHeader{
 			BatchNumber:   2,
 			L1BlockNumber: 2,
-			L1TxHash:      utils.RandomHex(32),
+			L1TxHash:      core.RandomHex(32),
 			ChainId:       chainID,
 			L2Blocks: []*sequencerv2types.BlockHeader{
 				{
 					BlockNumber: 3,
-					BlockHash:   utils.RandomHex(32),
+					BlockHash:   core.RandomHex(32),
 				},
 				{
 					BlockNumber: 4,
-					BlockHash:   utils.RandomHex(32),
+					BlockHash:   core.RandomHex(32),
 				},
 			},
 		},
 		CommitteeHeader: &sequencerv2types.CommitteeHeader{
-			CurrentCommittee: utils.RandomHex(32),
-			NextCommittee:    utils.RandomHex(32),
+			CurrentCommittee: core.RandomHex(32),
+			NextCommittee:    core.RandomHex(32),
 			TotalVotingPower: 100,
 		},
 		SequencedTime: time.Now().Format("2024-01-01 00:00:00.000000"),
@@ -93,8 +93,8 @@ func (s *StorageTestSuite) TestBatch() {
 	s.Require().NoError(err)
 	s.Require().Equal(uint64(0), bnf)
 
-	batch.AggSignature = utils.RandomHex(96)
-	batch.PubKeys = []string{utils.RandomHex(32), utils.RandomHex(32)}
+	batch.AggSignature = core.RandomHex(96)
+	batch.PubKeys = []string{core.RandomHex(32), core.RandomHex(32)}
 	batch.FinalizedTime = time.Now().Format("2024-01-01 00:00:00.000000")
 
 	err = storage.UpdateBatch(ctx, batch)

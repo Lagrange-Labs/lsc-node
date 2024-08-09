@@ -5,12 +5,12 @@ import (
 	"time"
 
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 	"github.com/Lagrange-Labs/lagrange-node/store/types"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 const KeyLen = 32
@@ -99,12 +99,12 @@ func (d *MemDB) AddBlock(ctx context.Context, block *sequencertypes.Block) error
 	lastBlock := &sequencertypes.Block{
 		ChainHeader: &sequencertypes.ChainHeader{
 			BlockNumber: blockNumber,
-			BlockHash:   utils.RandomHex(32),
+			BlockHash:   core.RandomHex(32),
 			ChainId:     1,
 		},
 		BlockHeader: &sequencertypes.BlockHeader{
-			CurrentCommittee: utils.RandomHex(32),
-			NextCommittee:    utils.RandomHex(32),
+			CurrentCommittee: core.RandomHex(32),
+			NextCommittee:    core.RandomHex(32),
 		},
 	}
 

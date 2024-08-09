@@ -5,11 +5,11 @@ import (
 	"fmt"
 	"sync"
 
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 // RoundState defines the internal consensus state.
@@ -151,8 +151,8 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 	// aggregate the signatures of client nodes
 	for operator, operatorSignatures := range rs.commitSignatures {
 		for pubKey, commit := range operatorSignatures {
-			signatures = append(signatures, utils.Hex2Bytes(commit.BlsSignature))
-			pubKeys = append(pubKeys, utils.Hex2Bytes(pubKey))
+			signatures = append(signatures, core.Hex2Bytes(commit.BlsSignature))
+			pubKeys = append(pubKeys, core.Hex2Bytes(pubKey))
 			operators = append(operators, operator)
 		}
 	}
@@ -163,9 +163,9 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 	} else {
 		verified, err := rs.blsScheme.VerifyAggregatedSignature(pubKeys, sigHash, aggSig)
 		if err == nil && verified {
-			rs.proposedBatch.AggSignature = utils.Bytes2Hex(aggSig)
+			rs.proposedBatch.AggSignature = core.Bytes2Hex(aggSig)
 			for _, pubKey := range pubKeys {
-				rs.proposedBatch.PubKeys = append(rs.proposedBatch.PubKeys, utils.Bytes2Hex(pubKey))
+				rs.proposedBatch.PubKeys = append(rs.proposedBatch.PubKeys, core.Bytes2Hex(pubKey))
 			}
 			rs.proposedBatch.Operators = operators
 			return nil
@@ -180,11 +180,11 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 		for pubKey, commit := range operatorSignatures {
 			commitHash := commit.Hash()
 			if !bytes.Equal(commitHash, sigHash) {
-				logger.Errorf("wrong commit message: %v, original: %v", utils.Bytes2Hex(commitHash), utils.Bytes2Hex(sigHash))
+				logger.Errorf("wrong commit message: %v, original: %v", core.Bytes2Hex(commitHash), core.Bytes2Hex(sigHash))
 				rs.addEvidence(operator, pubKey, commit)
 				continue
 			}
-			verified, err := rs.blsScheme.VerifySignature(utils.Hex2Bytes(pubKey), commitHash, utils.Hex2Bytes(commit.BlsSignature))
+			verified, err := rs.blsScheme.VerifySignature(core.Hex2Bytes(pubKey), commitHash, core.Hex2Bytes(commit.BlsSignature))
 			if err != nil {
 				logger.Errorf("failed to verify the signature: %v", err)
 				rs.addEvidence(operator, pubKey, commit)

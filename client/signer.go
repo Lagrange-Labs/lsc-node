@@ -10,11 +10,11 @@ import (
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/credentials/insecure"
 
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	"github.com/Lagrange-Labs/lagrange-node/signer"
 	"github.com/Lagrange-Labs/lagrange-node/signer/types"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 var _ SignerCaller = (*SignerClient)(nil)
@@ -89,7 +89,7 @@ func NewSignerClient(cfg *Config) (*SignerClient, error) {
 		isRemote:              false,
 		blsScheme:             blsScheme,
 		blsPrivateKey:         blsPriv,
-		blsPublicKey:          utils.Bytes2Hex(pubkey),
+		blsPublicKey:          core.Bytes2Hex(pubkey),
 		signerECDSAPrivateKey: ecdsaPriv,
 	}, nil
 }
@@ -108,7 +108,7 @@ func (sc *SignerClient) Sign(keyType string, msg []byte) ([]byte, error) {
 	}
 
 	req := &types.SignRequest{
-		Message: utils.Bytes2Hex(msg),
+		Message: core.Bytes2Hex(msg),
 	}
 	switch keyType {
 	case "BLS":
@@ -122,7 +122,7 @@ func (sc *SignerClient) Sign(keyType string, msg []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	return utils.Hex2Bytes(resp.Signature), nil
+	return core.Hex2Bytes(resp.Signature), nil
 
 }
 
@@ -133,7 +133,7 @@ func (sc *SignerClient) GetPublicKey(keyType string) (string, error) {
 		case "BLS":
 			return sc.blsPublicKey, nil
 		case "ECDSA":
-			return utils.Bytes2Hex(ecrypto.FromECDSAPub(&sc.signerECDSAPrivateKey.PublicKey)), nil
+			return core.Bytes2Hex(ecrypto.FromECDSAPub(&sc.signerECDSAPrivateKey.PublicKey)), nil
 		default:
 			return "", errors.New("invalid key type")
 		}

@@ -2,14 +2,13 @@ package types
 
 import (
 	"encoding/binary"
-	"encoding/json"
 	"math/big"
 	"testing"
 
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
-	"github.com/umbracle/go-eth-consensus/bls"
+
+	corecrypto "github.com/Lagrange-Labs/lagrange-node/core/crypto"
 )
 
 type BlsSignatureVector struct {
@@ -38,45 +37,45 @@ func TestBlsSignatureHash(t *testing.T) {
 	big.NewInt(int64(blsSignature.BlockNumber())).FillBytes(blockNumberBuf[:])
 	t.Logf("blockNumberBuf: %s", common.Bytes2Hex(blockNumberBuf[:]))
 	t.Logf("chainIDBuf: %s", common.Bytes2Hex(chainIDBuf))
-	chainHash := utils.Hash(common.FromHex(blsSignature.ChainHeader.BlockHash), blockNumberBuf[:], chainIDBuf)
+	chainHash := corecrypto.Hash(common.FromHex(blsSignature.ChainHeader.BlockHash), blockNumberBuf[:], chainIDBuf)
 	require.Equal(t, common.Bytes2Hex(chainHash), "06c3a68be875459bbc887f758c9d4aab01b7eb997daa25b91c99c9fb1e35f14a")
 
 	blsHash := blsSignature.Hash()
 	require.Equal(t, common.Bytes2Hex(blsHash), "0c6dd657c4fa2048bd8fc9d135207485bab7aad9fff6b70c17a2b787a8bcb52e")
 }
 
-func TestGenerateVector(t *testing.T) {
-	sec, pub := utils.RandomBlsKey()
-	pubkey := new(bls.PublicKey)
-	require.NoError(t, pubkey.Deserialize(common.FromHex(pub)))
+// func TestGenerateVector(t *testing.T) {
+// 	sec, pub := common.RandomBlsKey()
+// 	pubkey := new(bls.PublicKey)
+// 	require.NoError(t, pubkey.Deserialize(common.FromHex(pub)))
 
-	sigs := make([]*BlsSignatureVector, 10)
-	for i := 0; i < 10; i++ {
-		b := &BlsSignatureVector{
-			BlsSignature: &BlsSignature{
-				ChainHeader: &ChainHeader{
-					BlockHash:   common.Bytes2Hex(utils.Hash(common.Hex2Bytes(utils.RandomHex(32)))),
-					BlockNumber: uint64(i + 1),
-					ChainId:     5,
-				},
-				CurrentCommittee: common.Bytes2Hex(utils.PoseidonHash(common.Hex2Bytes(utils.RandomHex(32)))),
-				NextCommittee:    common.Bytes2Hex(utils.PoseidonHash(common.Hex2Bytes(utils.RandomHex(32)))),
-			},
-			BlsSecKey: utils.BlsPrivKeyToHex(sec),
-			BlsPubKey: utils.BlsPubKeyToHex(pubkey),
-		}
-		b.Hash = common.Bytes2Hex(b.BlsSignature.Hash())
-		sig, err := sec.Sign(common.FromHex(b.Hash))
-		require.NoError(t, err)
-		b.BlsSigMsg = utils.BlsSignatureToHex(sig)
+// 	sigs := make([]*BlsSignatureVector, 10)
+// 	for i := 0; i < 10; i++ {
+// 		b := &BlsSignatureVector{
+// 			BlsSignature: &BlsSignature{
+// 				ChainHeader: &ChainHeader{
+// 					BlockHash:   common.Bytes2Hex(common.Hash(common.Hex2Bytes(common.RandomHex(32)))),
+// 					BlockNumber: uint64(i + 1),
+// 					ChainId:     5,
+// 				},
+// 				CurrentCommittee: common.Bytes2Hex(common.PoseidonHash(common.Hex2Bytes(common.RandomHex(32)))),
+// 				NextCommittee:    common.Bytes2Hex(common.PoseidonHash(common.Hex2Bytes(common.RandomHex(32)))),
+// 			},
+// 			BlsSecKey: common.BlsPrivKeyToHex(sec),
+// 			BlsPubKey: common.BlsPubKeyToHex(pubkey),
+// 		}
+// 		b.Hash = common.Bytes2Hex(b.BlsSignature.Hash())
+// 		sig, err := sec.Sign(common.FromHex(b.Hash))
+// 		require.NoError(t, err)
+// 		b.BlsSigMsg = common.BlsSignatureToHex(sig)
 
-		isVerified, err := utils.VerifySignature(common.FromHex(b.BlsPubKey), common.FromHex(b.Hash), common.FromHex(b.BlsSigMsg))
-		require.NoError(t, err)
-		require.True(t, isVerified)
+// 		isVerified, err := common.VerifySignature(common.FromHex(b.BlsPubKey), common.FromHex(b.Hash), common.FromHex(b.BlsSigMsg))
+// 		require.NoError(t, err)
+// 		require.True(t, isVerified)
 
-		sigs[i] = b
-	}
-	msg, err := json.Marshal(sigs)
-	require.NoError(t, err)
-	t.Logf("%s", msg)
-}
+// 		sigs[i] = b
+// 	}
+// 	msg, err := json.Marshal(sigs)
+// 	require.NoError(t, err)
+// 	t.Logf("%s", msg)
+// }

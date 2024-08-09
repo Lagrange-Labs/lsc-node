@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/arbitrum"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/mantle"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/mock"

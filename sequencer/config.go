@@ -1,6 +1,6 @@
 package sequencer
 
-import "github.com/Lagrange-Labs/lagrange-node/utils"
+import "github.com/Lagrange-Labs/lagrange-node/core"
 
 type Config struct {
 	// L2 Chain name
@@ -14,5 +14,5 @@ type Config struct {
 	// EigenDMSCAddress is the address of the Eigen DelegationManager smart contract.
 	EigenDMSCAddress string `mapstructure:"EigenDMSCAddress"`
 	// StakingCheckInterval is the interval to check the staking status.
-	StakingCheckInterval utils.TimeDuration `mapstructure:"StakingCheckInterval"`
+	StakingCheckInterval core.TimeDuration `mapstructure:"StakingCheckInterval"`
 }

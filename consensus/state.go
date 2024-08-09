@@ -7,16 +7,17 @@ import (
 	"sync"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/ethclient"
+
 	"github.com/Lagrange-Labs/lagrange-node/consensus/types"
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/ethclient"
 )
 
 const CheckInterval = 1 * time.Second
@@ -77,7 +78,7 @@ func NewState(cfg *Config, storage storageInterface, chainInfo *ChainInfo) *Stat
 		committeeSC:      committeeSC,
 		blsScheme:        blsScheme,
 		proposerPrivKey:  privKey,
-		proposerPubKey:   utils.Bytes2Hex(pubKey),
+		proposerPubKey:   core.Bytes2Hex(pubKey),
 		storage:          storage,
 		roundLimit:       time.Duration(cfg.RoundLimit),
 		roundInterval:    time.Duration(cfg.RoundInterval),
@@ -374,7 +375,7 @@ func (s *State) startRound(batchNumber uint64) error {
 		logger.Errorf("failed to sign the batch %d: %v", batch.BatchNumber(), err)
 		return err
 	}
-	batch.ProposerSignature = utils.Bytes2Hex(signature)
+	batch.ProposerSignature = core.Bytes2Hex(signature)
 	batch.ProposerPubKey = s.proposerPubKey
 
 	s.rwMutex.Lock()

@@ -4,7 +4,7 @@ import (
 	"bytes"
 	"testing"
 
-	"github.com/Lagrange-Labs/lagrange-node/utils"
+	"github.com/Lagrange-Labs/lagrange-node/core"
 )
 
 func TestBatchHeaderHash(t *testing.T) {
@@ -56,7 +56,7 @@ func TestBatchHeaderHash(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if got := tc.batchHeader.Hash(); !bytes.Equal(got, utils.Hex2Bytes(tc.expected)) {
+		if got := tc.batchHeader.Hash(); !bytes.Equal(got, core.Hex2Bytes(tc.expected)) {
 			t.Errorf("batchHeader.Hash() = %x; expected %s", got, tc.expected)
 		}
 	}
@@ -111,7 +111,7 @@ func TestBatchHeaderMerkleHash(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if got := tc.batchHeader.MerkleHash(); !bytes.Equal(got, utils.Hex2Bytes(tc.expected)) {
+		if got := tc.batchHeader.MerkleHash(); !bytes.Equal(got, core.Hex2Bytes(tc.expected)) {
 			t.Errorf("batchHeader.Hash() = %x; expected %s", got, tc.expected)
 		}
 	}

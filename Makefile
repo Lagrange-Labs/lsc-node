@@ -8,9 +8,7 @@ GOBIN := $(GOBASE)/dist
 GOARCH := $(ARCH)
 GOENVVARS := GOBIN=$(GOBIN) CGO_ENABLED=1 GOOS=$(OS) GOARCH=$(GOARCH)
 GOBINARY := lagrange-node
-GOSIGNERBINARY := lagrange-signer
 GOCMD := $(GOBASE)/cmd/baseapp/
-GOSIGNERCMD := $(GOBASE)/signer/cmd/
 SCRIPTS_FOLDER=$(GOBASE)/scripts
 
 LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.Version=$(VERSION)'
@@ -23,7 +21,6 @@ STOP := docker compose down --remove-orphans
 # Building the docker image and the binary
 build: ## Builds the binary locally into ./dist
 	$(GOENVVARS) go build -ldflags "all=$(LDFLAGS)" -o $(GOBIN)/$(GOBINARY) $(GOCMD)
-	cd signer && $(GOENVVARS) go build -ldflags "all=$(LDFLAGS)" -o $(GOBIN)/$(GOSIGNERBINARY) $(GOSIGNERCMD)
 .PHONY: build
 
 docker-build: ## Builds a docker image with the node binary

@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/go-metrics"
 	metricsprom "github.com/hashicorp/go-metrics/prometheus"
 
-	"github.com/Lagrange-Labs/lagrange-node/utils"
+	"github.com/Lagrange-Labs/lagrange-node/core"
 )
 
 // globalLabels defines the set of global labels that will be applied to all
@@ -35,7 +35,7 @@ type Config struct {
 	// PrometheusRetentionTime, when positive, enables a Prometheus metrics sink.
 	// It defines the retention duration in seconds. If 0, Prometheus metrics are
 	// disabled.
-	PrometheusRetentionTime utils.TimeDuration `mapstructure:"PrometheusRetentionTime"`
+	PrometheusRetentionTime core.TimeDuration `mapstructure:"PrometheusRetentionTime"`
 }
 
 // NewGlobal creates a global Metrics.

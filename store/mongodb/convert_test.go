@@ -8,31 +8,31 @@ import (
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 
+	"github.com/Lagrange-Labs/lagrange-node/core"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 func TestConvertProtobufToMongo(t *testing.T) {
 	block := &sequencertypes.Block{
 		BlockHeader: &sequencertypes.BlockHeader{
-			CurrentCommittee:  utils.RandomHex(32),
-			NextCommittee:     utils.RandomHex(32),
-			ProposerPubKey:    utils.RandomHex(32),
-			ProposerSignature: utils.RandomHex(32),
+			CurrentCommittee:  core.RandomHex(32),
+			NextCommittee:     core.RandomHex(32),
+			ProposerPubKey:    core.RandomHex(32),
+			ProposerSignature: core.RandomHex(32),
 		},
 		ChainHeader: &sequencertypes.ChainHeader{
 			ChainId:       1,
-			BlockHash:     utils.RandomHex(32),
+			BlockHash:     core.RandomHex(32),
 			BlockNumber:   1,
 			L1BlockNumber: 1,
-			L1TxHash:      utils.RandomHex(32),
+			L1TxHash:      core.RandomHex(32),
 		},
 		PubKeys: []string{
-			utils.RandomHex(32),
-			utils.RandomHex(32),
+			core.RandomHex(32),
+			core.RandomHex(32),
 		},
-		AggSignature:  utils.RandomHex(96),
+		AggSignature:  core.RandomHex(96),
 		SequencedTime: time.Now().Format("2024-01-01 00:00:00.000000"),
 		FinalizedTime: time.Now().Format("2024-01-01 00:00:00.000000"),
 	}
@@ -54,7 +54,7 @@ func TestConvertProtobufToMongo(t *testing.T) {
 		BatchHeader: &sequencerv2types.BatchHeader{
 			BatchNumber:       1,
 			L1BlockNumber:     1,
-			L1TxHash:          utils.RandomHex(32),
+			L1TxHash:          core.RandomHex(32),
 			L1TxIndex:         1,
 			ChainId:           1,
 			L2FromBlockNumber: 1,
@@ -62,26 +62,26 @@ func TestConvertProtobufToMongo(t *testing.T) {
 			L2Blocks: []*sequencerv2types.BlockHeader{
 				{
 					BlockNumber: 1,
-					BlockHash:   utils.RandomHex(32),
-					BlockRlp:    utils.RandomHex(100),
+					BlockHash:   core.RandomHex(32),
+					BlockRlp:    core.RandomHex(100),
 				},
 				{
 					BlockNumber: 2,
-					BlockHash:   utils.RandomHex(32),
-					BlockRlp:    utils.RandomHex(120),
+					BlockHash:   core.RandomHex(32),
+					BlockRlp:    core.RandomHex(120),
 				},
 			},
 		},
 		CommitteeHeader: &sequencerv2types.CommitteeHeader{
-			CurrentCommittee: utils.RandomHex(32),
-			NextCommittee:    utils.RandomHex(32),
+			CurrentCommittee: core.RandomHex(32),
+			NextCommittee:    core.RandomHex(32),
 			TotalVotingPower: 100,
 		},
 		PubKeys: []string{
-			utils.RandomHex(32),
-			utils.RandomHex(32),
+			core.RandomHex(32),
+			core.RandomHex(32),
 		},
-		AggSignature:  utils.RandomHex(96),
+		AggSignature:  core.RandomHex(96),
 		SequencedTime: time.Now().Format("2024-01-01 00:00:00.000000"),
 		FinalizedTime: time.Now().Format("2024-01-01 00:00:00.000000"),
 	}
@@ -111,23 +111,23 @@ func TestConvertProtobufToMongo(t *testing.T) {
 func TestConvertMongoToBlock(t *testing.T) {
 	m := bson.M{
 		"block_header": bson.M{
-			"current_committee":  utils.RandomHex(32),
-			"next_committee":     utils.RandomHex(32),
-			"proposer_pub_key":   utils.RandomHex(32),
-			"proposer_signature": utils.RandomHex(32),
+			"current_committee":  core.RandomHex(32),
+			"next_committee":     core.RandomHex(32),
+			"proposer_pub_key":   core.RandomHex(32),
+			"proposer_signature": core.RandomHex(32),
 		},
 		"chain_header": bson.M{
 			"chain_id":        int64(1),
-			"block_hash":      utils.RandomHex(32),
+			"block_hash":      core.RandomHex(32),
 			"block_number":    int64(1),
 			"l1_block_number": int64(1),
-			"l1_tx_hash":      utils.RandomHex(32),
+			"l1_tx_hash":      core.RandomHex(32),
 		},
 		"pub_keys": bson.A{
-			utils.RandomHex(32),
-			utils.RandomHex(32),
+			core.RandomHex(32),
+			core.RandomHex(32),
 		},
-		"agg_signature":  utils.RandomHex(96),
+		"agg_signature":  core.RandomHex(96),
 		"sequenced_time": time.Now().Format("2024-01-01 00:00:00.000000"),
 		"finalized_time": time.Now().Format("2024-01-01 00:00:00.000000"),
 	}
@@ -150,7 +150,7 @@ func TestConvertMongoToBatch(t *testing.T) {
 		"batch_header": bson.M{
 			"batch_number":         int64(1),
 			"l1_block_number":      int64(1),
-			"l1_tx_hash":           utils.RandomHex(32),
+			"l1_tx_hash":           core.RandomHex(32),
 			"l1_tx_index":          int64(1),
 			"chain_id":             int64(1),
 			"l2_from_block_number": int64(1),
@@ -158,23 +158,23 @@ func TestConvertMongoToBatch(t *testing.T) {
 			"l2_blocks": bson.A{
 				bson.M{
 					"block_number": int64(1),
-					"block_hash":   utils.RandomHex(32),
-					"block_rlp":    utils.RandomHex(100),
+					"block_hash":   core.RandomHex(32),
+					"block_rlp":    core.RandomHex(100),
 				},
 				bson.M{
 					"block_number": int64(2),
-					"block_hash":   utils.RandomHex(32),
-					"block_rlp":    utils.RandomHex(120),
+					"block_hash":   core.RandomHex(32),
+					"block_rlp":    core.RandomHex(120),
 				},
 			},
 		},
 		"committee_header": bson.M{
-			"current_committee":  utils.RandomHex(32),
-			"next_committee":     utils.RandomHex(32),
+			"current_committee":  core.RandomHex(32),
+			"next_committee":     core.RandomHex(32),
 			"total_voting_power": int64(100),
 		},
-		"pub_keys":       bson.A{utils.RandomHex(32), utils.RandomHex(32)},
-		"agg_signature":  utils.RandomHex(96),
+		"pub_keys":       bson.A{core.RandomHex(32), core.RandomHex(32)},
+		"agg_signature":  core.RandomHex(96),
 		"sequenced_time": time.Now().Format("2024-01-01 00:00:00.000000"),
 		"finalized_time": time.Now().Format("2024-01-01 00:00:00.000000"),
 	}

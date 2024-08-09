@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	convert "github.com/Lagrange-Labs/lagrange-node/store/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
@@ -16,10 +16,10 @@ func up_0003(client *mongo.Client) error {
 	chainId := uint64(10)
 	batchSize := int64(2)
 	startBatchNumber := int64(0) // for testing purposes
-	maxBatchNumber := int64(2) // for testing purposes
+	maxBatchNumber := int64(2)   // for testing purposes
 
 	logger.Info("Starting to update l2 blocks range for batches")
-	for batchNumber := startBatchNumber; batchNumber < maxBatchNumber; batchNumber+=batchSize {
+	for batchNumber := startBatchNumber; batchNumber < maxBatchNumber; batchNumber += batchSize {
 		endBatchNumber := batchNumber + batchSize
 		if endBatchNumber > maxBatchNumber {
 			endBatchNumber = maxBatchNumber
@@ -71,7 +71,7 @@ func up_0003(client *mongo.Client) error {
 				logger.Infof("Updated batch %d with fromL2BlockNumber %d and toL2BlockNumber %d",
 					batch.BatchHeader.BatchNumber, fromL2BlockNumber, toL2BlockNumber)
 			}
-		}	 
+		}
 	}
 	return nil
 }
@@ -81,7 +81,7 @@ func down_0003(client *mongo.Client) error {
 	batchesCollection := db.Collection("batches")
 
 	fromBatchNumber := int64(0) // for testing purposes
-	toBatchNumber := int64(2) // for testing purposes
+	toBatchNumber := int64(2)   // for testing purposes
 	chainId := 10
 
 	filter := bson.M{

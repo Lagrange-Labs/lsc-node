@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
+	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/server/types"
