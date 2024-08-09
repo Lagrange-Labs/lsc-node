@@ -1,6 +1,6 @@
 package client
 
-import "github.com/Lagrange-Labs/lagrange-node/utils"
+import "github.com/Lagrange-Labs/lagrange-node/core"
 
 // Config is the configuration for the client node.
 type Config struct {
@@ -15,7 +15,7 @@ type Config struct {
 	// CommitteeSCAddress is the address of the committee smart contract
 	CommitteeSCAddress string `mapstructure:"CommitteeSCAddress"`
 	// PullInterval is the interval to pull the latest proof
-	PullInterval utils.TimeDuration `mapstructure:"PullInterval"`
+	PullInterval core.TimeDuration `mapstructure:"PullInterval"`
 	// BLSCurve is the curve used for BLS signature
 	BLSCurve string `mapstructure:"BLSCurve"`
 	// BLSKeyAccountID is the account ID of the BLS key

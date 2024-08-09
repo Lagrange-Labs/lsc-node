@@ -10,12 +10,12 @@ import (
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/server/types"
 	v2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 type mockConsensus struct{}
@@ -89,7 +89,7 @@ func TestBLSSignVerify(t *testing.T) {
 	// JoinNetwork request sign
 	req := &types.JoinNetworkRequest{
 		StakeAddress: "0x9fE46736679d2D9a65F0992F2272dE9f3c7fa6e0",
-		PublicKey:    utils.Bytes2Hex(pub),
+		PublicKey:    core.Bytes2Hex(pub),
 	}
 
 	msg, err := proto.Marshal(req)

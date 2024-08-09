@@ -3,11 +3,12 @@ package types
 import (
 	"testing"
 
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
+	"github.com/stretchr/testify/require"
+
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/stretchr/testify/require"
 )
 
 func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []servertypes.ClientNode) {
@@ -20,26 +21,26 @@ func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []se
 			ChainId:       1,
 			BatchNumber:   1,
 			L1BlockNumber: 1,
-			L1TxHash:      utils.RandomHex(32),
+			L1TxHash:      core.RandomHex(32),
 			L2Blocks: []*sequencerv2types.BlockHeader{
 				{
 					BlockNumber: 1,
-					BlockHash:   utils.RandomHex(32),
+					BlockHash:   core.RandomHex(32),
 				},
 			},
 		},
 		CommitteeHeader: &sequencerv2types.CommitteeHeader{
 
 			TotalVotingPower: 10,
-			CurrentCommittee: utils.RandomHex(32),
-			NextCommittee:    utils.RandomHex(32),
+			CurrentCommittee: core.RandomHex(32),
+			NextCommittee:    core.RandomHex(32),
 		},
-		ProposerPubKey: utils.Bytes2Hex(proposerPubKey),
+		ProposerPubKey: core.Bytes2Hex(proposerPubKey),
 	}
 
 	blsSigHash := pBatch.BlsSignature().Hash()
 	proposerSigMsg, _ := blsScheme.Sign(proposerSecKey, blsSigHash)
-	pBatch.ProposerSignature = utils.Bytes2Hex(proposerSigMsg)
+	pBatch.ProposerSignature = core.Bytes2Hex(proposerSigMsg)
 
 	secKeys := make([][]byte, 0)
 	nodes := []servertypes.ClientNode{}
@@ -47,9 +48,9 @@ func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []se
 		secKey, _ := blsScheme.GenerateRandomKey()
 		pubKey, _ := blsScheme.GetPublicKey(secKey, true)
 		secKeys = append(secKeys, secKey)
-		addr := utils.RandomHex(20)
+		addr := core.RandomHex(20)
 		node := servertypes.ClientNode{
-			PublicKey:    utils.Bytes2Hex(pubKey),
+			PublicKey:    core.Bytes2Hex(pubKey),
 			StakeAddress: addr,
 			SignAddress:  addr,
 			VotingPower:  1,
@@ -88,9 +89,9 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		blsSign := blsSignature.Clone()
 		signature, err := blsScheme.Sign(secKeys[i], sigHash)
 		require.NoError(t, err)
-		blsSign.BlsSignature = utils.Bytes2Hex(signature)
+		blsSign.BlsSignature = core.Bytes2Hex(signature)
 
-		verified, err := blsScheme.VerifySignature(utils.Hex2Bytes(validators[i].PublicKey), sigHash, signature)
+		verified, err := blsScheme.VerifySignature(core.Hex2Bytes(validators[i].PublicKey), sigHash, signature)
 		require.NoError(t, err)
 		require.True(t, verified, i)
 
@@ -113,7 +114,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		}
 		signature, err := blsScheme.Sign(secKeys[i], sigHash)
 		require.NoError(t, err)
-		blsSign.BlsSignature = utils.Bytes2Hex(signature)
+		blsSign.BlsSignature = core.Bytes2Hex(signature)
 		if i == 7 {
 			blsSign.BlsSignature = "0x000" // invalid signature
 		} else if i == 8 {
@@ -122,7 +123,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 			blsSign.BlsSignature = wrongSignature // wrong signature
 		}
 
-		verified, err := blsScheme.VerifySignature(utils.Hex2Bytes(validators[i].PublicKey), sigHash, signature)
+		verified, err := blsScheme.VerifySignature(core.Hex2Bytes(validators[i].PublicKey), sigHash, signature)
 		require.NoError(t, err)
 		require.True(t, verified)
 

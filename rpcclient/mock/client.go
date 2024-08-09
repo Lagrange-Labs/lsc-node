@@ -12,10 +12,10 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 
+	"github.com/Lagrange-Labs/lagrange-node/core"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 const batchBlockCount = 5
@@ -127,7 +127,7 @@ func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
 			l2Blocks = append(l2Blocks, &sequencerv2types.BlockHeader{
 				BlockNumber: l2BlockNumber - batchBlockCount + i + 1,
 				BlockHash:   blockHeader.Hash().Hex(),
-				BlockRlp:    utils.Bytes2Hex(buffer.Bytes()),
+				BlockRlp:    core.Bytes2Hex(buffer.Bytes()),
 			})
 		}
 	}

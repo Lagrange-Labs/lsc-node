@@ -6,9 +6,10 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/golang-jwt/jwt/v5"
+
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 )
 
 const (
@@ -34,7 +35,7 @@ func getSecretKey(curTime int64) string {
 
 // checkExpire checks if the secret key is expired.
 func checkExpire(secretKey string) bool {
-	b := utils.Hex2Bytes(secretKey[:16])
+	b := core.Hex2Bytes(secretKey[:16])
 	t := time.Unix(0, int64(binary.LittleEndian.Uint64(b)))
 
 	return time.Since(t) > TokenExpireTime

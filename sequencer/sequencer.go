@@ -14,7 +14,8 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
@@ -24,7 +25,6 @@ import (
 	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 const (
@@ -347,7 +347,7 @@ func (s *Sequencer) fetchOperatorInfos(blockNumber *big.Int, leafCount uint32) (
 				StakeAddress: addr.Hex(),
 				SignAddress:  operatorStatus.SignAddress.Hex(),
 				VotingPower:  votingPower.Uint64(),
-				PublicKey:    utils.Bytes2Hex(pubKey),
+				PublicKey:    core.Bytes2Hex(pubKey),
 			}
 			leafIndex++
 		}
@@ -422,7 +422,7 @@ func (s *Sequencer) fetchCommitteeRoot(epochNumber uint64) (*v2types.CommitteeRo
 
 	committeeRoot := &v2types.CommitteeRoot{
 		ChainID:               s.chainID,
-		CurrentCommitteeRoot:  utils.Bytes2Hex(committeeData.Root[:]),
+		CurrentCommitteeRoot:  core.Bytes2Hex(committeeData.Root[:]),
 		TotalVotingPower:      tvl,
 		EpochStartBlockNumber: epochStartBlockNumber,
 		EpochNumber:           epochNumber,

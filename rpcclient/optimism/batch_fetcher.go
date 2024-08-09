@@ -19,12 +19,12 @@ import (
 	"github.com/ethereum/go-ethereum/log"
 	"golang.org/x/sync/errgroup"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 const (
@@ -391,7 +391,7 @@ func (f *Fetcher) fetchBlock(blockNumber uint64) ([]*FramesRef, error) {
 			Time:       block.Time(),
 		}
 		ti := time.Now()
-		blobs, err := f.l1BlobFetcher.GetBlobs(utils.GetContext(), blockRef, hashes)
+		blobs, err := f.l1BlobFetcher.GetBlobs(core.GetContext(), blockRef, hashes)
 		if err != nil {
 			logger.Errorf("failed to get blobs: %v", err)
 			return nil, err

@@ -4,12 +4,14 @@ import (
 	"encoding/binary"
 	"math/big"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
+
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	corecrypto "github.com/Lagrange-Labs/lagrange-node/core/crypto"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
+	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 )
 
 // TODO: refactor the evidence to use the new sequencer types
@@ -37,11 +39,11 @@ func GetCommitRequestHash(sig *sequencertypes.BlsSignature) []byte {
 	nextCommitteeRoot := common.FromHex(sig.NextCommittee)[:]
 	blockNumber := big.NewInt(int64(sig.BlockNumber())).FillBytes(blockNumberBuf[:])
 	l1BlockNumber := big.NewInt(int64(sig.L1BlockNumber())).FillBytes(l1BlockNumberBuf[:])
-	blockSignature := utils.Hex2Bytes(sig.BlsSignature)
+	blockSignature := core.Hex2Bytes(sig.BlsSignature)
 	chainID := make([]byte, 4)
 	binary.BigEndian.PutUint32(chainID, sig.ChainHeader.ChainId)
 
-	return utils.Hash(
+	return corecrypto.Hash(
 		blockHash,
 		currentCommitteeRoot,
 		nextCommitteeRoot,

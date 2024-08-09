@@ -9,10 +9,10 @@ import (
 	"google.golang.org/grpc/credentials/insecure"
 	"google.golang.org/grpc/health/grpc_health_v1"
 
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	serverv2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 const (
@@ -96,7 +96,7 @@ func (hm *healthManager) loadHealthClient() error {
 				logger.Warnf("failed to watch the health of the server %s: %v", serverURL, err)
 			}
 			for i := 0; i < DefaultHealthCheckRetry; i++ {
-				resp, err := healthClient.Check(utils.GetContext(), &grpc_health_v1.HealthCheckRequest{})
+				resp, err := healthClient.Check(core.GetContext(), &grpc_health_v1.HealthCheckRequest{})
 				if err == nil && resp.Status == grpc_health_v1.HealthCheckResponse_SERVING {
 					hm.index = index
 					hm.conn = conn
@@ -135,7 +135,7 @@ func (hm *healthManager) healthCheck() {
 			return
 		case <-ticker.C:
 			ti := time.Now()
-			resp, err := hm.healthClient.Check(utils.GetContext(), &grpc_health_v1.HealthCheckRequest{})
+			resp, err := hm.healthClient.Check(core.GetContext(), &grpc_health_v1.HealthCheckRequest{})
 			if err == nil && resp.Status == grpc_health_v1.HealthCheckResponse_SERVING {
 				telemetry.MeasureSince(ti, "network", "health_check")
 				telemetry.SetGauge(float64(hm.index), "network", "current_health_server_index")

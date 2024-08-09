@@ -10,10 +10,10 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/client"
 	"github.com/Lagrange-Labs/lagrange-node/config"
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
 	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 	"github.com/Lagrange-Labs/lagrange-node/testutil/operations"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 type ClientTestSuite struct {
@@ -30,10 +30,10 @@ func (suite *ClientTestSuite) SetupTest() {
 
 	dir := suite.T().TempDir()
 	ecdsaKeyPath := dir + "/ecdsa.key"
-	err = crypto.SaveKey("ECDSA", utils.Hex2Bytes("0xb126ae5e3d88007081b76024477b854ca4f808d48be1e22fe763822bc0c17cb3"), "password", ecdsaKeyPath)
+	err = crypto.SaveKey("ECDSA", core.Hex2Bytes("0xb126ae5e3d88007081b76024477b854ca4f808d48be1e22fe763822bc0c17cb3"), "password", ecdsaKeyPath)
 	suite.Require().NoError(err)
 	blsKeyPath := dir + "/bls.key"
-	err = crypto.SaveKey("BN254", utils.Hex2Bytes("0x00000000000000000000000000000000000000000000000000000000499602d7"), "password", blsKeyPath)
+	err = crypto.SaveKey("BN254", core.Hex2Bytes("0x00000000000000000000000000000000000000000000000000000000499602d7"), "password", blsKeyPath)
 	suite.Require().NoError(err)
 
 	suite.cfg = client.Config{
@@ -46,7 +46,7 @@ func (suite *ClientTestSuite) SetupTest() {
 		SignerECDSAKeystorePassword: "password",
 		OperatorAddress:             "0x13cF11F76a08214A826355a1C8d661E41EA7Bf97",
 		CommitteeSCAddress:          cfg.Client.CommitteeSCAddress,
-		PullInterval:                utils.TimeDuration(2 * time.Second),
+		PullInterval:                core.TimeDuration(2 * time.Second),
 		BLSCurve:                    "BN254",
 	}
 	suite.manager, err = operations.NewManager()

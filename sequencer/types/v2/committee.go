@@ -5,10 +5,11 @@ import (
 	"fmt"
 	"math/big"
 
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
+	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 )
 
 // CommitteeRoot is the root of the committee.
@@ -36,11 +37,11 @@ func GetLeafHash(addr, pubKey []byte, votingPower uint64) []byte {
 func (c *CommitteeRoot) Verify() error {
 	leaves := make([][]byte, len(c.Operators))
 	for i, op := range c.Operators {
-		leaves[i] = GetLeafHash(utils.Hex2Bytes(op.StakeAddress), utils.Hex2Bytes(op.PublicKey), op.VotingPower)
+		leaves[i] = GetLeafHash(core.Hex2Bytes(op.StakeAddress), common.Hex2Bytes(op.PublicKey), op.VotingPower)
 	}
 	root := crypto.MerkleRoot(leaves)
-	if !bytes.Equal(utils.Hex2Bytes(c.CurrentCommitteeRoot), root) {
-		return fmt.Errorf("invalid committee root %s, expected %s", c.CurrentCommitteeRoot, utils.Bytes2Hex(root))
+	if !bytes.Equal(core.Hex2Bytes(c.CurrentCommitteeRoot), root) {
+		return fmt.Errorf("invalid committee root %s, expected %s", c.CurrentCommitteeRoot, common.Bytes2Hex(root))
 	}
 
 	return nil

@@ -7,16 +7,15 @@ import (
 	"strings"
 	"time"
 
-	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/grpc/peer"
 	"google.golang.org/protobuf/proto"
 
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	"github.com/Lagrange-Labs/lagrange-node/server/types"
 	v2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 var (
@@ -30,9 +29,9 @@ var (
 	ErrCheckCommitteeMember = errors.New("failed to check the committee member")
 
 	// MinCompatibleVersion is the minimum compatible version.
-	MinCompatibleVersion = utils.Version{Major: 0, Minor: 0, Patch: 0}
+	MinCompatibleVersion = core.Version{Major: 0, Minor: 0, Patch: 0}
 	// ExpectedVersion is the expected version.
-	ExpectedVersion = utils.Version{Major: 1, Minor: 0, Patch: 0}
+	ExpectedVersion = core.Version{Major: 1, Minor: 0, Patch: 0}
 )
 
 type sequencerService struct {
@@ -67,7 +66,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *v2types.JoinNet
 	if len(req.NodeVersion) == 0 {
 		logger.Warnf("The node version is empty, expected version: %s", ExpectedVersion.String())
 	} else {
-		nv, err := utils.GetVersion(req.NodeVersion)
+		nv, err := core.GetVersion(req.NodeVersion)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse the node version: %v", err)
 		}
@@ -87,13 +86,13 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *v2types.JoinNet
 	if err != nil {
 		return nil, err
 	}
-	verified, err := s.blsScheme.VerifySignature(utils.Hex2Bytes(req.PublicKey), msg, utils.Hex2Bytes(sigMessage))
+	verified, err := s.blsScheme.VerifySignature(core.Hex2Bytes(req.PublicKey), msg, core.Hex2Bytes(sigMessage))
 	if err != nil || !verified {
 		logger.Warnf("BLS signature verification failed: %v", err)
 		return nil, fmt.Errorf("BLS signature verification failed: %v", err)
 	}
 	// Check if the operator is a committee member
-	isMember, err := s.consensus.CheckCommitteeMember(utils.GetValidAddress(req.StakeAddress), strings.TrimPrefix(req.PublicKey, "0x"))
+	isMember, err := s.consensus.CheckCommitteeMember(core.GetValidAddress(req.StakeAddress), strings.TrimPrefix(req.PublicKey, "0x"))
 	if err != nil {
 		return nil, errors.Join(ErrCheckCommitteeMember, err)
 	}
@@ -108,7 +107,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *v2types.JoinNet
 	}
 	if err := s.storage.AddNode(ctx,
 		&types.ClientNode{
-			StakeAddress: utils.GetValidAddress(req.StakeAddress),
+			StakeAddress: core.GetValidAddress(req.StakeAddress),
 			PublicKey:    req.PublicKey,
 			IPAddress:    ip,
 			ChainID:      s.chainID,
@@ -167,19 +166,19 @@ func (s *sequencerService) CommitBatch(req *v2types.CommitBatchRequest, stream v
 
 	// verify the peer signature
 	reqHash := signature.CommitHash()
-	isVerified, addr, err := utils.VerifyECDSASignature(reqHash, common.FromHex(signature.EcdsaSignature))
+	isVerified, addr, err := crypto.VerifyECDSASignature(reqHash, core.Hex2Bytes(signature.EcdsaSignature))
 	if err != nil || !isVerified {
 		logger.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)
 		return fmt.Errorf("failed to verify the ECDSA signature: %v, %v", err, isVerified)
 	}
 
-	if !s.consensus.CheckSignAddress(utils.GetValidAddress(req.StakeAddress), addr.Hex()) {
+	if !s.consensus.CheckSignAddress(core.GetValidAddress(req.StakeAddress), addr.Hex()) {
 		logger.Errorf("the sign address is not matched in ECDSA signature: %v, %v", addr, req.StakeAddress)
 		return fmt.Errorf("the sign address is not matched in ECDSA signature: %v, %v", addr, req.StakeAddress)
 	}
 
 	// upload the commit to the consensus layer
-	if err := s.consensus.AddBatchCommit(signature, utils.GetValidAddress(req.StakeAddress), strings.TrimPrefix(req.PublicKey, "0x")); err != nil {
+	if err := s.consensus.AddBatchCommit(signature, core.GetValidAddress(req.StakeAddress), strings.TrimPrefix(req.PublicKey, "0x")); err != nil {
 		logger.Errorf("failed to add the commit to the consensus layer: %v", err)
 		return err
 	}

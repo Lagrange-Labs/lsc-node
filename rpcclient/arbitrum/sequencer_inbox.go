@@ -12,9 +12,9 @@ import (
 	coretypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
+	"github.com/Lagrange-Labs/lagrange-node/core"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/arbinbox"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 var sequencerBridgeABI *abi.ABI
@@ -76,7 +76,7 @@ func NewSequencerInbox(inboxAddr common.Address, client types.EvmClient) (*Seque
 		return nil, err
 	}
 
-	chainId, err := ethClient.ChainID(utils.GetContext())
+	chainId, err := ethClient.ChainID(core.GetContext())
 	if err != nil {
 		return nil, err
 	}
@@ -97,7 +97,7 @@ func (s *SequencerInbox) fetchBatchTransactions(from, to *big.Int) ([]*Sequencer
 		Addresses: []common.Address{s.address},
 		Topics:    [][]common.Hash{{batchDeliveredID}},
 	}
-	logs, err := s.client.FilterLogs(utils.GetContext(), query)
+	logs, err := s.client.FilterLogs(core.GetContext(), query)
 	if err != nil {
 		return nil, err
 	}
@@ -144,7 +144,7 @@ func (s *SequencerInbox) fetchBatchTransactions(from, to *big.Int) ([]*Sequencer
 }
 
 func (s *SequencerInbox) getLogTransaction(log coretypes.Log) (*coretypes.Transaction, error) {
-	tx, err := s.client.TransactionInBlock(utils.GetContext(), log.BlockHash, log.TxIndex)
+	tx, err := s.client.TransactionInBlock(core.GetContext(), log.BlockHash, log.TxIndex)
 	if err != nil {
 		return nil, err
 	}
@@ -180,7 +180,7 @@ func (s *SequencerInbox) serialize(batch *SequencerBatch) ([]byte, error) {
 				Addresses: []common.Address{s.address},
 				Topics:    [][]common.Hash{{sequencerBatchDataABI.ID}, {numberAsHash}},
 			}
-			logs, err := s.client.FilterLogs(utils.GetContext(), query)
+			logs, err := s.client.FilterLogs(core.GetContext(), query)
 			if err != nil {
 				return nil, err
 			}

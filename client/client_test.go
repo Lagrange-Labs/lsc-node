@@ -5,15 +5,17 @@ import (
 	"testing"
 	"time"
 
+	"github.com/ethereum/go-ethereum/common"
+	"github.com/ethereum/go-ethereum/crypto"
+	"github.com/stretchr/testify/require"
+
 	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	corecrypto "github.com/Lagrange-Labs/lagrange-node/core/crypto"
 	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	"github.com/Lagrange-Labs/lagrange-node/store/goleveldb"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/ethereum/go-ethereum/common"
-	"github.com/ethereum/go-ethereum/crypto"
-	"github.com/stretchr/testify/require"
 )
 
 func TestECDSASignVerify(t *testing.T) {
@@ -35,9 +37,9 @@ func TestECDSASignVerify(t *testing.T) {
 	reqMsg := contypes.GetCommitRequestHash(signature)
 	sig, err := crypto.Sign(reqMsg, privateKey)
 	require.NoError(t, err)
-	t.Log("signature:", common.Bytes2Hex(sig))
+	t.Log("signature:", core.Bytes2Hex(sig))
 	// verify the signature
-	isVerified, addr, err := utils.VerifyECDSASignature(reqMsg, sig)
+	isVerified, addr, err := corecrypto.VerifyECDSASignature(reqMsg, sig)
 	require.NoError(t, err)
 	require.True(t, isVerified)
 	require.Equal(t, addr.Hex(), "0x516D6C27C23CEd21BF7930E2a01F0BcA9A141a0d")

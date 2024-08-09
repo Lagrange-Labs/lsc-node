@@ -4,11 +4,12 @@ import (
 	"os"
 	"testing"
 
+	"github.com/stretchr/testify/require"
+
+	"github.com/Lagrange-Labs/lagrange-node/core"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient/optimism"
 	"github.com/Lagrange-Labs/lagrange-node/store"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
-	"github.com/stretchr/testify/require"
 )
 
 func TestFetchCommittee(t *testing.T) {
@@ -26,7 +27,7 @@ func TestFetchCommittee(t *testing.T) {
 		Chain:                "optimism",
 		CommitteeSCAddress:   "0xECc22f3EcD0EFC8aD77A78ad9469eFbc44E746F5",
 		EigenDMSCAddress:     "0x39053D51B77DC0d36036Fc1fCc8Cb819df8Ef37A",
-		StakingCheckInterval: utils.TimeDuration(5),
+		StakingCheckInterval: core.TimeDuration(5),
 	}
 	rpcConfig := rpcclient.Config{
 		Optimism: &optimism.Config{

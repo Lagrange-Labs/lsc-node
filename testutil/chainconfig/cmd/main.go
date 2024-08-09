@@ -6,9 +6,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Lagrange-Labs/lagrange-node/crypto"
+	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/testutil/chainconfig"
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 )
 
 func main() {
@@ -38,12 +38,12 @@ func main() {
 	for i := range chainConfigs[0].BLSPrivateKeys {
 		// bls keystore
 		blsKeystorePath := filepath.Join(configDirPath, fmt.Sprintf("bls_%d.json", i))
-		if err := crypto.SaveKey("BN254", utils.Hex2Bytes(chainConfigs[0].BLSPrivateKeys[i]), password, blsKeystorePath); err != nil {
+		if err := crypto.SaveKey("BN254", core.Hex2Bytes(chainConfigs[0].BLSPrivateKeys[i]), password, blsKeystorePath); err != nil {
 			panic(err)
 		}
 		// ecdsa keystore
 		ecdsaKeystorePath := filepath.Join(configDirPath, fmt.Sprintf("ecdsa_%d.json", i))
-		if err := crypto.SaveKey("ECDSA", utils.Hex2Bytes(chainConfigs[0].ECDSAPrivateKeys[i]), password, ecdsaKeystorePath); err != nil {
+		if err := crypto.SaveKey("ECDSA", core.Hex2Bytes(chainConfigs[0].ECDSAPrivateKeys[i]), password, ecdsaKeystorePath); err != nil {
 			panic(err)
 		}
 	}

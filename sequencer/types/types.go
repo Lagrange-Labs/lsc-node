@@ -4,8 +4,9 @@ import (
 	"encoding/binary"
 	"math/big"
 
-	"github.com/Lagrange-Labs/lagrange-node/utils"
 	"github.com/ethereum/go-ethereum/common"
+
+	corecrypto "github.com/Lagrange-Labs/lagrange-node/core/crypto"
 )
 
 // BlockHash returns the block hash of the chain header.
@@ -72,7 +73,7 @@ func (c *ChainHeader) Hash() []byte {
 	blockNumber := big.NewInt(int64(c.BlockNumber)).FillBytes(blockNumberBuf[:])
 	chainID := make([]byte, 4)
 	binary.BigEndian.PutUint32(chainID, c.ChainId)
-	return utils.Hash(blockHash, blockNumber, chainID)
+	return corecrypto.Hash(blockHash, blockNumber, chainID)
 }
 
 // Hash returns the hash of the bls signature.
@@ -81,7 +82,7 @@ func (b *BlsSignature) Hash() []byte {
 	nextCommitteeRoot := common.FromHex(b.NextCommittee)[:]
 	chainHash := b.ChainHeader.Hash()
 
-	return utils.PoseidonHash(chainHash, currentCommitteeRoot, nextCommitteeRoot)
+	return corecrypto.PoseidonHash(chainHash, currentCommitteeRoot, nextCommitteeRoot)
 }
 
 // BlockNumber returns the block number of the bls signature.
