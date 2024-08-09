@@ -37,17 +37,17 @@ func (suite *ClientTestSuite) SetupTest() {
 	suite.Require().NoError(err)
 
 	suite.cfg = client.Config{
-		GrpcURLs:    []string{"127.0.0.1:9090"},
-		Chain:       "mock",
-		EthereumURL: "http://localhost:8545",
-		// BLSKeystorePath:             blsKeyPath,
-		// BLSKeystorePassword:         "password",
-		// SignerECDSAKeystorePath:     ecdsaKeyPath,
-		// SignerECDSAKeystorePassword: "password",
-		OperatorAddress:    "0x13cF11F76a08214A826355a1C8d661E41EA7Bf97",
-		CommitteeSCAddress: cfg.Client.CommitteeSCAddress,
-		PullInterval:       utils.TimeDuration(2 * time.Second),
-		BLSCurve:           "BN254",
+		GrpcURLs:                    []string{"127.0.0.1:9090"},
+		Chain:                       "mock",
+		EthereumURL:                 "http://localhost:8545",
+		BLSKeystorePath:             blsKeyPath,
+		BLSKeystorePassword:         "password",
+		SignerECDSAKeystorePath:     ecdsaKeyPath,
+		SignerECDSAKeystorePassword: "password",
+		OperatorAddress:             "0x13cF11F76a08214A826355a1C8d661E41EA7Bf97",
+		CommitteeSCAddress:          cfg.Client.CommitteeSCAddress,
+		PullInterval:                utils.TimeDuration(2 * time.Second),
+		BLSCurve:                    "BN254",
 	}
 	suite.manager, err = operations.NewManager()
 	suite.Require().NoError(err)
@@ -76,5 +76,5 @@ func (suite *ClientTestSuite) Test_Client_Start() {
 }
 
 func TestClientTestSuite(t *testing.T) {
-	// suite.Run(t, new(ClientTestSuite))
+	suite.Run(t, new(ClientTestSuite))
 }

@@ -68,7 +68,7 @@ type Client struct {
 
 // NewClient creates a new client.
 func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
-	signer, err := NewSignerClient(cfg.BLSKeyAccountID, cfg.SignerKeyAccountID, cfg.SignerServerURL)
+	signer, err := NewSignerClient(cfg)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the signer client: %v", err)
 	}
