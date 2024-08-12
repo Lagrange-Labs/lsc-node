@@ -54,7 +54,7 @@ func NewManager() (*Manager, error) {
 // RunServer runs a new server instance.
 func (m *Manager) RunServer() {
 	keystorePath := filepath.Join(os.TempDir(), "bls.json")
-	if err := testutil.GenerateRandomKeystore(string(crypto.BN254), "password", keystorePath); err != nil {
+	if err := testutil.GenerateRandomKeystore(string(crypto.BN254), "password_localtest", keystorePath); err != nil {
 		panic(err)
 	}
 	m.cfg.Consensus.ProposerBLSKeystorePath = keystorePath
