@@ -7,10 +7,12 @@ import (
 	"os"
 	"os/signal"
 
-	"github.com/Lagrange-Labs/lagrange-node/signer/types"
 	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/grpc"
 	"google.golang.org/grpc/health/grpc_health_v1"
+
+	"github.com/Lagrange-Labs/lagrange-node/core/logger"
+	"github.com/Lagrange-Labs/lagrange-node/signer/types"
 )
 
 const (
@@ -87,7 +89,7 @@ func runGRPCServer(ctx context.Context, svc types.SignerServiceServer, port stri
 		}
 	}()
 
-	Info("Signer Server is serving at ", port)
+	logger.Info("Signer Server is serving at ", port)
 	return server.Serve(listen)
 }
 
@@ -105,6 +107,7 @@ func NewSignerService(signers map[string]Signer) (types.SignerServiceServer, err
 
 // Sign signs the message.
 func (s *signerService) Sign(ctx context.Context, req *types.SignRequest) (*types.SignResponse, error) {
+	logger.Infof("Sign request: %+v", req)
 	signer, ok := s.signers[req.AccountId]
 	if !ok {
 		return nil, ErrSignerNotFound

@@ -54,6 +54,13 @@ test: stop
 	sleep 3
 	docker ps -a
 	trap '$(STOP)' EXIT; go test ./... --timeout=10m --race
+
+signer-test:
+	cd signer && go test ./... --timeout=10m --race
+
+core-test:
+	cd core && go test ./... --timeout=10m --race
+
 .PHONY: test
 
 run-db-mongo:
@@ -87,12 +94,13 @@ create-keystore:
 localnet-start: stop create-keystore
 	docker compose -f docker-compose.yml up -d mongo
 	docker compose -f docker-compose.yml up -d lagrangesc
+	docker compose -f docker-compose.yml up -d simsigner
 	sleep 3
 	docker compose -f docker-compose.yml up -d simserver
 	docker compose -f docker-compose.yml up -d simserver1
 	docker compose -f docker-compose.yml up -d simsequencer
 	docker compose -f docker-compose.yml up -d simavs-sync
-	sleep 3
+	sleep 10
 	docker compose -f docker-compose.yml up -d simnode1
 	docker compose -f docker-compose.yml up -d simnode2
 	docker compose -f docker-compose.yml up -d simnode3

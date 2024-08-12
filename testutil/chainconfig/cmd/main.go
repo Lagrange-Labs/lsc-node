@@ -11,6 +11,14 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/testutil/chainconfig"
 )
 
+const signerConfigFormat = `[[ProviderConfigs]]
+	Type = "local"
+	[ProviderConfigs.LocalConfig]
+		AccountID = "%s"
+		KeyType = "%s"
+		PrivateKeyPath = "%s"
+		PasswordKeyPath = "%s"`
+
 func main() {
 	curPath, err := os.Getwd()
 	if err != nil {
@@ -34,6 +42,12 @@ func main() {
 		panic(err)
 	}
 
+	signerConfig := `CertKeyPath = ""
+GRPCPort = "9090"
+
+`
+
+	signerPasswordFilePath := filepath.Join("/app/config", "keystore_password")
 	// create the keystore files
 	for i := range chainConfigs[0].BLSPrivateKeys {
 		// bls keystore
@@ -46,5 +60,15 @@ func main() {
 		if err := crypto.SaveKey("ECDSA", core.Hex2Bytes(chainConfigs[0].ECDSAPrivateKeys[i]), password, ecdsaKeystorePath); err != nil {
 			panic(err)
 		}
+
+		signerBLSPath := filepath.Join("/app/config", fmt.Sprintf("bls_%d.json", i))
+		signerECDSAPath := filepath.Join("/app/config", fmt.Sprintf("ecdsa_%d.json", i))
+		signerConfig += fmt.Sprintf(signerConfigFormat, fmt.Sprintf("bls-sign-key-%d", i), "BN254", signerBLSPath, signerPasswordFilePath) + "\n\n"
+		signerConfig += fmt.Sprintf(signerConfigFormat, fmt.Sprintf("ecdsa-signer-key-%d", i), "ECDSA", signerECDSAPath, signerPasswordFilePath) + "\n\n"
+	}
+
+	signerConfigPath := filepath.Join(configDirPath, "signer_config.toml")
+	if err := os.WriteFile(signerConfigPath, []byte(signerConfig), 0644); err != nil {
+		panic(err)
 	}
 }
