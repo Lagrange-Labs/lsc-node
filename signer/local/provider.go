@@ -20,7 +20,7 @@ type provider struct {
 }
 
 // NewProvider creates a new local provider.
-func NewProvider(cfg *signer.LocalConfig) (signer.Signer, error) {
+func NewProvider(cfg *signer.LocalConfig) (*provider, error) {
 	password, err := crypto.ReadKeystorePasswordFromFile(cfg.PasswordKeyPath)
 	if err != nil {
 		return nil, err
@@ -65,11 +65,24 @@ func (p *provider) Sign(msg []byte) ([]byte, error) {
 func (p *provider) GetPubKey() ([]byte, error) {
 	switch p.keyType {
 	case string(crypto.BLS12381), string(crypto.BN254):
-		return p.scheme.GetPublicKey(p.privateKey, true)
+		return p.scheme.GetPublicKey(p.privateKey, false)
 	case "ECDSA":
 		addr := ecrypto.PubkeyToAddress(p.ecdsaPrivateKey.PublicKey)
 		return addr.Bytes(), nil
 	default:
 		return nil, errors.New("invalid curve")
+	}
+}
+
+// Verify verifies the signature.
+func (p *provider) Verify(pubKey, msg, sig []byte) (bool, error) {
+	switch p.keyType {
+	case string(crypto.BLS12381), string(crypto.BN254):
+		return p.scheme.VerifySignature(pubKey, msg, sig)
+	case "ECDSA":
+		res, _, err := crypto.VerifyECDSASignature(msg, sig)
+		return res, err
+	default:
+		return false, errors.New("invalid curve")
 	}
 }
