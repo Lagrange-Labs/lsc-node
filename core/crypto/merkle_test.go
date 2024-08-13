@@ -6,6 +6,8 @@ import (
 	"testing"
 
 	"github.com/ethereum/go-ethereum/common"
+
+	"github.com/Lagrange-Labs/lagrange-node/core"
 )
 
 func TestNextPowerOfTwo(t *testing.T) {
@@ -43,7 +45,7 @@ func TestNodeHash(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if got := leafHash(tc.data); !bytes.Equal(got, common.Hex2Bytes(tc.expected)) {
+		if got := leafHash(tc.data); !bytes.Equal(got, core.Hex2Bytes(tc.expected)) {
 			t.Errorf("leafHash(%x) = %x; expected %v", tc.data, got, tc.expected)
 		}
 	}
@@ -59,7 +61,7 @@ func TestNodeHash(t *testing.T) {
 	}
 
 	for _, tc := range testCases1 {
-		if got := innerHash(common.Hex2Bytes(tc.left), common.Hex2Bytes(tc.right)); !bytes.Equal(got, common.Hex2Bytes(tc.expected)) {
+		if got := innerHash(core.Hex2Bytes(tc.left), core.Hex2Bytes(tc.right)); !bytes.Equal(got, core.Hex2Bytes(tc.expected)) {
 			t.Errorf("innerHash(%x, %x) = %x; expected %v", tc.left, tc.right, got, tc.expected)
 		}
 	}
@@ -77,7 +79,7 @@ func TestMerkleRoot(t *testing.T) {
 	}
 
 	for _, tc := range testCases {
-		if got := MerkleRoot(tc.data); !bytes.Equal(got, common.Hex2Bytes(tc.expected)) {
+		if got := MerkleRoot(tc.data); !bytes.Equal(got, core.Hex2Bytes(tc.expected)) {
 			t.Errorf("MerkleRoot(%x) = %x; expected %v", tc.data, got, tc.expected)
 		}
 	}
@@ -97,14 +99,14 @@ func TestRootWithCommittee(t *testing.T) {
 	leaves := make([][]byte, 0, len(committee))
 	for _, c := range committee {
 		res := make([]byte, 0, 32+32+20+12)
-		res = append(res, common.Hex2Bytes(c.publicKey)...)
-		res = append(res, common.Hex2Bytes(c.operator)...)
+		res = append(res, core.Hex2Bytes(c.publicKey)...)
+		res = append(res, core.Hex2Bytes(c.operator)...)
 		res = append(res, common.LeftPadBytes(big.NewInt(int64(c.votingPower)).Bytes(), 12)...)
 		leaves = append(leaves, res)
 	}
 	root := MerkleRoot(leaves)
 	expected := "2d64f451e549526f76e0e6b9cf724c229298998b2d9fdfa0d96efbf862685915"
-	if !bytes.Equal(root, common.Hex2Bytes(expected)) {
+	if !bytes.Equal(root, core.Hex2Bytes(expected)) {
 		t.Errorf("MerkleRoot(%v) = %x; expected %v", leaves, root, expected)
 	}
 }

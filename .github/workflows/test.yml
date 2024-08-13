@@ -23,6 +23,8 @@ jobs:
       - name: test & coverage report creation
         run: |
           make test
+          make core-test
+          make signer-test
         env:
           ETH_RPC: ${{ secrets.ETH_RPC }}
           OPT_RPC: ${{ secrets.OPT_RPC }}
