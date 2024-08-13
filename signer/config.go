@@ -6,6 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
+	"github.com/Lagrange-Labs/lagrange-node/core"
 	"github.com/mitchellh/mapstructure"
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
@@ -44,13 +45,17 @@ type AWSKMSConfig struct {
 // Config is the configuration for the signer.
 type Config struct {
 	ProviderConfigs []ProviderConfig `mapstructure:"ProviderConfigs"`
-	CertKeyPath     string           `mapstructure:"CertKeyPath"`
+	TLSConfig       *core.CertConfig `mapstructure:"TLSConfig"`
 	GRPCPort        string           `mapstructure:"GRPCPort"`
 }
 
 const DefaultValues = `
-CertKeyPath = ""
 GRPCPort = "50051"
+
+[TLSConfig]
+	CACertPath = "./testutil/vector/config/ca.pem"
+	NodeKeyPath = "./testutil/vector/config/server.key"
+	NodeCertPath = "./testutil/vector/config/server.pem"
 
 [[ProviderConfigs]]
 	Type = "local"
