@@ -37,8 +37,11 @@ type LocalConfig struct {
 
 // AWSKMSConfig is the configuration for the AWS KMS provider.
 type AWSKMSConfig struct {
-	Region string `mapstructure:"Region"`
-	KeyID  string `mapstructure:"KeyID"`
+	Region          string `mapstructure:"Region"`
+	EndpointURL     string `mapstructure:"EndpointURL"`
+	AccessKeyID     string `mapstructure:"AccessKeyID"`
+	SecretAccessKey string `mapstructure:"SecretAccessKey"`
+	KeyID           string `mapstructure:"KeyID"`
 }
 
 // Config is the configuration for the signer.
