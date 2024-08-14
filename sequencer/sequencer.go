@@ -16,6 +16,7 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/core"
 	"github.com/Lagrange-Labs/lagrange-node/core/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
@@ -24,7 +25,6 @@ import (
 	v2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
 	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
 	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
-	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 )
 
 const (

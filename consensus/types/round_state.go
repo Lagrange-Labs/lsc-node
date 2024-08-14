@@ -8,8 +8,8 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/core"
 	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
 	"github.com/Lagrange-Labs/lagrange-node/core/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core/telemetry"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 )
 
 // RoundState defines the internal consensus state.
