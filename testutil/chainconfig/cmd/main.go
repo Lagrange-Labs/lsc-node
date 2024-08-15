@@ -11,13 +11,35 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/testutil/chainconfig"
 )
 
-const signerConfigFormat = `[[ProviderConfigs]]
+const (
+	signerConfigFormat = `[[ProviderConfigs]]
 	Type = "local"
 	[ProviderConfigs.LocalConfig]
 		AccountID = "%s"
 		KeyType = "%s"
 		PrivateKeyPath = "%s"
 		PasswordKeyPath = "%s"`
+
+	clientConfigFormat = `[Client]
+GrpcURLs = "192.168.20.3:9090,192.168.20.33:9090"
+SignerServerURL = "192.168.20.88:9090"
+EthereumURL = "http://192.168.20.100:8545"
+PullInterval = "200ms"
+BLSKeyAccountID = "bls-sign-key-%d"
+SignerKeyAccountID = "ecdsa-signer-key-%d"
+OperatorAddress = "%s"
+
+	[Client.TLSConfig]
+	CACertPath = "/app/config/ca-cert.pem"
+	NodeKeyPath = "/app/config/client-key.pem"
+	NodeCertPath = "/app/config/client-cert.pem"
+
+[RpcClient]
+
+	[RpcClient.Mock]
+	RPCURL = "http://192.168.20.100:8545"
+`
+)
 
 func main() {
 	curPath, err := os.Getwd()
@@ -42,8 +64,12 @@ func main() {
 		panic(err)
 	}
 
-	signerConfig := `CertKeyPath = ""
-GRPCPort = "9090"
+	signerConfig := `GRPCPort = "9090"
+
+[TLSConfig]
+	CACertPath = "/app/config/ca-cert.pem"
+	NodeKeyPath = "/app/config/server-key.pem"
+	NodeCertPath = "/app/config/server-cert.pem"
 
 `
 
@@ -70,5 +96,14 @@ GRPCPort = "9090"
 	signerConfigPath := filepath.Join(configDirPath, "signer_config.toml")
 	if err := os.WriteFile(signerConfigPath, []byte(signerConfig), 0644); err != nil {
 		panic(err)
+	}
+
+	clientCount := (len(chainConfigs[0].BLSPrivateKeys)*2 + 2) / 3
+	for i := 1; i <= clientCount; i++ {
+		clientConfigPath := filepath.Join(configDirPath, fmt.Sprintf("client_config_%d.toml", i))
+		clientConfig := fmt.Sprintf(clientConfigFormat, i, i, chainConfigs[0].Operators[i])
+		if err := os.WriteFile(clientConfigPath, []byte(clientConfig), 0644); err != nil {
+			panic(err)
+		}
 	}
 }

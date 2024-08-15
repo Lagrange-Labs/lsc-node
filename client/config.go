@@ -24,6 +24,8 @@ type Config struct {
 	SignerKeyAccountID string `mapstructure:"SignerKeyAccountID"`
 	// SignerServerURL is the URL of the signer server
 	SignerServerURL string `mapstructure:"SignerServerURL"`
+	// TLSConfig is the configuration for the TLS connection to the signer server
+	TLSConfig *core.CertConfig `mapstructure:"TLSConfig"`
 	// BLSPrivateKeyPath is the path of the BLS keystore file
 	BLSKeystorePath string `mapstructure:"BLSKeystorePath"`
 	// BLSKeystorePassword is the password of the BLS keystore file

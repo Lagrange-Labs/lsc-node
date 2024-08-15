@@ -223,7 +223,7 @@ func runSingerServer(ctx *cli.Context) error {
 		}
 	}
 
-	if err := signer.RunServer(cfg.GRPCPort, signers); err != nil {
+	if err := signer.RunServer(cfg.GRPCPort, cfg.TLSConfig, signers); err != nil {
 		return err
 	}
 
