@@ -9,7 +9,6 @@ require (
 	github.com/ethereum-optimism/optimism v1.7.6
 	github.com/ethereum/go-ethereum v1.13.15
 	github.com/golang-jwt/jwt/v5 v5.2.1
-	github.com/hashicorp/go-metrics v0.5.3
 	github.com/mitchellh/mapstructure v1.5.0
 	github.com/offchainlabs/nitro v0.0.0-20240508220349-0a4c491a1114
 	github.com/prometheus/client_golang v1.19.1
@@ -66,6 +65,7 @@ require (
 	github.com/hashicorp/errwrap v1.1.0 // indirect
 	github.com/hashicorp/go-bexpr v0.1.11 // indirect
 	github.com/hashicorp/go-immutable-radix v1.3.1 // indirect
+	github.com/hashicorp/go-metrics v0.5.3 // indirect
 	github.com/hashicorp/go-multierror v1.1.1 // indirect
 	github.com/hashicorp/go-uuid v1.0.3 // indirect
 	github.com/hashicorp/golang-lru v0.5.4 // indirect
