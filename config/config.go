@@ -12,11 +12,11 @@ import (
 
 	"github.com/Lagrange-Labs/lagrange-node/client"
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
+	"github.com/Lagrange-Labs/lagrange-node/core/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/server"
 	"github.com/Lagrange-Labs/lagrange-node/store"
-	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 )
 
 const (

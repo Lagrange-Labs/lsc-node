@@ -9,8 +9,10 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/health/grpc_health_v1"
 
+	"github.com/Lagrange-Labs/lagrange-node/core"
 	"github.com/Lagrange-Labs/lagrange-node/core/logger"
 	"github.com/Lagrange-Labs/lagrange-node/signer/types"
 )
@@ -26,7 +28,7 @@ var (
 )
 
 // RunServer runs the signer server.
-func RunServer(port string, signers map[string]Signer) error {
+func RunServer(port string, certCfg *core.CertConfig, signers map[string]Signer) error {
 	ctx := context.Background()
 
 	signerService, err := NewSignerService(signers)
@@ -35,7 +37,7 @@ func RunServer(port string, signers map[string]Signer) error {
 	}
 
 	go func() {
-		_ = runGRPCServer(ctx, signerService, port)
+		_ = runGRPCServer(ctx, signerService, port, certCfg)
 	}()
 
 	return nil
@@ -68,13 +70,21 @@ func (s *healthChecker) Watch(req *grpc_health_v1.HealthCheckRequest, server grp
 	})
 }
 
-func runGRPCServer(ctx context.Context, svc types.SignerServiceServer, port string) error {
+func runGRPCServer(ctx context.Context, svc types.SignerServiceServer, port string, certCfg *core.CertConfig) error {
 	listen, err := net.Listen("tcp", ":"+port)
 	if err != nil {
 		return err
 	}
 
-	server := grpc.NewServer()
+	opts := []grpc.ServerOption{}
+	if certCfg != nil {
+		tlsConfig, err := core.LoadTLS(certCfg, true)
+		if err != nil {
+			return err
+		}
+		opts = append(opts, grpc.Creds(credentials.NewTLS(tlsConfig)))
+	}
+	server := grpc.NewServer(opts...)
 	types.RegisterSignerServiceServer(server, svc)
 
 	healthService := newHealthChecker()

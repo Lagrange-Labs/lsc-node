@@ -16,13 +16,13 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/config"
 	"github.com/Lagrange-Labs/lagrange-node/consensus"
 	"github.com/Lagrange-Labs/lagrange-node/core/logger"
+	"github.com/Lagrange-Labs/lagrange-node/core/telemetry"
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	"github.com/Lagrange-Labs/lagrange-node/sequencer"
 	"github.com/Lagrange-Labs/lagrange-node/server"
 	"github.com/Lagrange-Labs/lagrange-node/signer"
 	signerlocal "github.com/Lagrange-Labs/lagrange-node/signer/local"
 	"github.com/Lagrange-Labs/lagrange-node/store"
-	"github.com/Lagrange-Labs/lagrange-node/telemetry"
 )
 
 var (
@@ -223,7 +223,7 @@ func runSingerServer(ctx *cli.Context) error {
 		}
 	}
 
-	if err := signer.RunServer(cfg.GRPCPort, signers); err != nil {
+	if err := signer.RunServer(cfg.GRPCPort, cfg.TLSConfig, signers); err != nil {
 		return err
 	}
 

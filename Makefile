@@ -89,6 +89,7 @@ benchmark:
 
 # Local testnet
 create-keystore:
+	sh ./testutil/vector/generator.sh
 	go run ./testutil/chainconfig/cmd/...
 
 localnet-start: stop create-keystore

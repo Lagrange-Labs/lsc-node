@@ -8,6 +8,7 @@ import (
 
 	ecrypto "github.com/ethereum/go-ethereum/crypto"
 	"google.golang.org/grpc"
+	"google.golang.org/grpc/credentials"
 	"google.golang.org/grpc/credentials/insecure"
 
 	"github.com/Lagrange-Labs/lagrange-node/core"
@@ -37,9 +38,18 @@ type SignerClient struct {
 func NewSignerClient(cfg *Config) (*SignerClient, error) {
 	// Remote Signer
 	if len(cfg.SignerServerURL) > 0 {
-		opts := []grpc.DialOption{
-			grpc.WithTransportCredentials(insecure.NewCredentials()),
+		opts := []grpc.DialOption{}
+		if cfg.TLSConfig != nil {
+			creds, err := core.LoadTLS(cfg.TLSConfig, false)
+			if err != nil {
+				return nil, err
+			}
+			tlsCredentials := credentials.NewTLS(creds)
+			opts = append(opts, grpc.WithTransportCredentials(tlsCredentials))
+		} else {
+			opts = append(opts, grpc.WithTransportCredentials(insecure.NewCredentials()))
 		}
+
 		conn, err := grpc.NewClient(cfg.SignerServerURL, opts...)
 		if err != nil {
 			return nil, err

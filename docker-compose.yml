@@ -96,17 +96,8 @@ services:
       - LAGRANGE_NODE_CONSENSUS_PROPOSERBLSKEYSTOREPASSWORD=password_localtest
       - LAGRANGE_NODE_SEQUENCER_ETHEREUMURL=http://192.168.20.100:8545
   simnode1:
-    container_name: node0
+    container_name: node1
     image: lagrange-node
-    environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
-      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.42s
-      - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x516D6C27C23CEd21BF7930E2a01F0BcA9A141a0d
-      - LAGRANGE_NODE_CLIENT_BLSKEYACCOUNTID=bls-sign-key-1
-      - LAGRANGE_NODE_CLIENT_SIGNERKEYACCOUNTID=ecdsa-signer-key-1
-      - LAGRANGE_NODE_CLIENT_SIGNERSERVERURL=192.168.20.88:9090
-      - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
-      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.4
@@ -117,19 +108,10 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
+      - "/app/lagrange-node run-client -c /app/config/client_config_1.toml"
   simnode2:
-    container_name: node1
+    container_name: node2
     image: lagrange-node
-    environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
-      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.5s
-      - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x4d694DE17246086d6451D732Ea8EA2a9a76dC997
-      - LAGRANGE_NODE_CLIENT_BLSKEYACCOUNTID=bls-sign-key-2
-      - LAGRANGE_NODE_CLIENT_SIGNERKEYACCOUNTID=ecdsa-signer-key-2
-      - LAGRANGE_NODE_CLIENT_SIGNERSERVERURL=192.168.20.88:9090
-      - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
-      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.5
@@ -138,19 +120,10 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
+      - "/app/lagrange-node run-client -c /app/config/client_config_2.toml"
   simnode3:
-    container_name: node2
+    container_name: node3
     image: lagrange-node
-    environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
-      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.43s
-      - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x5d51B4c1fb0c67d0e1274EC96c1B895F45505a3D
-      - LAGRANGE_NODE_CLIENT_BLSKEYACCOUNTID=bls-sign-key-3
-      - LAGRANGE_NODE_CLIENT_SIGNERKEYACCOUNTID=ecdsa-signer-key-3
-      - LAGRANGE_NODE_CLIENT_SIGNERSERVERURL=192.168.20.88:9090
-      - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
-      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.6
@@ -159,19 +132,10 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
+      - "/app/lagrange-node run-client -c /app/config/client_config_3.toml"
   simnode4:
-    container_name: node3
+    container_name: node4
     image: lagrange-node
-    environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
-      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.35s
-      - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x13cF11F76a08214A826355a1C8d661E41EA7Bf97
-      - LAGRANGE_NODE_CLIENT_BLSKEYACCOUNTID=bls-sign-key-4
-      - LAGRANGE_NODE_CLIENT_SIGNERKEYACCOUNTID=ecdsa-signer-key-4
-      - LAGRANGE_NODE_CLIENT_SIGNERSERVERURL=192.168.20.88:9090
-      - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
-      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.7
@@ -180,19 +144,10 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
+      - "/app/lagrange-node run-client -c /app/config/client_config_4.toml"
   simnode5:
-    container_name: node4
+    container_name: node5
     image: lagrange-node
-    environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
-      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.23s
-      - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0xBD2369a9535751004617bC47cB0BF8Ea5c35Ed7C
-      - LAGRANGE_NODE_CLIENT_BLSKEYACCOUNTID=bls-sign-key-5
-      - LAGRANGE_NODE_CLIENT_SIGNERKEYACCOUNTID=ecdsa-signer-key-5
-      - LAGRANGE_NODE_CLIENT_SIGNERSERVERURL=192.168.20.88:9090
-      - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
-      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.8
@@ -201,20 +156,10 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
+      - "/app/lagrange-node run-client -c /app/config/client_config_5.toml"
   simnode6:
-    container_name: node5
+    container_name: node6
     image: lagrange-node
-    environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
-      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.38s
-      - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x83070c799c0d41526D4c71e462557CdbB2C750AC
-      - LAGRANGE_NODE_CLIENT_BLSKEYACCOUNTID=bls-sign-key-6
-      - LAGRANGE_NODE_CLIENT_SIGNERKEYACCOUNTID=ecdsa-signer-key-6
-      - LAGRANGE_NODE_CLIENT_SIGNERSERVERURL=192.168.20.88:9090
-      - LAGRANGE_NODE_CLIENT_SIGNERECDSAKEYSTOREPASSWORDPATH=/app/config/keystore_password
-      - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
-      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
     networks:
       localnet:
         ipv4_address: 192.168.20.9
@@ -223,19 +168,11 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
+      - "/app/lagrange-node run-client -c /app/config/client_config_6.toml"
   simnode7:
-    container_name: node6
+    container_name: node7
     image: lagrange-node
-    environment:
-      - LAGRANGE_NODE_CLIENT_GRPCURLS=192.168.20.3:9090,192.168.20.33:9090
-      - LAGRANGE_NODE_CLIENT_PULLINTERVAL=0.47s
-      - LAGRANGE_NODE_CLIENT_OPERATORADDRESS=0x7365666466f97E8aBBEE8900925521e0469A1f25
-      - LAGRANGE_NODE_CLIENT_BLSKEYACCOUNTID=bls-sign-key-7
-      - LAGRANGE_NODE_CLIENT_SIGNERKEYACCOUNTID=ecdsa-signer-key-7
-      - LAGRANGE_NODE_CLIENT_SIGNERSERVERURL=192.168.20.88:9090
-      - LAGRANGE_NODE_RPCCLIENT_MOCK_RPCURL=http://192.168.20.100:8545
-      - LAGRANGE_NODE_CLIENT_ETHEREUMURL=http://192.168.20.100:8545
+    
     networks:
       localnet:
         ipv4_address: 192.168.20.10
@@ -244,7 +181,7 @@ services:
     command:
       - "/bin/sh"
       - "-c"
-      - "/app/lagrange-node run-client"
+      - "/app/lagrange-node run-client -c /app/config/client_config_7.toml"
   lagrangesc:
     container_name: lagrange-smart-contract
     image: lagrangelabs/lagrange-contracts:develop
