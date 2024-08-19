@@ -76,7 +76,7 @@ func NewSignerClient(cfg *Config) (*SignerClient, error) {
 		return nil, fmt.Errorf("failed to load the bls keystore from %s: %v", cfg.BLSKeystorePath, err)
 	}
 	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
-	pubkey, err := blsScheme.GetPublicKey(blsPriv, false)
+	pubkey, err := blsScheme.GetPublicKey(blsPriv, false, true)
 	if err != nil {
 		return nil, fmt.Errorf("failed to get the bls public key: %v", err)
 	}
@@ -109,7 +109,7 @@ func (sc *SignerClient) Sign(keyType string, msg []byte) ([]byte, error) {
 	if !sc.isRemote {
 		switch keyType {
 		case "BLS":
-			return sc.blsScheme.Sign(sc.blsPrivateKey, msg)
+			return sc.blsScheme.Sign(sc.blsPrivateKey, msg, true)
 		case "ECDSA":
 			return ecrypto.Sign(msg, sc.signerECDSAPrivateKey)
 		default:
@@ -150,7 +150,7 @@ func (sc *SignerClient) GetPublicKey(keyType string) (string, error) {
 	}
 
 	req := &types.SignRequest{
-		SignMethod: signer.PublicKeyMethod,
+		SignMethod: signer.PublicKeyMethodG1,
 	}
 	switch keyType {
 	case "BLS":

@@ -43,7 +43,7 @@ func TestSingerSuite(t *testing.T) {
 			return ep, nil
 		},
 		Verify: func(pubKey, msg, sig []byte) (bool, error) {
-			return ep.Verify(pubKey, msg, sig)
+			return ep.Verify(pubKey, msg, sig, true)
 		},
 	})
 
@@ -52,7 +52,7 @@ func TestSingerSuite(t *testing.T) {
 			return bp, nil
 		},
 		Verify: func(pubKey, msg, sig []byte) (bool, error) {
-			return bp.Verify(pubKey, msg, sig)
+			return bp.Verify(pubKey, msg, sig, true)
 		},
 	})
 }

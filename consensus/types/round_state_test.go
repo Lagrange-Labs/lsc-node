@@ -15,7 +15,7 @@ func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []se
 	blsScheme := crypto.NewBLSScheme(blsCurve)
 
 	proposerSecKey, _ := blsScheme.GenerateRandomKey()
-	proposerPubKey, _ := blsScheme.GetPublicKey(proposerSecKey, true)
+	proposerPubKey, _ := blsScheme.GetPublicKey(proposerSecKey, true, true)
 	pBatch := &sequencerv2types.Batch{
 		BatchHeader: &sequencerv2types.BatchHeader{
 			ChainId:       1,
@@ -39,14 +39,14 @@ func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []se
 	}
 
 	blsSigHash := pBatch.BlsSignature().Hash()
-	proposerSigMsg, _ := blsScheme.Sign(proposerSecKey, blsSigHash)
+	proposerSigMsg, _ := blsScheme.Sign(proposerSecKey, blsSigHash, true)
 	pBatch.ProposerSignature = core.Bytes2Hex(proposerSigMsg)
 
 	secKeys := make([][]byte, 0)
 	nodes := []servertypes.ClientNode{}
 	for i := 0; i < 10; i++ {
 		secKey, _ := blsScheme.GenerateRandomKey()
-		pubKey, _ := blsScheme.GetPublicKey(secKey, true)
+		pubKey, _ := blsScheme.GetPublicKey(secKey, true, true)
 		secKeys = append(secKeys, secKey)
 		addr := core.RandomHex(20)
 		node := servertypes.ClientNode{
@@ -87,11 +87,11 @@ func TestCheckAggregatedSignature(t *testing.T) {
 	// Test 1: valid case
 	for i := 0; i < len(secKeys); i++ {
 		blsSign := blsSignature.Clone()
-		signature, err := blsScheme.Sign(secKeys[i], sigHash)
+		signature, err := blsScheme.Sign(secKeys[i], sigHash, true)
 		require.NoError(t, err)
 		blsSign.BlsSignature = core.Bytes2Hex(signature)
 
-		verified, err := blsScheme.VerifySignature(core.Hex2Bytes(validators[i].PublicKey), sigHash, signature)
+		verified, err := blsScheme.VerifySignature(core.Hex2Bytes(validators[i].PublicKey), sigHash, signature, true)
 		require.NoError(t, err)
 		require.True(t, verified, i)
 
@@ -112,7 +112,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 		if i == 8 {
 			blsSign.CommitteeHeader.NextCommittee = "0x111" // wrong contents
 		}
-		signature, err := blsScheme.Sign(secKeys[i], sigHash)
+		signature, err := blsScheme.Sign(secKeys[i], sigHash, true)
 		require.NoError(t, err)
 		blsSign.BlsSignature = core.Bytes2Hex(signature)
 		if i == 7 {
@@ -123,7 +123,7 @@ func TestCheckAggregatedSignature(t *testing.T) {
 			blsSign.BlsSignature = wrongSignature // wrong signature
 		}
 
-		verified, err := blsScheme.VerifySignature(core.Hex2Bytes(validators[i].PublicKey), sigHash, signature)
+		verified, err := blsScheme.VerifySignature(core.Hex2Bytes(validators[i].PublicKey), sigHash, signature, true)
 		require.NoError(t, err)
 		require.True(t, verified)
 

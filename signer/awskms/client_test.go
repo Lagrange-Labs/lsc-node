@@ -74,7 +74,7 @@ func startLocalstackContainer(name string) (testcontainers.Container, error) {
 
 func (s *TestClientSuite) TestSign() {
 	msg := crypto.Hash([]byte("hello"))
-	sig, err := s.client.Sign(msg)
+	sig, err := s.client.Sign(msg, false)
 	require.NoError(s.T(), err)
 
 	verified, _, err := crypto.VerifyECDSASignature(msg, sig)

@@ -6,6 +6,7 @@ import (
 	"net"
 	"os"
 	"os/signal"
+	"strings"
 
 	"github.com/ethereum/go-ethereum/common"
 	"google.golang.org/grpc"
@@ -19,7 +20,13 @@ import (
 
 const (
 	// PublicKeyMethod is the method to get the public key.
-	PublicKeyMethod = "public_key"
+	PublicKeyMethod   = "public_key"
+	PublicKeyMethodG1 = "public_key_g1"
+	PublicKeyMethodG2 = "public_key_g2"
+	// SignMethod is the method to sign the message.
+	SignMethod   = "sign"
+	SignMethodG1 = "sign_g1"
+	SignMethodG2 = "sign_g2"
 )
 
 var (
@@ -123,8 +130,8 @@ func (s *signerService) Sign(ctx context.Context, req *types.SignRequest) (*type
 		return nil, ErrSignerNotFound
 	}
 
-	if req.SignMethod == PublicKeyMethod {
-		pubKey, err := signer.GetPubKey()
+	if strings.HasPrefix(req.SignMethod, PublicKeyMethod) {
+		pubKey, err := signer.GetPubKey(!(req.SignMethod == PublicKeyMethodG2))
 		if err != nil {
 			return nil, err
 		}
@@ -134,7 +141,7 @@ func (s *signerService) Sign(ctx context.Context, req *types.SignRequest) (*type
 		}, nil
 	}
 
-	sig, err := signer.Sign(common.Hex2Bytes(req.Message))
+	sig, err := signer.Sign(common.Hex2Bytes(req.Message), !(req.SignMethod == SignMethodG2))
 	if err != nil {
 		return nil, err
 	}

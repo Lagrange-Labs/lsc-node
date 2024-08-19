@@ -20,13 +20,13 @@ func (s *BlsTestSuite) TestKeyGeneration() {
 
 	s.T().Logf("Private Key: %x", privKey)
 
-	pubKey, err := s.scheme.GetPublicKey(privKey, true)
+	pubKey, err := s.scheme.GetPublicKey(privKey, true, true)
 	s.Require().NoError(err)
 	s.Require().NotNil(pubKey)
 
 	s.T().Logf("Public Key: %x", pubKey)
 
-	pubKey, err = s.scheme.GetPublicKey(privKey, false)
+	pubKey, err = s.scheme.GetPublicKey(privKey, false, true)
 	s.Require().NoError(err)
 	s.Require().NotNil(pubKey)
 
@@ -38,17 +38,17 @@ func (s *BlsTestSuite) TestSignature() {
 	s.Require().NoError(err)
 	s.Require().NotNil(privKey)
 
-	pubKey, err := s.scheme.GetPublicKey(privKey, true)
+	pubKey, err := s.scheme.GetPublicKey(privKey, true, true)
 	s.Require().NoError(err)
 	s.Require().NotNil(pubKey)
 
 	message := []byte("hello world")
 
-	signature, err := s.scheme.Sign(privKey, message)
+	signature, err := s.scheme.Sign(privKey, message, true)
 	s.Require().NoError(err)
 	s.Require().NotNil(signature)
 
-	ok, err := s.scheme.VerifySignature(pubKey, message, signature)
+	ok, err := s.scheme.VerifySignature(pubKey, message, signature, true)
 	s.Require().NoError(err)
 	s.Require().True(ok)
 }
@@ -65,33 +65,33 @@ func (s *BlsTestSuite) TestAggregation() {
 		s.Require().NoError(err)
 		s.Require().NotNil(privKey)
 
-		pubKey, err := s.scheme.GetPublicKey(privKey, true)
+		pubKey, err := s.scheme.GetPublicKey(privKey, true, true)
 		s.Require().NoError(err)
 		s.Require().NotNil(pubKey)
 
 		privKeys[i] = privKey
 		pubKeys[i] = pubKey
 
-		signature, err := s.scheme.Sign(privKey, message)
+		signature, err := s.scheme.Sign(privKey, message, true)
 		s.Require().NoError(err)
 		s.Require().NotNil(signature)
 
 		signatures[i] = signature
 	}
 
-	aggPubKey, err := s.scheme.AggregatePublicKeys(pubKeys)
+	aggPubKey, err := s.scheme.AggregatePublicKeys(pubKeys, true)
 	s.Require().NoError(err)
 	s.Require().NotNil(aggPubKey)
 
-	aggSignature, err := s.scheme.AggregateSignatures(signatures)
+	aggSignature, err := s.scheme.AggregateSignatures(signatures, false)
 	s.Require().NoError(err)
 	s.Require().NotNil(aggSignature)
 
-	ok, err := s.scheme.VerifySignature(aggPubKey, message, aggSignature)
+	ok, err := s.scheme.VerifySignature(aggPubKey, message, aggSignature, true)
 	s.Require().NoError(err)
 	s.Require().True(ok)
 
-	ok, err = s.scheme.VerifyAggregatedSignature(pubKeys, message, aggSignature)
+	ok, err = s.scheme.VerifyAggregatedSignature(pubKeys, message, aggSignature, true)
 	s.Require().NoError(err)
 	s.Require().True(ok)
 }
@@ -124,13 +124,13 @@ func BenchmarkAggregation(b *testing.B) {
 					if err != nil {
 						b.Fatal(err)
 					}
-					pubKey, err := scheme.GetPublicKey(privKey, true)
+					pubKey, err := scheme.GetPublicKey(privKey, true, true)
 					if err != nil {
 						b.Fatal(err)
 					}
 					privKeys[i] = privKey
 					pubKeys[i] = pubKey
-					signature, err := scheme.Sign(privKey, message)
+					signature, err := scheme.Sign(privKey, message, true)
 					if err != nil {
 						b.Fatal(err)
 					}
@@ -139,11 +139,11 @@ func BenchmarkAggregation(b *testing.B) {
 
 				b.ResetTimer()
 				for i := 0; i < b.N; i++ {
-					aggSig, err := scheme.AggregateSignatures(signatures)
+					aggSig, err := scheme.AggregateSignatures(signatures, false)
 					if err != nil {
 						b.Fatal(err)
 					}
-					ok, err := scheme.VerifyAggregatedSignature(pubKeys, message, aggSig)
+					ok, err := scheme.VerifyAggregatedSignature(pubKeys, message, aggSig, true)
 					if err != nil {
 						b.Fatal(err)
 					}
