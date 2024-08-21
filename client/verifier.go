@@ -148,7 +148,7 @@ func (v *Verifier) verifyBatchHeader(batch *sequencerv2types.Batch) error {
 		return fmt.Errorf("the block %d proposer key is empty", batch.BatchNumber())
 	}
 	blsSigHash := batch.BlsSignature().Hash()
-	verified, err := v.blsScheme.VerifySignature(core.Hex2Bytes(batch.ProposerPubKey), blsSigHash, core.Hex2Bytes(batch.ProposerSignature))
+	verified, err := v.blsScheme.VerifySignature(core.Hex2Bytes(batch.ProposerPubKey), blsSigHash, core.Hex2Bytes(batch.ProposerSignature), true)
 	if err != nil || !verified {
 		return fmt.Errorf("failed to verify the proposer signature: %v", err)
 	}

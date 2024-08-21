@@ -19,11 +19,11 @@ func (s *SignerTestSuite) TestSigner() {
 	signer, err := s.NewSinger()
 	require.NoError(s.T(), err)
 
-	pubKey, err := signer.GetPubKey()
+	pubKey, err := signer.GetPubKey(true)
 	require.NoError(s.T(), err)
 
 	msg := corecrypto.Hash([]byte("hello"))
-	sig, err := signer.Sign(msg)
+	sig, err := signer.Sign(msg, true)
 	require.NoError(s.T(), err)
 
 	ok, err := s.Verify(pubKey, msg, sig)

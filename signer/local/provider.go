@@ -50,10 +50,10 @@ func NewProvider(cfg *signer.LocalConfig) (*provider, error) {
 }
 
 // Sign signs the message.
-func (p *provider) Sign(msg []byte) ([]byte, error) {
+func (p *provider) Sign(msg []byte, isG1 bool) ([]byte, error) {
 	switch p.keyType {
 	case string(crypto.BLS12381), string(crypto.BN254):
-		return p.scheme.Sign(p.privateKey, msg)
+		return p.scheme.Sign(p.privateKey, msg, isG1)
 	case "ECDSA":
 		return ecrypto.Sign(msg, p.ecdsaPrivateKey)
 	default:
@@ -62,10 +62,10 @@ func (p *provider) Sign(msg []byte) ([]byte, error) {
 }
 
 // GetPubKey gets the public key.
-func (p *provider) GetPubKey() ([]byte, error) {
+func (p *provider) GetPubKey(isG1 bool) ([]byte, error) {
 	switch p.keyType {
 	case string(crypto.BLS12381), string(crypto.BN254):
-		return p.scheme.GetPublicKey(p.privateKey, false)
+		return p.scheme.GetPublicKey(p.privateKey, false, isG1)
 	case "ECDSA":
 		addr := ecrypto.PubkeyToAddress(p.ecdsaPrivateKey.PublicKey)
 		return addr.Bytes(), nil
@@ -75,10 +75,10 @@ func (p *provider) GetPubKey() ([]byte, error) {
 }
 
 // Verify verifies the signature.
-func (p *provider) Verify(pubKey, msg, sig []byte) (bool, error) {
+func (p *provider) Verify(pubKey, msg, sig []byte, isG1 bool) (bool, error) {
 	switch p.keyType {
 	case string(crypto.BLS12381), string(crypto.BN254):
-		return p.scheme.VerifySignature(pubKey, msg, sig)
+		return p.scheme.VerifySignature(pubKey, msg, sig, isG1)
 	case "ECDSA":
 		res, _, err := crypto.VerifyECDSASignature(msg, sig)
 		return res, err

@@ -13,7 +13,7 @@ type BLS12381Scheme struct {
 
 var _ BLSScheme = (*BLS12381Scheme)(nil)
 
-func (s *BLS12381Scheme) VerifySignature(pubKey, message, signature []byte) (bool, error) {
+func (s *BLS12381Scheme) VerifySignature(pubKey, message, signature []byte, _ bool) (bool, error) {
 	pubK := new(bls.PublicKey)
 	if err := pubK.Deserialize(pubKey); err != nil {
 		return false, err
@@ -25,7 +25,7 @@ func (s *BLS12381Scheme) VerifySignature(pubKey, message, signature []byte) (boo
 	return sig.VerifyByte(pubK, message)
 }
 
-func (s *BLS12381Scheme) AggregateSignatures(signatures [][]byte) ([]byte, error) {
+func (s *BLS12381Scheme) AggregateSignatures(signatures [][]byte, _ bool) ([]byte, error) {
 	sigs := make([]*bls.Signature, len(signatures))
 	for i, sig := range signatures {
 		s := new(bls.Signature)
@@ -58,7 +58,7 @@ func (s *BLS12381Scheme) aggregatePublicKeys(pubKeys [][]byte) (*blst.P1Affine, 
 	return aggregator.ToAffine(), nil
 }
 
-func (s *BLS12381Scheme) AggregatePublicKeys(pubKeys [][]byte) ([]byte, error) {
+func (s *BLS12381Scheme) AggregatePublicKeys(pubKeys [][]byte, _ bool) ([]byte, error) {
 	aggPk, err := s.aggregatePublicKeys(pubKeys)
 	if err != nil {
 		return nil, err
@@ -68,7 +68,7 @@ func (s *BLS12381Scheme) AggregatePublicKeys(pubKeys [][]byte) ([]byte, error) {
 	return aggPkRaw[:], nil
 }
 
-func (s *BLS12381Scheme) VerifyAggregatedSignature(pubKeys [][]byte, message, signature []byte) (bool, error) {
+func (s *BLS12381Scheme) VerifyAggregatedSignature(pubKeys [][]byte, message, signature []byte, _ bool) (bool, error) {
 	sig := new(bls.Signature)
 	if err := sig.Deserialize(signature); err != nil {
 		return false, err
@@ -86,7 +86,7 @@ func (s *BLS12381Scheme) VerifyAggregatedSignature(pubKeys [][]byte, message, si
 	return sig.FastAggregateVerify(pks, message)
 }
 
-func (s *BLS12381Scheme) Sign(privKey, message []byte) ([]byte, error) {
+func (s *BLS12381Scheme) Sign(privKey, message []byte, _ bool) ([]byte, error) {
 	priv := new(bls.SecretKey)
 	if err := priv.Unmarshal(privKey); err != nil {
 		return nil, err
@@ -108,7 +108,7 @@ func (s *BLS12381Scheme) GenerateRandomKey() ([]byte, error) {
 	return privRaw[:], nil
 }
 
-func (s *BLS12381Scheme) GetPublicKey(privKey []byte, isCompressed bool) ([]byte, error) {
+func (s *BLS12381Scheme) GetPublicKey(privKey []byte, isCompressed bool, _ bool) ([]byte, error) {
 	priv := new(bls.SecretKey)
 	if err := priv.Unmarshal(privKey); err != nil {
 		return nil, err
@@ -123,7 +123,7 @@ func (s *BLS12381Scheme) GetPublicKey(privKey []byte, isCompressed bool) ([]byte
 	return pubKey.Serialize(), nil
 }
 
-func (s *BLS12381Scheme) ConvertPublicKey(pubKey []byte, isCompressed bool) ([]byte, error) {
+func (s *BLS12381Scheme) ConvertPublicKey(pubKey []byte, isCompressed bool, _ bool) ([]byte, error) {
 	if isCompressed {
 		pubKey = new(blst.P1Affine).Deserialize(pubKey).Compress()
 

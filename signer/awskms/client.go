@@ -71,7 +71,7 @@ type asn1EcSig struct {
 }
 
 // Sign signs the data.
-func (c *Client) Sign(digest []byte) ([]byte, error) {
+func (c *Client) Sign(digest []byte, _ bool) ([]byte, error) {
 	input := &kms.SignInput{
 		KeyId:            &c.keyID,
 		Message:          digest,
@@ -112,7 +112,7 @@ type asn1EcPublicKeyInfo struct {
 }
 
 // GetPubKey gets the public key.
-func (c *Client) GetPubKey() ([]byte, error) {
+func (c *Client) GetPubKey(_ bool) ([]byte, error) {
 	output, err := c.Client.GetPublicKey(context.Background(), &kms.GetPublicKeyInput{KeyId: aws.String(c.keyID)})
 	if err != nil {
 		return nil, err

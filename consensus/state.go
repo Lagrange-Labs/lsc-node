@@ -60,7 +60,7 @@ func NewState(cfg *Config, storage storageInterface, chainInfo *ChainInfo) *Stat
 		logger.Fatalf("failed to load the bls keystore from %s: %v", cfg.ProposerBLSKeystorePath, err)
 	}
 	blsScheme := crypto.NewBLSScheme(crypto.BLSCurve(cfg.BLSCurve))
-	pubKey, err := blsScheme.GetPublicKey(privKey, true)
+	pubKey, err := blsScheme.GetPublicKey(privKey, true, true)
 	if err != nil {
 		logger.Fatalf("failed to get the public key: %v", err)
 	}
@@ -370,7 +370,7 @@ func (s *State) startRound(batchNumber uint64) error {
 
 	// generate a proposer signature
 	blsSigHash := batch.BlsSignature().Hash()
-	signature, err := s.blsScheme.Sign(s.proposerPrivKey, blsSigHash)
+	signature, err := s.blsScheme.Sign(s.proposerPrivKey, blsSigHash, true)
 	if err != nil {
 		logger.Errorf("failed to sign the batch %d: %v", batch.BatchNumber(), err)
 		return err
