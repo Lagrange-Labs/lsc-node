@@ -71,7 +71,7 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 }
 
 // SetBeginBlockNumber sets the begin L1 & L2 block number.
-func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) bool {
+func (c *Client) SetBeginBlockNumber(l1BlockNumber, _ uint64) bool {
 	c.mtx.Lock()
 	defer c.mtx.Unlock()
 	c.fromL1BlockNumber = l1BlockNumber

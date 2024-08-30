@@ -35,7 +35,7 @@ func NewClient(cfg *Config, isLight bool) (*Client, error) {
 }
 
 // SetBeginBlockNumber sets the begin L1 & L2 block number.
-func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) bool {
+func (c *Client) SetBeginBlockNumber(l1BlockNumber, _ uint64) bool {
 	lastSyncedL1BlockNumber := c.fetcher.GetFetchedBlockNumber()
 	lastPulledL1BlockNumber := c.fetcher.GetPulledBlockNumber()
 	if lastSyncedL1BlockNumber >= l1BlockNumber && l1BlockNumber >= lastPulledL1BlockNumber {

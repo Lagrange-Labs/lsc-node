@@ -147,7 +147,9 @@ func (f *Fetcher) InitFetch() {
 
 // Fetch fetches the block data from the Ethereum and analyzes the
 // transactions which are sent to the BatchInbox EOA.
-func (f *Fetcher) Fetch(l1BeginBlockNumber uint64) error {
+func (f *Fetcher) Fetch(l1BeginBlockNumber, l2BeginBlockNumber uint64) error {
+	f.lastSyncedL2BlockNumber = l2BeginBlockNumber
+
 	go func() {
 		if err := f.handleFrames(); err != nil {
 			logger.Errorf("failed to handle frames: %v", err)
@@ -431,16 +433,6 @@ func (f *Fetcher) fetchBlock(blockNumber uint64) ([]*FramesRef, error) {
 	}
 
 	return res, nil
-}
-
-// getL2BlockNumberByHash returns the L2 block number for the given block hash.
-func (f *Fetcher) getL2BlockNumberByHash(blockHash common.Hash) (uint64, error) {
-	return f.l2Client.GetBlockNumberByHash(blockHash)
-}
-
-// getL2BlockNumberByTxHash returns the L2 block number for the given transaction hash.
-func (f *Fetcher) getL2BlockNumberByTxHash(txHash common.Hash) (uint64, error) {
-	return f.l2Client.GetBlockNumberByTxHash(txHash)
 }
 
 // validTransaction returns true if the given transaction is valid.

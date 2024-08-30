@@ -35,7 +35,7 @@ func NewClient(cfg *Config, isLight bool) (*Client, error) {
 }
 
 // SetBeginBlockNumber sets the begin L1 & L2 block number.
-func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) bool {
+func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) bool {
 	lastSyncedL1BlockNumber := c.fetcher.GetFetchedBlockNumber()
 	lastPulledL1BlockNumber := c.fetcher.GetPulledBlockNumber()
 	if lastSyncedL1BlockNumber+ParallelBlocks > l1BlockNumber && l1BlockNumber >= lastPulledL1BlockNumber {
@@ -49,7 +49,7 @@ func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) bool {
 	c.fetcher.InitFetch()
 	// Fetch L1 batch headers
 	go func() {
-		if err := c.fetcher.Fetch(l1BlockNumber); err != nil {
+		if err := c.fetcher.Fetch(l1BlockNumber, l2BlockNumber); err != nil {
 			logger.Errorf("failed to fetch L1 batch headers: %v", err)
 			c.fetcher.Stop()
 		}

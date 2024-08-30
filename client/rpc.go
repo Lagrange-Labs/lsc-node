@@ -121,7 +121,7 @@ func (r *RpcAdapter) startBatchFetching(chErr chan<- error) {
 }
 
 // InitBeginBlockNumber initializes the begin block number for the RPC client.
-func (r *RpcAdapter) InitBeginBlockNumber(blockNumber uint64) error {
+func (r *RpcAdapter) InitBeginBlockNumber(blockNumber, l2BlockNumber uint64) error {
 	// set the open block number
 	r.SetOpenL1BlockNumber(blockNumber)
 
@@ -154,7 +154,7 @@ func (r *RpcAdapter) InitBeginBlockNumber(blockNumber uint64) error {
 		}
 	}
 
-	r.isSetBeginBlockNumber.Store(r.client.SetBeginBlockNumber(blockNumber))
+	r.isSetBeginBlockNumber.Store(r.client.SetBeginBlockNumber(blockNumber, l2BlockNumber))
 
 	return nil
 }

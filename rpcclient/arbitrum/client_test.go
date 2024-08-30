@@ -19,12 +19,12 @@ func TestErrorHandling(t *testing.T) {
 	client, err := NewClient(cfg, true)
 	require.NoError(t, err)
 
-	client.SetBeginBlockNumber(10)
+	client.SetBeginBlockNumber(10, 0)
 	time.Sleep(1 * time.Second)
 	client.fetcher.StopFetch()
 
 	// check if able to restart
-	client.SetBeginBlockNumber(50)
+	client.SetBeginBlockNumber(50, 0)
 	time.Sleep(1 * time.Second)
 	client.fetcher.Stop()
 	// check error propagation
