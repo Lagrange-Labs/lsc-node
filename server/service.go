@@ -86,7 +86,7 @@ func (s *sequencerService) JoinNetwork(ctx context.Context, req *v2types.JoinNet
 	if err != nil {
 		return nil, err
 	}
-	verified, err := s.blsScheme.VerifySignature(core.Hex2Bytes(req.PublicKey), msg, core.Hex2Bytes(sigMessage))
+	verified, err := s.blsScheme.VerifySignature(core.Hex2Bytes(req.PublicKey), msg, core.Hex2Bytes(sigMessage), true)
 	if err != nil || !verified {
 		logger.Warnf("BLS signature verification failed: %v", err)
 		return nil, fmt.Errorf("BLS signature verification failed: %v", err)

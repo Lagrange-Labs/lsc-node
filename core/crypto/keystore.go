@@ -71,7 +71,7 @@ func ReadKeystorePasswordFromFile(passwordFilePath string) (string, error) {
 
 func saveBLSKey(curve BLSCurve, privKey []byte, password, filePath string) error {
 	blsScheme := NewBLSScheme(curve)
-	pubKey, err := blsScheme.GetPublicKey(privKey, false)
+	pubKey, err := blsScheme.GetPublicKey(privKey, false, true)
 	if err != nil {
 		return err
 	}

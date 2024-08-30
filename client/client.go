@@ -270,7 +270,7 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 		logger.Warnf("failed to verify the batch: %v", err)
 		return batch, err
 	}
-
+	telemetry.SetGauge(float64(batch.BatchNumber()), "client", "current_batch_number")
 	return batch, nil
 }
 

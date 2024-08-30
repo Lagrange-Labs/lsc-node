@@ -157,11 +157,11 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 		}
 	}
 
-	aggSig, err := rs.blsScheme.AggregateSignatures(signatures)
+	aggSig, err := rs.blsScheme.AggregateSignatures(signatures, false)
 	if err != nil {
 		logger.Errorf("failed to aggregate the signatures: %v", err)
 	} else {
-		verified, err := rs.blsScheme.VerifyAggregatedSignature(pubKeys, sigHash, aggSig)
+		verified, err := rs.blsScheme.VerifyAggregatedSignature(pubKeys, sigHash, aggSig, true)
 		if err == nil && verified {
 			rs.proposedBatch.AggSignature = core.Bytes2Hex(aggSig)
 			for _, pubKey := range pubKeys {
@@ -184,7 +184,7 @@ func (rs *RoundState) CheckAggregatedSignature() error {
 				rs.addEvidence(operator, pubKey, commit)
 				continue
 			}
-			verified, err := rs.blsScheme.VerifySignature(core.Hex2Bytes(pubKey), commitHash, core.Hex2Bytes(commit.BlsSignature))
+			verified, err := rs.blsScheme.VerifySignature(core.Hex2Bytes(pubKey), commitHash, core.Hex2Bytes(commit.BlsSignature), true)
 			if err != nil {
 				logger.Errorf("failed to verify the signature: %v", err)
 				rs.addEvidence(operator, pubKey, commit)

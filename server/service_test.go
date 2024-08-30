@@ -83,7 +83,7 @@ func TestBLSSignVerify(t *testing.T) {
 	blsScheme := crypto.NewBLSScheme(crypto.BN254)
 	priv, err := blsScheme.GenerateRandomKey()
 	require.NoError(t, err)
-	pub, err := blsScheme.GetPublicKey(priv, true)
+	pub, err := blsScheme.GetPublicKey(priv, true, true)
 	require.NoError(t, err)
 
 	// JoinNetwork request sign
@@ -95,11 +95,11 @@ func TestBLSSignVerify(t *testing.T) {
 	msg, err := proto.Marshal(req)
 	require.NoError(t, err)
 
-	sig, err := blsScheme.Sign(priv, msg)
+	sig, err := blsScheme.Sign(priv, msg, true)
 	require.NoError(t, err)
 
 	// Verify signature
-	verified, err := blsScheme.VerifySignature(pub, msg, sig)
+	verified, err := blsScheme.VerifySignature(pub, msg, sig, true)
 	require.NoError(t, err)
 	require.True(t, verified)
 }
