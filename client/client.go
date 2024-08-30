@@ -33,7 +33,7 @@ type PreviousBatchInfo struct {
 
 // AdapterTrigger is the interface to trigger the adapter.
 type AdapterTrigger interface {
-	InitBeginBlockNumber(uint64) error
+	InitBeginBlockNumber(uint64, uint64) error
 	SetOpenL1BlockNumber(uint64)
 }
 
@@ -148,7 +148,7 @@ func (c *Client) Start() error {
 				}
 				if errors.Is(err, ErrBatchNotFound) {
 					logger.Warnf("The batch is not found, please check the metrics for the RPC provider. There may be a delay or a performance issue.")
-					if err := c.adapter.InitBeginBlockNumber(batch.L1BlockNumber()); err != nil {
+					if err := c.adapter.InitBeginBlockNumber(batch.L1BlockNumber(), batch.BatchHeader.GetL2FromBlockNumber()); err != nil {
 						logger.Errorf("failed to initialize the begin block number: %v", err)
 					}
 					continue
@@ -239,7 +239,7 @@ func (c *Client) joinNetwork() error {
 
 	c.jwToken = res.Token
 
-	if err := c.adapter.InitBeginBlockNumber(res.PrevL1BlockNumber); err != nil {
+	if err := c.adapter.InitBeginBlockNumber(res.PrevL1BlockNumber, res.PrevL2BlockNumber); err != nil {
 		return fmt.Errorf("failed to initialize the begin block number: %v", err)
 	}
 

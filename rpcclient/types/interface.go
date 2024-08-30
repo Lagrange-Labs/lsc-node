@@ -26,8 +26,8 @@ type RpcClient interface {
 	GetFinalizedBlockNumber() (uint64, error)
 	// GetChainID returns the chain ID.
 	GetChainID() (uint32, error)
-	// SetBeginBlockNumber sets the begin L1 block number.
-	SetBeginBlockNumber(l1BlockNumber uint64) bool
+	// SetBeginBlockNumber sets the begin L1 and L2 block number.
+	SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) bool
 	// NextBatch returns the next batch after SetBeginBlockNumber.
 	NextBatch() (*sequencerv2types.BatchHeader, error)
 	// GetBlockHashFromRLPHeader returns the block hash and the parent hash from the rlp encoded block header.

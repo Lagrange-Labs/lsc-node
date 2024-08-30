@@ -99,7 +99,7 @@ func (c *Client) GetFinalizedBlockNumber() (uint64, error) {
 }
 
 // SetBeginBlockNumber sets the begin L1 & L2 block number.
-func (c *Client) SetBeginBlockNumber(l1BlockNumber uint64) bool {
+func (c *Client) SetBeginBlockNumber(_, _ uint64) bool {
 	return true
 }
 

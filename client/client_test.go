@@ -68,7 +68,7 @@ func (m *mockRPC) GetBlockHashFromRLPHeader(rlpHeader []byte) (common.Hash, comm
 	return common.Hash{}, common.Hash{}, nil
 }
 
-func (m *mockRPC) SetBeginBlockNumber(l1BlockNumber uint64) bool {
+func (m *mockRPC) SetBeginBlockNumber(l1BlockNumber, _ uint64) bool {
 	m.chBeginBlockNumber <- l1BlockNumber
 	return true
 }
@@ -138,12 +138,12 @@ func TestRPCStorage(t *testing.T) {
 	require.Equal(t, uint64(8), batch.L1BlockNumber)
 
 	// init begin block number
-	err = adapter.InitBeginBlockNumber(5)
+	err = adapter.InitBeginBlockNumber(5, 5)
 	require.NoError(t, err)
 	beginBlockNumber := <-chBeginBlockNumber
 	require.Equal(t, uint64(10), beginBlockNumber)
 
-	err = adapter.InitBeginBlockNumber(11)
+	err = adapter.InitBeginBlockNumber(11, 11)
 	require.NoError(t, err)
 	beginBlockNumber = <-chBeginBlockNumber
 	require.Equal(t, uint64(11), beginBlockNumber)
