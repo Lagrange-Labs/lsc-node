@@ -35,7 +35,7 @@ Change Categories
 •  Breaking Changes: For changes that break backward compatibility.
 -->
 
-## Unreleased
+## [v1.1.0](https://github.com/Lagrange-Labs/lsc-node/releases/tag/v1.1.0) *2024-09-02*
 
 ### Features
 
@@ -43,11 +43,17 @@ Change Categories
 
 ### Enhancements
 
+* [#523](https://github.com/Lagrange-Labs/lsc-node/issues/523) Add the `Signer` module.
+* [#530](https://github.com/Lagrange-Labs/lsc-node/issues/530) Create the own go modules to manage the dependencies.
+* [#550](https://github.com/Lagrange-Labs/lsc-node/pull/550) Add G2 based BLS scheme.
+* [#556](https://github.com/Lagrange-Labs/lsc-node/pull/556) Refactor the optimism rpc for the polymer support.
+
 ### Fixes
 
 ### Breaking Changes
 
-###
+* [#557](https://github.com/Lagrange-Labs/lsc-node/pull/557) Update the batch hash logic with the merkle root.
+
 
 ## [v1.0.0](https://github.com/Lagrange-Labs/lsc-node/releases/tag/v1.0.0) *2024-07-30*
 
