@@ -146,7 +146,7 @@ func (b *BlsSignature) BatchNumber() uint64 {
 
 // Hash returns the hash of the bls signature.
 func (b *BlsSignature) Hash() []byte {
-	h := append([]byte{}, b.BatchHeader.Hash()...)
+	h := append([]byte{}, b.BatchHeader.MerkleHash()...)
 	h = append(h, core.Hex2Bytes(b.CommitteeHeader.CurrentCommittee)...)
 	h = append(h, core.Hex2Bytes(b.CommitteeHeader.NextCommittee)...)
 	h = append(h, core.Uint64ToBytes(b.CommitteeHeader.TotalVotingPower)...)
