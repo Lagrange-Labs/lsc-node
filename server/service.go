@@ -29,9 +29,9 @@ var (
 	ErrCheckCommitteeMember = errors.New("failed to check the committee member")
 
 	// MinCompatibleVersion is the minimum compatible version.
-	MinCompatibleVersion = core.Version{Major: 0, Minor: 0, Patch: 0}
+	MinCompatibleVersion = core.Version{Major: 1, Minor: 1, Patch: 0}
 	// ExpectedVersion is the expected version.
-	ExpectedVersion = core.Version{Major: 1, Minor: 0, Patch: 0}
+	ExpectedVersion = core.Version{Major: 1, Minor: 1, Patch: 0}
 )
 
 type sequencerService struct {
