@@ -22,7 +22,7 @@ var (
 	ErrBatchNotFinalized = errors.New("the current batch is not finalized yet")
 
 	// NodeVersion is used to check the compatibility between the client and the server.
-	NodeVersion = "v1.0.0"
+	NodeVersion = "v1.1.0"
 )
 
 // PreviousBatchInfo is the struct to store the previous batch information.
