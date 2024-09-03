@@ -25,6 +25,8 @@ func NewClient(chain string, cfg *Config, isLight bool) (types.RpcClient, error)
 		return optimism.NewClient(cfg.Optimism, isLight)
 	case "optimism":
 		return optimism.NewClient(cfg.Optimism, isLight)
+	case "polymer":
+		return optimism.NewClient(cfg.Optimism, isLight)
 	case "mock":
 		return mock.NewClient(cfg.Mock, isLight)
 	default:
