@@ -421,7 +421,7 @@ func (f *Fetcher) fetchBlock(blockNumber uint64) ([]*FramesRef, error) {
 		frames, err := derive.ParseFrames(data.Data)
 		if err != nil {
 			logger.Errorf("failed to parse frames: %v", err)
-			return nil, err
+			continue
 		}
 		framesRef := &FramesRef{
 			Frames:        frames,
