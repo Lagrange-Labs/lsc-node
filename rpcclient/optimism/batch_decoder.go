@@ -190,9 +190,6 @@ func (f *Fetcher) pushBatchesRef(batchesRef *BatchesRef) error {
 					isFound = true
 					break
 				}
-				if j == 1 {
-					continue
-				}
 				bn = f.lastSyncedL2BlockNumber - uint64(j)
 				hash, err = f.l2Client.GetBlockHashByNumber(bn)
 				if err != nil {
@@ -206,7 +203,7 @@ func (f *Fetcher) pushBatchesRef(batchesRef *BatchesRef) error {
 				}
 			}
 			if !isFound {
-				logger.Errorf("no L2 block number found for the batchref: %+v", batchesRef)
+				logger.Errorf("no L2 block number found for the batchesRef: %+v", batchesRef)
 				return fmt.Errorf("no L2 block number found")
 			}
 		}
