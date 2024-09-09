@@ -44,7 +44,7 @@ func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) bool {
 	}
 
 	c.fetcher.StopFetch()
-	logger.Infof("last synced L1 block number: %d, begin L1 block number: %d", lastSyncedL1BlockNumber, l1BlockNumber)
+	logger.Infof("last synced L1 block number: %d, begin L1 block number: %d, begin L2 block number: %d", lastSyncedL1BlockNumber, l1BlockNumber, l2BlockNumber)
 
 	c.fetcher.InitFetch()
 	// Fetch L1 batch headers
