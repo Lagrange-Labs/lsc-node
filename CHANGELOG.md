@@ -46,7 +46,7 @@ Change Categories
 * [#523](https://github.com/Lagrange-Labs/lsc-node/issues/523) Add the `Signer` module.
 * [#530](https://github.com/Lagrange-Labs/lsc-node/issues/530) Create the own go modules to manage the dependencies.
 * [#550](https://github.com/Lagrange-Labs/lsc-node/pull/550) Add G2 based BLS scheme.
-* [#556](https://github.com/Lagrange-Labs/lsc-node/pull/556) Refactor the optimism rpc for the polymer support.
+* [#556](https://github.com/Lagrange-Labs/lsc-node/pull/556) Refactor the optimism rpc in a more combinient way.
 
 ### Fixes
 
