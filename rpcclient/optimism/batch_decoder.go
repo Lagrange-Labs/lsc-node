@@ -203,8 +203,12 @@ func (f *Fetcher) pushBatchesRef(batchesRef *BatchesRef) error {
 				}
 			}
 			if !isFound {
-				logger.Errorf("no L2 block number found for the batchesRef: %+v", batchesRef)
-				return fmt.Errorf("no L2 block number found")
+				logger.Warnf("no L2 block number found for the batchesRef: %+v", batchesRef)
+				bn, err := f.getBeginL2BlockNumber(batchesRef)
+				if err != nil {
+					return err
+				}
+				f.lastSyncedL2BlockNumber = bn
 			}
 		}
 		if i == 0 {
@@ -216,4 +220,47 @@ func (f *Fetcher) pushBatchesRef(batchesRef *BatchesRef) error {
 	f.batchHeaders <- batchesRef
 
 	return nil
+}
+
+// getBeginL2BlockNumber returns the begin L2 block number for the given BatchesRef.
+func (f *Fetcher) getBeginL2BlockNumber(batchesRef *BatchesRef) (uint64, error) {
+	l2BlockNumber := uint64(0)
+	forwardCount := uint64(0)
+	var err error
+	for _, batch := range batchesRef.Batches {
+		forwardCount += uint64(batch.BlockCount)
+		if batch.ParentHash.Cmp((common.Hash{})) != 0 { // singular batch
+			l2BlockNumber, err = f.l2Client.GetBlockNumberByHash(batch.ParentHash)
+			if err != nil {
+				logger.Errorf("failed to get L2 block number by block hash: %v", err)
+				return 0, err
+			}
+			break
+		}
+		if batch.TxHash.Cmp((common.Hash{})) != 0 {
+			l2BlockNumber, err = f.l2Client.GetBlockNumberByHash(batch.TxHash)
+			if err != nil {
+				logger.Errorf("failed to get L2 block number by tx hash: %v", err)
+				return 0, err
+			}
+			break
+		}
+	}
+	if l2BlockNumber == 0 {
+		logger.Warnf("no L2 block number found: %+v", batchesRef)
+		return 0, ErrNoTransaction
+	}
+	for bn := l2BlockNumber; bn >= l2BlockNumber-forwardCount; bn-- {
+		blockHash, err := f.l2Client.GetBlockHashByNumber(bn)
+		if err != nil {
+			logger.Errorf("failed to get L2 block hash: %v", err)
+			return 0, err
+		}
+		if bytes.Equal(batchesRef.Batches[0].ParentHashCheck, blockHash[:20]) {
+			return bn, nil
+		}
+	}
+
+	logger.Errorf("no L2 block number found parentHashCheck %x from l2BlockNumber %d forwardCount %d", batchesRef.Batches[0].ParentHashCheck, l2BlockNumber, forwardCount)
+	return 0, fmt.Errorf("no L2 block number found")
 }
