@@ -51,6 +51,8 @@ StakingCheckInterval = "2s"
 	BeaconURL = "http://localhost:8545"
 	BatchInbox = "0x1c479675ad559DC151F6Ec7ed3FbF8ceE79582B6"
 	ConcurrentFetchers = 8
+	L1ParallelBlocks = 32
+	L2ParallelBlocks = 32
 
 	[RpcClient.Mantle]
 	RPCURL = "http://localhost:8545"

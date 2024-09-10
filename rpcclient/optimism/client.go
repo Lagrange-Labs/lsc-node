@@ -13,7 +13,8 @@ var _ types.RpcClient = (*Client)(nil)
 type Client struct {
 	evmclient.Client
 
-	fetcher *Fetcher
+	l1ParallelBlocks int
+	fetcher          *Fetcher
 }
 
 // NewClient creates a new Client instance.
@@ -29,8 +30,9 @@ func NewClient(cfg *Config, isLight bool) (*Client, error) {
 	}
 
 	return &Client{
-		Client:  *client,
-		fetcher: fetcher,
+		Client:           *client,
+		l1ParallelBlocks: cfg.L1ParallelBlocks,
+		fetcher:          fetcher,
 	}, nil
 }
 
@@ -38,7 +40,7 @@ func NewClient(cfg *Config, isLight bool) (*Client, error) {
 func (c *Client) SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) bool {
 	lastSyncedL1BlockNumber := c.fetcher.GetFetchedBlockNumber()
 	lastPulledL1BlockNumber := c.fetcher.GetPulledBlockNumber()
-	if lastSyncedL1BlockNumber+ParallelBlocks > l1BlockNumber && l1BlockNumber >= lastPulledL1BlockNumber {
+	if lastSyncedL1BlockNumber+uint64(c.l1ParallelBlocks) > l1BlockNumber && l1BlockNumber >= lastPulledL1BlockNumber {
 		// if the begin block number is already synced, return false
 		return false
 	}
