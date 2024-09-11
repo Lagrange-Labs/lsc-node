@@ -230,7 +230,7 @@ func (f *Fetcher) getBeginL2BlockNumber(batchesRef *BatchesRef) (uint64, error) 
 	for _, batch := range batchesRef.Batches {
 		forwardCount += uint64(batch.BlockCount)
 		if batch.ParentHash.Cmp((common.Hash{})) != 0 { // singular batch
-			l2BlockNumber, err = f.l2Client.GetBlockNumberByHash(batch.ParentHash)
+			l2BlockNumber, err = f.l2Client.GetBlockNumberByTxHash(batch.ParentHash)
 			if err != nil {
 				logger.Errorf("failed to get L2 block number by block hash: %v", err)
 				return 0, err
@@ -238,7 +238,7 @@ func (f *Fetcher) getBeginL2BlockNumber(batchesRef *BatchesRef) (uint64, error) 
 			break
 		}
 		if batch.TxHash.Cmp((common.Hash{})) != 0 {
-			l2BlockNumber, err = f.l2Client.GetBlockNumberByHash(batch.TxHash)
+			l2BlockNumber, err = f.l2Client.GetBlockNumberByTxHash(batch.TxHash)
 			if err != nil {
 				logger.Errorf("failed to get L2 block number by tx hash: %v", err)
 				return 0, err
