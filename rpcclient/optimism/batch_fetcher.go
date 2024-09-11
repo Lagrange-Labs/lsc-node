@@ -65,7 +65,7 @@ type Fetcher struct {
 	l2Client          types.EvmClient
 	l1BlobFetcher     *sources.L1BeaconClient
 	batchInboxAddress common.Address
-	batchSender       common.Address
+	batchSenders      []string
 	concurrentFetcher int
 	l1ParallelBlocks  int
 	l2ParallelBlocks  int
@@ -117,7 +117,7 @@ func NewFetcher(cfg *Config, isLight bool) (*Fetcher, error) {
 		isLight:           isLight,
 		chainID:           big.NewInt(int64(l2ChainID)),
 		batchInboxAddress: common.HexToAddress(cfg.BatchInbox),
-		batchSender:       common.HexToAddress(cfg.BatchSender),
+		batchSenders:      cfg.BatchSender,
 		concurrentFetcher: cfg.ConcurrentFetchers,
 		l1ParallelBlocks:  cfg.L1ParallelBlocks,
 		l2ParallelBlocks:  cfg.L2ParallelBlocks,
@@ -450,11 +450,13 @@ func (f *Fetcher) validTransaction(tx *coretypes.Transaction) bool {
 	if err != nil {
 		return false
 	}
-	if from != f.batchSender {
-		return false
+	for _, sender := range f.batchSenders {
+		if from == common.HexToAddress(sender) {
+			return true
+		}
 	}
 
-	return true
+	return false
 }
 
 // nextBatchHeader returns the L2 batch header.
