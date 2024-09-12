@@ -31,7 +31,7 @@ var (
 	// MinCompatibleVersion is the minimum compatible version.
 	MinCompatibleVersion = core.Version{Major: 1, Minor: 1, Patch: 0}
 	// ExpectedVersion is the expected version.
-	ExpectedVersion = core.Version{Major: 1, Minor: 1, Patch: 2}
+	ExpectedVersion = core.Version{Major: 1, Minor: 1, Patch: 3}
 )
 
 type sequencerService struct {
