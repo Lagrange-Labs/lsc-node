@@ -35,7 +35,7 @@ func TestFetchCommittee(t *testing.T) {
 			L1RPCURLs:   []string{ethURL},
 			BeaconURL:   "http://localhost:8545",
 			BatchInbox:  "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f",
-			BatchSender: "0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f",
+			BatchSender: []string{"0x0AEd0dC7f53CB452A34A3Fe4d6a7E4Fdd110ed0f"},
 		},
 	}
 

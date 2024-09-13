@@ -10,8 +10,12 @@ type Config struct {
 	BeaconURL string `mapstructure:"BeaconURL"`
 	// BatchInbox is the address of the BatchInbox EOA
 	BatchInbox string `mapstructure:"BatchInbox"`
-	// BatchSender is the address of the Batcher
-	BatchSender string `mapstructure:"BatchSender"`
+	// BatchSender are the addresses of the BatchSender EOAs
+	BatchSender []string `mapstructure:"BatchSender"`
 	// ConcurrentFetchers is the number of concurrent fetchers
 	ConcurrentFetchers int `mapstructure:"ConcurrentFetchers"`
+	// L1ParallelBlocks is the number of blocks to fetch in parallel from L1
+	L1ParallelBlocks int `mapstructure:"L1ParallelBlocks"`
+	// L2ParallelBlocks is the number of blocks to fetch in parallel from L2
+	L2ParallelBlocks int `mapstructure:"L2ParallelBlocks"`
 }

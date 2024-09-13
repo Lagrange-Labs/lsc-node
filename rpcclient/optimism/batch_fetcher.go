@@ -28,7 +28,6 @@ import (
 )
 
 const (
-	ParallelBlocks = 32
 	searchLimit    = 1024
 	maxTxBlobCount = 10000
 	fetchInterval  = 5 * time.Second
@@ -66,8 +65,10 @@ type Fetcher struct {
 	l2Client          types.EvmClient
 	l1BlobFetcher     *sources.L1BeaconClient
 	batchInboxAddress common.Address
-	batchSender       common.Address
+	batchSenders      []string
 	concurrentFetcher int
+	l1ParallelBlocks  int
+	l2ParallelBlocks  int
 	signer            coretypes.Signer
 	batchHeaders      chan *BatchesRef
 
@@ -116,10 +117,12 @@ func NewFetcher(cfg *Config, isLight bool) (*Fetcher, error) {
 		isLight:           isLight,
 		chainID:           big.NewInt(int64(l2ChainID)),
 		batchInboxAddress: common.HexToAddress(cfg.BatchInbox),
-		batchSender:       common.HexToAddress(cfg.BatchSender),
+		batchSenders:      cfg.BatchSender,
 		concurrentFetcher: cfg.ConcurrentFetchers,
+		l1ParallelBlocks:  cfg.L1ParallelBlocks,
+		l2ParallelBlocks:  cfg.L2ParallelBlocks,
 		signer:            coretypes.LatestSignerForChainID(big.NewInt(int64(chainID))),
-		batchHeaders:      make(chan *BatchesRef, ParallelBlocks),
+		batchHeaders:      make(chan *BatchesRef, cfg.L1ParallelBlocks),
 
 		chErr:       make(chan error, 1),
 		fetcherDone: make(chan struct{}, 1),
@@ -141,7 +144,7 @@ func (f *Fetcher) GetPulledBlockNumber() uint64 {
 //
 // NOTE: This should be called before calling Fetch after the Stop.
 func (f *Fetcher) InitFetch() {
-	f.chFramesRef = make(chan *FramesRef, ParallelBlocks)
+	f.chFramesRef = make(chan *FramesRef, f.l1ParallelBlocks)
 	f.ctx, f.cancel = context.WithCancel(context.Background())
 }
 
@@ -179,7 +182,7 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber, l2BeginBlockNumber uint64) error {
 				return err
 			}
 			lastSyncedL1BlockNumber := f.lastSyncedL1BlockNumber.Load()
-			nextBlockNumber := lastSyncedL1BlockNumber + ParallelBlocks
+			nextBlockNumber := lastSyncedL1BlockNumber + uint64(f.l1ParallelBlocks)
 			if blockNumber < nextBlockNumber {
 				nextBlockNumber = blockNumber
 			}
@@ -239,13 +242,13 @@ func (f *Fetcher) getL2BlockHeaders(start, end uint64) ([]*sequencerv2types.Bloc
 	g, ctx := errgroup.WithContext(context.Background())
 	g.SetLimit(f.concurrentFetcher)
 	headersMap := sync.Map{}
-	for i := start; i <= end; i += ParallelBlocks {
+	for i := start; i <= end; i += uint64(f.l2ParallelBlocks) {
 		if err := ctx.Err(); err != nil {
 			logger.Errorf("fetch l2 block context error: %v", err)
 			return nil, err
 		}
 		startBlockNumber := i
-		endBlockNumber := i + ParallelBlocks
+		endBlockNumber := i + uint64(f.l2ParallelBlocks)
 		if endBlockNumber > end {
 			endBlockNumber = (end + 1)
 		}
@@ -447,11 +450,13 @@ func (f *Fetcher) validTransaction(tx *coretypes.Transaction) bool {
 	if err != nil {
 		return false
 	}
-	if from != f.batchSender {
-		return false
+	for _, sender := range f.batchSenders {
+		if from == common.HexToAddress(sender) {
+			return true
+		}
 	}
 
-	return true
+	return false
 }
 
 // nextBatchHeader returns the L2 batch header.
