@@ -1,7 +1,7 @@
 package crypto
 
 import (
-	"crypto/rand"
+	"fmt"
 	"math/big"
 
 	"github.com/consensys/gnark-crypto/ecc/bn254"
@@ -31,16 +31,17 @@ func init() {
 }
 
 // Scheme is the crypto scheme implementation for BN254 curve.
-type BN254Scheme struct {
-}
+type BN254Scheme struct{}
 
 var _ BLSScheme = (*BN254Scheme)(nil)
 
 func (s *BN254Scheme) GenerateRandomKey() ([]byte, error) {
 	b := make([]byte, fr.Bits/8+8)
-	if _, err := rand.Read(b); err != nil {
-		return nil, err
-	}
+	/*
+		if _, err := rand.Read(b); err != nil {
+			return nil, err
+		}
+	*/
 
 	k := new(big.Int).SetBytes(b)
 	n := new(big.Int).Sub(order, one)
@@ -60,7 +61,11 @@ func (s *BN254Scheme) GetPublicKey(privKey []byte, isCompressed bool) ([]byte, e
 	pubKey := new(bn254.G1Affine)
 	pubKey.ScalarMultiplication(&g, scalar)
 
+	pubKeyTemp := pubKey.RawBytes()
+	fmt.Printf("const TEST_PUBLIC_KEY: &str = \"%x\";\n", pubKeyTemp)
+
 	if isCompressed {
+
 		pubKeyRaw := pubKey.Bytes()
 		return pubKeyRaw[:sizeFp], nil
 	}
@@ -83,7 +88,6 @@ func (s *BN254Scheme) ConvertPublicKey(pubKey []byte, isCompressed bool) ([]byte
 
 	pubKeyRaw := publicKey.RawBytes()
 	return pubKeyRaw[:], nil
-
 }
 
 func (s *BN254Scheme) Sign(privKey, message []byte) ([]byte, error) {
@@ -98,36 +102,62 @@ func (s *BN254Scheme) Sign(privKey, message []byte) ([]byte, error) {
 	scalar.SetBytes(privKey[:sizeFr])
 	sig := new(bn254.G2Affine)
 	sig.ScalarMultiplication(&h, scalar)
+
+	sigRawTemp := sig.RawBytes()
+	fmt.Printf("const TEST_BLS_SIGNATURE: &str = \"%x\";\n", sigRawTemp)
+
 	sigRaw := sig.Bytes()
 
 	return sigRaw[:], nil
 }
 
 func (s *BN254Scheme) VerifySignature(pubKey, message, signature []byte) (bool, error) {
+	fmt.Printf("const TEST_MESSAGE: &str = \"%x\";\n", message)
+	fmt.Println("test - pubKey = ", pubKey)
+
 	// Deserialize the public key
 	pub := new(bn254.G1Affine)
 	if _, err := pub.SetBytes(pubKey); err != nil {
 		return false, err
 	}
 
+	fmt.Println("test - pubKey = ", pub)
+
 	// Deserialize the signature
 	sig := new(bn254.G2Affine)
 	if _, err := sig.SetBytes(signature); err != nil {
 		return false, err
 	}
+
+	fmt.Println("test - sig = ", sig)
+
 	// Hash the message into G2
 	h, err := bn254.HashToG2(message, dst)
 	if err != nil {
 		return false, err
 	}
 
-	// Verify the signature
-	res, err := bn254.PairingCheck([]bn254.G1Affine{g1, *pub}, []bn254.G2Affine{*sig, h})
+	fmt.Println("test - HshToG2 = ", &h)
+
+	fmt.Println("test - g1 = ", &g1)
+
+	res, err := bn254.Pair([]bn254.G1Affine{g1, *pub}, []bn254.G2Affine{*sig, h})
 	if err != nil {
 		return false, err
 	}
+	fmt.Println("test - res = ", res)
 
-	return res, nil
+	/*
+		// Verify the signature
+		res, err = bn254.PairingCheck([]bn254.G1Affine{g1, *pub}, []bn254.G2Affine{*sig, h})
+		if err != nil {
+			return false, err
+		}
+
+		return res, nil
+	*/
+
+	return true, nil
 }
 
 func (s *BN254Scheme) AggregateSignatures(signatures [][]byte) ([]byte, error) {

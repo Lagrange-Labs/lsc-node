@@ -2,6 +2,8 @@ module github.com/Lagrange-Labs/lagrange-node
 
 go 1.21
 
+toolchain go1.21.13
+
 require (
 	github.com/andybalholm/brotli v1.1.0
 	github.com/consensys/gnark-crypto v0.12.1

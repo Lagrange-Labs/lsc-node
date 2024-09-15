@@ -42,7 +42,8 @@ func (s *BlsTestSuite) TestSignature() {
 	s.Require().NoError(err)
 	s.Require().NotNil(pubKey)
 
-	message := []byte("hello world")
+	// test
+	message := []byte("00000000000000000000000000000000")
 
 	signature, err := s.scheme.Sign(privKey, message)
 	s.Require().NoError(err)
