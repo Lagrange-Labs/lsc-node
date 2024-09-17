@@ -84,7 +84,8 @@ func runGRPCServer(ctx context.Context, svc types.SignerServiceServer, port stri
 	}
 
 	opts := []grpc.ServerOption{}
-	if certCfg != nil {
+	if certCfg != nil && len(certCfg.CACertPath) > 0 {
+		logger.Info("Loading TLS config ...")
 		tlsConfig, err := core.LoadTLS(certCfg, true)
 		if err != nil {
 			return err
