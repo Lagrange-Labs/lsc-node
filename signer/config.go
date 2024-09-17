@@ -56,9 +56,9 @@ const DefaultValues = `
 GRPCPort = "50051"
 
 [TLSConfig]
-	CACertPath = "./testutil/vector/config/ca.pem"
-	NodeKeyPath = "./testutil/vector/config/server.key"
-	NodeCertPath = "./testutil/vector/config/server.pem"
+	CACertPath = ""
+	NodeKeyPath = ""
+	NodeCertPath = ""
 
 [[ProviderConfigs]]
 	Type = "local"
