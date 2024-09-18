@@ -145,6 +145,4 @@ require (
 
 replace github.com/ethereum/go-ethereum => github.com/ethereum-optimism/op-geth v1.101315.1-rc.5
 
-replace github.com/Lagrange-Labs/lagrange-node/core => ./core
-
 replace github.com/Lagrange-Labs/lagrange-node/signer => ./signer
