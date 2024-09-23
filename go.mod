@@ -3,7 +3,7 @@ module github.com/Lagrange-Labs/lagrange-node
 go 1.21
 
 require (
-	github.com/Lagrange-Labs/lagrange-node/core v0.1.0
+	github.com/Lagrange-Labs/lagrange-node/core v0.1.1
 	github.com/Lagrange-Labs/lagrange-node/signer v0.1.0
 	github.com/andybalholm/brotli v1.1.0
 	github.com/ethereum-optimism/optimism v1.7.6
