@@ -43,9 +43,12 @@ func NewClient(rpcURLs []string) (*Client, error) {
 		index:   len(rpcURLs) - 1,
 		cache:   lru.NewCache[uint64, json.RawMessage](CacheSize),
 	}
-
+	// switch the RPC URL to get the chain ID
 	if err := c.switchRPCURL(); err != nil {
 		return nil, err
+	}
+	if _, err := c.GetChainID(); err != nil {
+		return nil, fmt.Errorf("failed to get the chain ID error in NewEVMClient: %w", err)
 	}
 
 	return c, nil
