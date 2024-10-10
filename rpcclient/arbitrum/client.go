@@ -62,3 +62,8 @@ func (c *Client) SetBeginBlockNumber(l1BlockNumber, _ uint64) bool {
 func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
 	return c.fetcher.nextBatchHeader()
 }
+
+// GetL2BatchHeader returns the L2 batch header by the given L1 block number and transaction hash.
+func (c *Client) GetL2BatchHeader(l1BlockNumber uint64, txHash string) (*sequencerv2types.BatchHeader, error) {
+	return c.fetcher.GetL2BatchHeader(l1BlockNumber, txHash)
+}

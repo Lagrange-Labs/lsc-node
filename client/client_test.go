@@ -81,6 +81,14 @@ func (m *mockRPC) NextBatch() (*sequencerv2types.BatchHeader, error) {
 	return batch, nil
 }
 
+func (m *mockRPC) GetL2BatchHeader(l1BlockNumber uint64, txHash string) (*sequencerv2types.BatchHeader, error) {
+	batch, ok := <-m.chBatch
+	if !ok {
+		return nil, fmt.Errorf("channel closed")
+	}
+	return batch, nil
+}
+
 func TestRPCStorage(t *testing.T) {
 	db, err := goleveldb.NewDB(t.TempDir())
 	require.NoError(t, err)
