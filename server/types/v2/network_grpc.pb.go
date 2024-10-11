@@ -19,9 +19,10 @@ import (
 const _ = grpc.SupportPackageIsVersion9
 
 const (
-	NetworkService_JoinNetwork_FullMethodName = "/network.v2.NetworkService/JoinNetwork"
-	NetworkService_GetBatch_FullMethodName    = "/network.v2.NetworkService/GetBatch"
-	NetworkService_CommitBatch_FullMethodName = "/network.v2.NetworkService/CommitBatch"
+	NetworkService_JoinNetwork_FullMethodName  = "/network.v2.NetworkService/JoinNetwork"
+	NetworkService_GetBatch_FullMethodName     = "/network.v2.NetworkService/GetBatch"
+	NetworkService_CommitBatch_FullMethodName  = "/network.v2.NetworkService/CommitBatch"
+	NetworkService_UploadStatus_FullMethodName = "/network.v2.NetworkService/UploadStatus"
 )
 
 // NetworkServiceClient is the client API for NetworkService service.
@@ -36,6 +37,8 @@ type NetworkServiceClient interface {
 	GetBatch(ctx context.Context, in *GetBatchRequest, opts ...grpc.CallOption) (*GetBatchResponse, error)
 	// CommitBatch is the rpc endpoint for committing the given block batch with signature at the client node
 	CommitBatch(ctx context.Context, in *CommitBatchRequest, opts ...grpc.CallOption) (grpc.ServerStreamingClient[CommitBatchResponse], error)
+	// UploadStatus is the rpc endpoint for uploading the status of the client node
+	UploadStatus(ctx context.Context, in *UploadStatusRequest, opts ...grpc.CallOption) (*UploadStatusResponse, error)
 }
 
 type networkServiceClient struct {
@@ -85,6 +88,16 @@ func (c *networkServiceClient) CommitBatch(ctx context.Context, in *CommitBatchR
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type NetworkService_CommitBatchClient = grpc.ServerStreamingClient[CommitBatchResponse]
 
+func (c *networkServiceClient) UploadStatus(ctx context.Context, in *UploadStatusRequest, opts ...grpc.CallOption) (*UploadStatusResponse, error) {
+	cOpts := append([]grpc.CallOption{grpc.StaticMethod()}, opts...)
+	out := new(UploadStatusResponse)
+	err := c.cc.Invoke(ctx, NetworkService_UploadStatus_FullMethodName, in, out, cOpts...)
+	if err != nil {
+		return nil, err
+	}
+	return out, nil
+}
+
 // NetworkServiceServer is the server API for NetworkService service.
 // All implementations must embed UnimplementedNetworkServiceServer
 // for forward compatibility.
@@ -97,6 +110,8 @@ type NetworkServiceServer interface {
 	GetBatch(context.Context, *GetBatchRequest) (*GetBatchResponse, error)
 	// CommitBatch is the rpc endpoint for committing the given block batch with signature at the client node
 	CommitBatch(*CommitBatchRequest, grpc.ServerStreamingServer[CommitBatchResponse]) error
+	// UploadStatus is the rpc endpoint for uploading the status of the client node
+	UploadStatus(context.Context, *UploadStatusRequest) (*UploadStatusResponse, error)
 	mustEmbedUnimplementedNetworkServiceServer()
 }
 
@@ -115,6 +130,9 @@ func (UnimplementedNetworkServiceServer) GetBatch(context.Context, *GetBatchRequ
 }
 func (UnimplementedNetworkServiceServer) CommitBatch(*CommitBatchRequest, grpc.ServerStreamingServer[CommitBatchResponse]) error {
 	return status.Errorf(codes.Unimplemented, "method CommitBatch not implemented")
+}
+func (UnimplementedNetworkServiceServer) UploadStatus(context.Context, *UploadStatusRequest) (*UploadStatusResponse, error) {
+	return nil, status.Errorf(codes.Unimplemented, "method UploadStatus not implemented")
 }
 func (UnimplementedNetworkServiceServer) mustEmbedUnimplementedNetworkServiceServer() {}
 func (UnimplementedNetworkServiceServer) testEmbeddedByValue()                        {}
@@ -184,6 +202,24 @@ func _NetworkService_CommitBatch_Handler(srv interface{}, stream grpc.ServerStre
 // This type alias is provided for backwards compatibility with existing code that references the prior non-generic stream type by name.
 type NetworkService_CommitBatchServer = grpc.ServerStreamingServer[CommitBatchResponse]
 
+func _NetworkService_UploadStatus_Handler(srv interface{}, ctx context.Context, dec func(interface{}) error, interceptor grpc.UnaryServerInterceptor) (interface{}, error) {
+	in := new(UploadStatusRequest)
+	if err := dec(in); err != nil {
+		return nil, err
+	}
+	if interceptor == nil {
+		return srv.(NetworkServiceServer).UploadStatus(ctx, in)
+	}
+	info := &grpc.UnaryServerInfo{
+		Server:     srv,
+		FullMethod: NetworkService_UploadStatus_FullMethodName,
+	}
+	handler := func(ctx context.Context, req interface{}) (interface{}, error) {
+		return srv.(NetworkServiceServer).UploadStatus(ctx, req.(*UploadStatusRequest))
+	}
+	return interceptor(ctx, in, info, handler)
+}
+
 // NetworkService_ServiceDesc is the grpc.ServiceDesc for NetworkService service.
 // It's only intended for direct use with grpc.RegisterService,
 // and not to be introspected or modified (even as a copy)
@@ -198,6 +234,10 @@ var NetworkService_ServiceDesc = grpc.ServiceDesc{
 		{
 			MethodName: "GetBatch",
 			Handler:    _NetworkService_GetBatch_Handler,
+		},
+		{
+			MethodName: "UploadStatus",
+			Handler:    _NetworkService_UploadStatus_Handler,
 		},
 	},
 	Streams: []grpc.StreamDesc{
