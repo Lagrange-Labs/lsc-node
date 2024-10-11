@@ -13,6 +13,8 @@ enum ClientNodeStatus {
     L2_RPC_ISSUE = 2; // L2 RPC issue
     BEACON_RPC_ISSUE = 3; // Beacon RPC issue
     INTERNAL_ISSUE = 4; // Internal issue
+    BLS_KEY_ISSUE = 5; // BLS key issue
+    SIGNER_KEY_ISSUE = 6; // Signer key issue
 }
 
 // NetworkService is the service for the attestation network
