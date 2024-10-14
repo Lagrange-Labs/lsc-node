@@ -6,6 +6,17 @@ import "sequencer/v2/batch.proto";
 
 option go_package = "github.com/Lagrange-Labs/lagrange-node/network/types/v2";
 
+// Define the enum for the client node status
+enum ClientNodeStatus {
+    UNKNOWN = 0; // Unknown status
+    L1_RPC_ISSUE = 1; // L1 RPC issue
+    L2_RPC_ISSUE = 2; // L2 RPC issue
+    BEACON_RPC_ISSUE = 3; // Beacon RPC issue
+    INTERNAL_ISSUE = 4; // Internal issue
+    BLS_KEY_ISSUE = 5; // BLS key issue
+    SIGNER_KEY_ISSUE = 6; // Signer key issue
+}
+
 // NetworkService is the service for the attestation network
 service NetworkService {
     // JoinNetwork is the rpc endpoint for joining the network
@@ -14,6 +25,8 @@ service NetworkService {
     rpc GetBatch(GetBatchRequest) returns (GetBatchResponse);
     // CommitBatch is the rpc endpoint for committing the given block batch with signature at the client node
     rpc CommitBatch(CommitBatchRequest) returns (stream CommitBatchResponse);
+    // UploadStatus is the rpc endpoint for uploading the status of the client node
+    rpc UploadStatus(UploadStatusRequest) returns (UploadStatusResponse);
 }
 
 // JoinNetworkRequest is the request to join the network
@@ -53,5 +66,19 @@ message CommitBatchRequest {
 
 // CommitBatchResponse is the response for uploading the signature for the given block batch
 message CommitBatchResponse {
+    bool result = 1;
+}
+
+// UploadStatusRequest is the request to upload the status of the client node
+message UploadStatusRequest {
+    ClientNodeStatus status = 1;
+    string stake_address = 2;
+    string public_key = 3;
+    string token = 4;
+    string message = 5;
+}
+
+// UploadStatusResponse is the response for uploading the status of the client node
+message UploadStatusResponse {
     bool result = 1;
 }
