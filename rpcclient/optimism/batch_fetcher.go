@@ -28,9 +28,10 @@ import (
 )
 
 const (
-	searchLimit    = 1024
-	maxTxBlobCount = 10000
-	fetchInterval  = 5 * time.Second
+	searchLimit             = 1024
+	maxTxBlobCount          = 10000
+	fetchInterval           = 5 * time.Second
+	getL2BatchHeaderTimeout = 10 * time.Second
 )
 
 // TxDataRef is a the list of transaction data with tx metadata.
@@ -146,12 +147,6 @@ func (f *Fetcher) GetPulledBlockNumber() uint64 {
 func (f *Fetcher) InitFetch() {
 	f.chFramesRef = make(chan *FramesRef, f.l1ParallelBlocks)
 	f.ctx, f.cancel = context.WithCancel(context.Background())
-}
-
-// Fetch fetches the block data from the Ethereum and analyzes the
-// transactions which are sent to the BatchInbox EOA.
-func (f *Fetcher) Fetch(l1BeginBlockNumber, l2BeginBlockNumber uint64) error {
-	f.lastSyncedL2BlockNumber = l2BeginBlockNumber
 
 	go func() {
 		if err := f.handleFrames(); err != nil {
@@ -159,6 +154,56 @@ func (f *Fetcher) Fetch(l1BeginBlockNumber, l2BeginBlockNumber uint64) error {
 			f.chErr <- err
 		}
 	}()
+}
+
+// GetL2BatchHeader returns the next L2 batch header for the given L1 block number
+// and the Tx Hash
+func (f *Fetcher) GetL2BatchHeader(l1BlockNumber, l2BlockNumber uint64, txHash string) (*sequencerv2types.BatchHeader, error) {
+	checkTxHash := func(ctx context.Context) (*sequencerv2types.BatchHeader, error) {
+		for {
+			select {
+			case <-ctx.Done():
+				return nil, errors.New("batch header is not found")
+			case err := <-f.chErr:
+				return nil, fmt.Errorf("batch decoder err: %v", err)
+			default:
+				batchHeader, err := f.nextBatchHeader()
+				if err != nil {
+					return nil, err
+				}
+				if batchHeader.L1BlockNumber == l1BlockNumber {
+					if len(txHash) > 0 && batchHeader.L1TxHash == txHash {
+						return batchHeader, nil
+					}
+					if l2BlockNumber > 0 && batchHeader.L2FromBlockNumber == l2BlockNumber {
+						return batchHeader, nil
+					}
+				}
+			}
+		}
+	}
+
+	if f.lastSyncedL1BlockNumber.Load() == l1BlockNumber {
+		return checkTxHash(core.GetContextWithTimeout(getL2BatchHeaderTimeout))
+	}
+
+	frames, err := f.fetchBlock(l1BlockNumber)
+	if err != nil {
+		return nil, err
+	}
+	for _, framesRef := range frames {
+		f.chFramesRef <- framesRef
+	}
+
+	f.lastSyncedL1BlockNumber.Store(l1BlockNumber)
+
+	return checkTxHash(core.GetContextWithTimeout(getL2BatchHeaderTimeout))
+}
+
+// Fetch fetches the block data from the Ethereum and analyzes the
+// transactions which are sent to the BatchInbox EOA.
+func (f *Fetcher) Fetch(l1BeginBlockNumber, l2BeginBlockNumber uint64) error {
+	f.lastSyncedL2BlockNumber = l2BeginBlockNumber
 
 	defer func() {
 		f.fetcherDone <- struct{}{}
@@ -342,6 +387,42 @@ func (f *Fetcher) StopFetch() {
 	f.ctx = nil
 }
 
+// StopDecoder stops the decoder.
+func (f *Fetcher) StopDecoder() {
+	if f.cancel == nil {
+		return
+	}
+
+	f.lastSyncedL1BlockNumber.Store(0)
+	close(f.chFramesRef)
+
+	func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		for {
+			select {
+			case <-f.decoderDone: // wait for the batch decoder to finish
+				return
+			case <-ctx.Done():
+				panic("failed to stop the decoder")
+			default:
+				time.Sleep(10 * time.Millisecond)
+			}
+		}
+	}()
+
+	// drain channel to clean up the batches while stopping the fetcher
+	for len(f.batchHeaders) > 0 {
+		<-f.batchHeaders
+	}
+	for len(f.chFramesRef) > 0 { // drain channel
+		<-f.chFramesRef
+	}
+
+	f.cancel = nil
+	f.ctx = nil
+}
+
 // fetchBlock fetches the given block and analyzes the transactions
 // which are sent to the BatchInbox EOA.
 func (f *Fetcher) fetchBlock(blockNumber uint64) ([]*FramesRef, error) {
@@ -382,7 +463,7 @@ func (f *Fetcher) fetchBlock(blockNumber uint64) ([]*FramesRef, error) {
 					Data:    nil,
 					TxType:  tx.Type(),
 					TxHash:  tx.Hash(),
-					TxIndex: i*maxTxBlobCount + bi,
+					TxIndex: i*maxTxBlobCount + bi + 1,
 				})
 			}
 		}

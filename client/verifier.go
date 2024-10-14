@@ -25,8 +25,9 @@ const (
 
 // AdapterCaller is the interface to get the batch header from the rpc client.
 type AdapterCaller interface {
-	GetBatchHeader(l1BlockNumber, l2BlockNumber uint64, l1TxIndex uint32) (*sequencerv2types.BatchHeader, error)
+	GetBatchHeader(l1BlockNumber uint64, txHash string, l1TxIndex uint32) (*sequencerv2types.BatchHeader, error)
 	GetPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (uint64, error)
+	VerifyBatchHeader(l1BlockNumber, l2BlockNumber uint64) error
 	GetBlockHash(rlpHeader []byte) (common.Hash, common.Hash, error)
 }
 
@@ -94,16 +95,7 @@ func (v *Verifier) getCommitteeRoot(blockNumber uint64) (*committee.ILagrangeCom
 
 // VerifyPrevBatch verifies the previous batch.
 func (v *Verifier) VerifyPrevBatch(l1BlockNumber, l2BlockNumber uint64) error {
-	batchHeader, err := v.adapter.GetBatchHeader(l1BlockNumber, l2BlockNumber, 0)
-	if err != nil {
-		return fmt.Errorf("failed to get the previous batch header for L1 block number %d, L2 block number %d: %v", l1BlockNumber, l2BlockNumber, err)
-	}
-
-	if batchHeader == nil {
-		return fmt.Errorf("the batch header is not found for L1 block number %d, L2 block number %d", l1BlockNumber, l2BlockNumber)
-	}
-
-	return nil
+	return v.adapter.VerifyBatchHeader(l1BlockNumber, l2BlockNumber)
 }
 
 // VerifyBatch verifies the proposed batch.
@@ -124,7 +116,7 @@ func (v *Verifier) VerifyBatch(batch *sequencerv2types.Batch) error {
 // verifyBatchHeader verifies the batch header with the source chain one.
 func (v *Verifier) verifyBatchHeader(batch *sequencerv2types.Batch) error {
 	l1BlockNumber := batch.L1BlockNumber()
-	batchHeader, err := v.adapter.GetBatchHeader(l1BlockNumber, batch.BatchHeader.FromBlockNumber(), batch.BatchHeader.L1TxIndex)
+	batchHeader, err := v.adapter.GetBatchHeader(l1BlockNumber, batch.BatchHeader.L1TxHash, batch.BatchHeader.L1TxIndex)
 	if err != nil || batchHeader == nil {
 		logger.Errorf("failed to get the batch header for L1BlockNumber %d, L2FromBlockNumber %d, L1TxIndex %d: %v", l1BlockNumber, batch.BatchHeader.FromBlockNumber(), batch.BatchHeader.L1TxIndex, err)
 		return ErrBatchNotFound

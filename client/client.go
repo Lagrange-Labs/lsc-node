@@ -31,12 +31,6 @@ type PreviousBatchInfo struct {
 	L1BlockNumber     uint64
 }
 
-// AdapterTrigger is the interface to trigger the adapter.
-type AdapterTrigger interface {
-	InitBeginBlockNumber(uint64, uint64) error
-	SetOpenL1BlockNumber(uint64)
-}
-
 // VerifierCaller is the interface to verify the batch.
 type VerifierCaller interface {
 	VerifyBatch(*sequencerv2types.Batch) error
@@ -53,7 +47,6 @@ type SignerCaller interface {
 type Client struct {
 	serverv2types.NetworkServiceClient
 	healthMgr *healthManager
-	adapter   AdapterTrigger
 	verifier  VerifierCaller
 	signer    SignerCaller
 
@@ -96,20 +89,14 @@ func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 		logger.Fatalf("failed to get the health client: %v", err)
 	}
 
-	chErr := make(chan error, committeeCacheSize)
-	go adapter.startBatchFetching(chErr)
-
 	return &Client{
 		NetworkServiceClient: healthClient,
 		signer:               signer,
 		healthMgr:            healthMgr,
-		adapter:              adapter,
 		verifier:             verifier,
 		blsPublicKey:         blsPublicKey,
 		stakeAddress:         cfg.OperatorAddress,
 		pullInterval:         time.Duration(cfg.PullInterval),
-
-		chErr: chErr,
 	}, nil
 }
 
@@ -148,9 +135,6 @@ func (c *Client) Start() error {
 				}
 				if errors.Is(err, ErrBatchNotFound) {
 					logger.Warnf("The batch is not found, please check the metrics for the RPC provider. There may be a delay or a performance issue.")
-					if err := c.adapter.InitBeginBlockNumber(batch.L1BlockNumber(), batch.BatchHeader.GetL2FromBlockNumber()); err != nil {
-						logger.Errorf("failed to initialize the begin block number: %v", err)
-					}
 					continue
 				}
 				if errors.Is(err, ErrBatchNotReady) {
@@ -239,10 +223,6 @@ func (c *Client) joinNetwork() error {
 
 	c.jwToken = res.Token
 
-	if err := c.adapter.InitBeginBlockNumber(res.PrevL1BlockNumber, res.PrevL2BlockNumber); err != nil {
-		return fmt.Errorf("failed to initialize the begin block number: %v", err)
-	}
-
 	return c.verifier.VerifyPrevBatch(res.PrevL1BlockNumber, res.PrevL2BlockNumber)
 }
 
@@ -262,7 +242,6 @@ func (c *Client) TryGetBatch() (*sequencerv2types.Batch, error) {
 	telemetry.MeasureSince(ti, "client", "get_batch_request")
 
 	batch := res.Batch
-	c.adapter.SetOpenL1BlockNumber(batch.L1BlockNumber())
 	logger.Infof("get the batch with L1 block number %d with L2 block number from %d to %d", batch.L1BlockNumber(), batch.BatchHeader.FromBlockNumber(), batch.BatchHeader.ToBlockNumber())
 
 	// verify the batch

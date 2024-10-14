@@ -30,6 +30,10 @@ type RpcClient interface {
 	SetBeginBlockNumber(l1BlockNumber, l2BlockNumber uint64) bool
 	// NextBatch returns the next batch after SetBeginBlockNumber.
 	NextBatch() (*sequencerv2types.BatchHeader, error)
+	// GetL2BatchHeader returns the L2 batch header by the given L1 block number and transaction hash.
+	GetL2BatchHeader(l1BlockNumber uint64, txHash string) (*sequencerv2types.BatchHeader, error)
+	// VerifyBatchHeader verifies the batch header with the given L1 block number and L2 block number.
+	VerifyBatchHeader(l1BlockNumber, l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error)
 	// GetBlockHashFromRLPHeader returns the block hash and the parent hash from the rlp encoded block header.
 	GetBlockHashFromRLPHeader(rlpHeader []byte) (common.Hash, common.Hash, error)
 }

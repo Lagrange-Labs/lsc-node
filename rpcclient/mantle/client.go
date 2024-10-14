@@ -107,3 +107,13 @@ func (c *Client) SetBeginBlockNumber(_, _ uint64) bool {
 func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
 	return nil, types.ErrNoResult
 }
+
+// GetL2BatchHeader returns the L2 batch header by the given L1 block number and transaction hash.
+func (c *Client) GetL2BatchHeader(_ uint64, _ string) (*sequencerv2types.BatchHeader, error) {
+	return nil, types.ErrNoResult
+}
+
+// VerifyBatchHeader verifies the batch header with the given L1 block number and L2 block number.
+func (c *Client) VerifyBatchHeader(_, _ uint64) (*sequencerv2types.BatchHeader, error) {
+	return nil, types.ErrNoResult
+}

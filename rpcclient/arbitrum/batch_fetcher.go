@@ -27,10 +27,11 @@ import (
 )
 
 const (
-	ParallelBlocks = 32
-	cacheLimit     = 1024
-	maxTxBlobCount = 10000
-	fetchInterval  = 5 * time.Second
+	ParallelBlocks          = 32
+	cacheLimit              = 1024
+	maxTxBlobCount          = 10000
+	fetchInterval           = 5 * time.Second
+	getL2BatchHeaderTimeout = 10 * time.Second
 )
 
 // BatchesRef is a struct to represent the batch reference.
@@ -112,6 +113,72 @@ func (f *Fetcher) GetPulledBlockNumber() uint64 {
 // InitFetch inits the fetcher context.
 func (f *Fetcher) InitFetch() {
 	f.ctx, f.cancel = context.WithCancel(context.Background())
+}
+
+// GetL2BatchHeader returns the next L2 batch header for the given L1 block number
+// and the Tx Hash
+func (f *Fetcher) GetL2BatchHeader(l1BlockNumber, l2BlockNumber uint64, txHash string) (*sequencerv2types.BatchHeader, error) {
+	checkTxHash := func(ctx context.Context) (*sequencerv2types.BatchHeader, error) {
+		for {
+			select {
+			case <-ctx.Done():
+				return nil, errors.New("batch header is not found")
+			default:
+				batchHeader, err := f.nextBatchHeader()
+				if err != nil {
+					return nil, err
+				}
+				if batchHeader.L1BlockNumber == l1BlockNumber {
+					if len(txHash) > 0 && batchHeader.L1TxHash == txHash {
+						return batchHeader, nil
+					}
+					if l2BlockNumber > 0 && batchHeader.L2FromBlockNumber == l2BlockNumber {
+						return batchHeader, nil
+					}
+				}
+			}
+		}
+	}
+
+	if f.lastSyncedL1BlockNumber.Load() == l1BlockNumber {
+		return checkTxHash(core.GetContextWithTimeout(getL2BatchHeaderTimeout))
+	}
+
+	ti := time.Now()
+	batches, err := f.sequencerInbox.fetchBatchTransactions(big.NewInt(int64(l1BlockNumber)), big.NewInt(int64(l1BlockNumber)))
+	if err != nil {
+		return nil, err
+	}
+	telemetry.MeasureSince(ti, "rpc", "l1_filter_logs")
+
+	for _, batch := range batches {
+		var rawMsg []byte
+		if batch.serialized[0] == BlobHashesHeaderFlag {
+			rawMsg, err = f.fetchBlock(batch.BlockNumber, batch.TxHash)
+			if err != nil {
+				return nil, err
+			}
+		} else {
+			rawMsg = batch.serialized
+		}
+		batch.segments, err = decompress(rawMsg)
+		if err != nil {
+			return nil, err
+		}
+		if _, err := f.sequencerInbox.parseL2Transactions(batch); err != nil {
+			return nil, err
+		}
+		batchesRef, err := f.getBatchRef(batch)
+		if err != nil {
+			return nil, err
+		}
+		logger.Infof("batch reference is fetched: %+v", batchesRef)
+		f.batchHeaders <- batchesRef
+	}
+
+	f.lastSyncedL1BlockNumber.Store(l1BlockNumber)
+
+	return checkTxHash(core.GetContextWithTimeout(getL2BatchHeaderTimeout))
 }
 
 // Fetch fetches the block data from the Ethereum and analyzes the
