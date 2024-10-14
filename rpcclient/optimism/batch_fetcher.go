@@ -151,7 +151,7 @@ func (f *Fetcher) InitFetch() {
 
 // GetL2BatchHeader returns the next L2 batch header for the given L1 block number
 // and the Tx Hash
-func (f *Fetcher) GetL2BatchHeader(l1BlockNumber uint64, txHash string) (*sequencerv2types.BatchHeader, error) {
+func (f *Fetcher) GetL2BatchHeader(l1BlockNumber, l2BlockNumber uint64, txHash string) (*sequencerv2types.BatchHeader, error) {
 	checkTxHash := func(ctx context.Context) (*sequencerv2types.BatchHeader, error) {
 		for {
 			select {
@@ -162,8 +162,13 @@ func (f *Fetcher) GetL2BatchHeader(l1BlockNumber uint64, txHash string) (*sequen
 				if err != nil {
 					return nil, err
 				}
-				if batchHeader.L1BlockNumber == l1BlockNumber && batchHeader.L1TxHash == txHash {
-					return batchHeader, nil
+				if batchHeader.L1BlockNumber == l1BlockNumber {
+					if len(txHash) > 0 && batchHeader.L1TxHash == txHash {
+						return batchHeader, nil
+					}
+					if l2BlockNumber > 0 && batchHeader.L2FromBlockNumber == l2BlockNumber {
+						return batchHeader, nil
+					}
 				}
 			}
 		}
