@@ -113,30 +113,27 @@ func TestRPCStorage(t *testing.T) {
 				},
 			},
 		}
-		time.Sleep(200 * time.Millisecond)
+		time.Sleep(10 * time.Millisecond)
 	}
 
 	// get previous batch
 	prev, err := adapter.GetPrevBatchL1Number(3, 0)
 	require.Error(t, err)
 	require.Equal(t, uint64(0), prev)
-	// prev, err = adapter.GetPrevBatchL1Number(3, 1)
-	// require.NoError(t, err)
-	// require.Equal(t, uint64(2), prev)
-	// prev, err = adapter.GetPrevBatchL1Number(8, 2)
-	// require.NoError(t, err)
-	// require.Equal(t, uint64(8), prev)
-
-	// get batch by L1 block number
-	// _, err = adapter.GetBatchHeader(3, "", 0)
-	// require.Error(t, err)
-	// batch, err := adapter.GetBatchHeader(5, "", 1)
-	// require.NoError(t, err)
-	// require.Equal(t, uint64(5), batch.L1BlockNumber)
-	// require.Equal(t, uint32(1), batch.L1TxIndex)
-	// _, err = adapter.GetBatchHeader(5, "", 2)
-	// require.Error(t, err)
-	// batch, err = adapter.GetBatchHeader(8, "", 0)
-	// require.NoError(t, err)
-	// require.Equal(t, uint64(8), batch.L1BlockNumber)
+	// get batch header
+	batch, err := adapter.GetBatchHeader(1, "", 1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), batch.L1BlockNumber)
+	// get previous batch
+	prev, err = adapter.GetPrevBatchL1Number(3, 1)
+	require.Error(t, err)
+	require.Equal(t, uint64(0), prev)
+	// get batch header
+	batch, err = adapter.GetBatchHeader(2, "", 1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(2), batch.L1BlockNumber)
+	// get previous batch
+	prev, err = adapter.GetPrevBatchL1Number(2, 1)
+	require.NoError(t, err)
+	require.Equal(t, uint64(1), prev)
 }

@@ -72,5 +72,9 @@ func (c *Client) GetL2BatchHeader(l1BlockNumber uint64, txHash string) (*sequenc
 
 // VerifyBatchHeader verifies the batch header with the given L1 block number and L2 block number.
 func (c *Client) VerifyBatchHeader(l1BlockNumber, l2BlockNumber uint64) (*sequencerv2types.BatchHeader, error) {
+	c.fetcher.StopDecoder()
+	logger.Infof("last synced L1 block number: %d, begin L1 block number: %d, begin L2 block number: %d", c.fetcher.GetFetchedBlockNumber(), l1BlockNumber, l2BlockNumber)
+	c.fetcher.InitFetch()
+
 	return c.fetcher.GetL2BatchHeader(l1BlockNumber, l2BlockNumber, "")
 }

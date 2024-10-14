@@ -147,6 +147,13 @@ func (f *Fetcher) GetPulledBlockNumber() uint64 {
 func (f *Fetcher) InitFetch() {
 	f.chFramesRef = make(chan *FramesRef, f.l1ParallelBlocks)
 	f.ctx, f.cancel = context.WithCancel(context.Background())
+
+	go func() {
+		if err := f.handleFrames(); err != nil {
+			logger.Errorf("failed to handle frames: %v", err)
+			f.chErr <- err
+		}
+	}()
 }
 
 // GetL2BatchHeader returns the next L2 batch header for the given L1 block number
@@ -157,6 +164,8 @@ func (f *Fetcher) GetL2BatchHeader(l1BlockNumber, l2BlockNumber uint64, txHash s
 			select {
 			case <-ctx.Done():
 				return nil, errors.New("batch header is not found")
+			case err := <-f.chErr:
+				return nil, fmt.Errorf("batch decoder err: %v", err)
 			default:
 				batchHeader, err := f.nextBatchHeader()
 				if err != nil {
@@ -195,13 +204,6 @@ func (f *Fetcher) GetL2BatchHeader(l1BlockNumber, l2BlockNumber uint64, txHash s
 // transactions which are sent to the BatchInbox EOA.
 func (f *Fetcher) Fetch(l1BeginBlockNumber, l2BeginBlockNumber uint64) error {
 	f.lastSyncedL2BlockNumber = l2BeginBlockNumber
-
-	go func() {
-		if err := f.handleFrames(); err != nil {
-			logger.Errorf("failed to handle frames: %v", err)
-			f.chErr <- err
-		}
-	}()
 
 	defer func() {
 		f.fetcherDone <- struct{}{}
@@ -373,6 +375,42 @@ func (f *Fetcher) StopFetch() {
 			}
 		}
 	}()
+	// drain channel to clean up the batches while stopping the fetcher
+	for len(f.batchHeaders) > 0 {
+		<-f.batchHeaders
+	}
+	for len(f.chFramesRef) > 0 { // drain channel
+		<-f.chFramesRef
+	}
+
+	f.cancel = nil
+	f.ctx = nil
+}
+
+// StopDecoder stops the decoder.
+func (f *Fetcher) StopDecoder() {
+	if f.cancel == nil {
+		return
+	}
+
+	f.lastSyncedL1BlockNumber.Store(0)
+	close(f.chFramesRef)
+
+	func() {
+		ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+		defer cancel()
+		for {
+			select {
+			case <-f.decoderDone: // wait for the batch decoder to finish
+				return
+			case <-ctx.Done():
+				panic("failed to stop the decoder")
+			default:
+				time.Sleep(10 * time.Millisecond)
+			}
+		}
+	}()
+
 	// drain channel to clean up the batches while stopping the fetcher
 	for len(f.batchHeaders) > 0 {
 		<-f.batchHeaders
