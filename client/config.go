@@ -38,4 +38,6 @@ type Config struct {
 	SignerECDSAKeystorePassword string `mapstructure:"SignerECDSAKeystorePassword"`
 	// SignerECDSAKeystorePasswordPath is the path of the password file of the ECDSA keystore file
 	SignerECDSAKeystorePasswordPath string `mapstructure:"SignerECDSAKeystorePasswordPath"`
+	// IsUploadNodeStatus is the flag to upload the node status
+	IsUploadNodeStatus bool `mapstructure:"IsUploadNodeStatus"`
 }

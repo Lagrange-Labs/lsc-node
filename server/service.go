@@ -213,3 +213,23 @@ func getIPAddress(ctx context.Context) (string, error) {
 
 	return strings.Split(pr.Addr.String(), ":")[0], nil
 }
+
+// UploadStatus is a method to upload the node status.
+func (s *sequencerService) UploadStatus(ctx context.Context, req *v2types.UploadStatusRequest) (*v2types.UploadStatusResponse, error) {
+	ti := time.Now()
+	defer telemetry.MeasureSince(ti, "server", "update_node_status")
+
+	isValid := false
+	if len(req.Token) > 0 {
+		valid, err := ValidateToken(req.Token, req.StakeAddress)
+		if err != nil || !valid {
+			logger.Warnf("Failed to validate the token: %v", err)
+			return nil, ErrInvalidToken
+		}
+		isValid = valid
+	}
+
+	logger.Warnf("UploadStatus request from (%v, %v), valid: %v, code: %d, message: %s", req.StakeAddress, req.PublicKey, isValid, req.Status, req.Message)
+
+	return &v2types.UploadStatusResponse{Result: isValid}, nil
+}

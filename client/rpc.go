@@ -8,6 +8,7 @@ import (
 	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
 	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
 	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	serverv2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
 	"github.com/ethereum/go-ethereum/common"
 )
 
@@ -15,26 +16,36 @@ var _ AdapterCaller = (*RpcAdapter)(nil)
 
 // RpcAdapter is the adapter for the RPC client.
 type RpcAdapter struct {
-	client  rpctypes.RpcClient
-	chainID uint32
-	cache   [2]*sequencerv2types.BatchHeader
+	client       rpctypes.RpcClient
+	chainID      uint32
+	cache        [2]*sequencerv2types.BatchHeader
+	chNodeStatus chan<- StatusMessage
 }
 
 // newRpcAdapter creates a new rpc adapter.
-func newRpcAdapter(rpcCfg *rpcclient.Config, cfg *Config, accountID string) (*RpcAdapter, uint32, error) {
+func newRpcAdapter(rpcCfg *rpcclient.Config, cfg *Config, accountID string, chNodeStatus chan<- StatusMessage) (*RpcAdapter, uint32, error) {
 	rpcClient, err := rpcclient.NewClient(cfg.Chain, rpcCfg, true)
 	if err != nil {
+		chNodeStatus <- StatusMessage{
+			NodeStatus: serverv2types.ClientNodeStatus_L2_RPC_ISSUE,
+			Message:    fmt.Sprintf("failed to create the rpc client: %v", cfg.Chain),
+		}
 		return nil, 0, fmt.Errorf("failed to create the rpc client: %v, please check the chain name, the chain name should look like 'optimism', 'base'", err)
 	}
 
 	chainID, err := rpcClient.GetChainID()
 	if err != nil {
+		chNodeStatus <- StatusMessage{
+			NodeStatus: serverv2types.ClientNodeStatus_L2_RPC_ISSUE,
+			Message:    fmt.Sprintf("failed to get the chain ID for %s", cfg.Chain),
+		}
 		return nil, 0, fmt.Errorf("failed to get the chain ID: %v", err)
 	}
 
 	return &RpcAdapter{
-		client:  rpcClient,
-		chainID: chainID,
+		client:       rpcClient,
+		chainID:      chainID,
+		chNodeStatus: chNodeStatus,
 	}, chainID, nil
 }
 
@@ -66,6 +77,10 @@ func (r *RpcAdapter) updateCache(batchHeader *sequencerv2types.BatchHeader) {
 // GetPrevBatchL1Number gets the previous batch L1 number from the database.
 func (r *RpcAdapter) GetPrevBatchL1Number(l1BlockNumber uint64, l1TxIndex uint32) (uint64, error) {
 	if !r.checkCache(l1BlockNumber, l1TxIndex) {
+		r.chNodeStatus <- StatusMessage{
+			NodeStatus: serverv2types.ClientNodeStatus_INTERNAL_ISSUE,
+			Message:    fmt.Sprintf("no previous batch for L1BlockNumber: %d L1TxIndex: %d", l1BlockNumber, l1TxIndex),
+		}
 		return 0, fmt.Errorf("no previous batch for L1BlockNumber: %d L1TxIndex: %d", l1BlockNumber, l1TxIndex)
 	}
 	return r.cache[0].L1BlockNumber, nil
@@ -82,6 +97,10 @@ func (r *RpcAdapter) GetBatchHeader(l1BlockNumber uint64, txHash string, l1TxInd
 
 	batchHeader, err := r.client.GetL2BatchHeader(l1BlockNumber, txHash)
 	if err != nil {
+		r.chNodeStatus <- StatusMessage{
+			NodeStatus: serverv2types.ClientNodeStatus_L2_RPC_ISSUE,
+			Message:    fmt.Sprintf("failed to get the batch header for L1BlockNumber: %d L1TxIndex: %d err: %v", l1BlockNumber, l1TxIndex, err),
+		}
 		return nil, err
 	}
 
@@ -102,6 +121,10 @@ func (r *RpcAdapter) VerifyBatchHeader(l1BlockNumber, l2BlockNumber uint64) erro
 
 	batchHeader, err := r.client.VerifyBatchHeader(l1BlockNumber, l2BlockNumber)
 	if err != nil {
+		r.chNodeStatus <- StatusMessage{
+			NodeStatus: serverv2types.ClientNodeStatus_L2_RPC_ISSUE,
+			Message:    fmt.Sprintf("failed to verify the batch header for L1BlockNumber: %d L2BlockNumber: %d err: %v", l1BlockNumber, l2BlockNumber, err),
+		}
 		return err
 	}
 

@@ -22,6 +22,7 @@ SignerECDSAKeystorePassword = "password_localtest"
 SignerECDSAKeystorePasswordPath = ""
 PullInterval = "100ms"
 BLSCurve = "BN254"
+IsUploadNodeStatus = true
 
 [Store]
 BackendType = "mongodb"
