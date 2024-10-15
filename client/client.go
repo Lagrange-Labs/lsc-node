@@ -113,11 +113,10 @@ func (c *Client) GetStakeAddress() string {
 }
 
 func (c *Client) uploadStatus() {
-	if !c.isUploadNodeStatus {
-		return
-	}
-
 	for msg := range c.chNodeStatus {
+		if !c.isUploadNodeStatus {
+			continue
+		}
 		req := &serverv2types.UploadStatusRequest{
 			Status:       msg.NodeStatus,
 			Message:      msg.Message,
