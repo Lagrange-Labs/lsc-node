@@ -25,12 +25,6 @@ var (
 	NodeVersion = "v1.1.0"
 )
 
-// PreviousBatchInfo is the struct to store the previous batch information.
-type PreviousBatchInfo struct {
-	NextCommitteeRoot string
-	L1BlockNumber     uint64
-}
-
 // VerifierCaller is the interface to verify the batch.
 type VerifierCaller interface {
 	VerifyBatch(*sequencerv2types.Batch) error
@@ -43,6 +37,12 @@ type SignerCaller interface {
 	GetPublicKey(keyType string) (string, error)
 }
 
+// StatusMessage is the struct to represent the node status message.
+type StatusMessage struct {
+	NodeStatus serverv2types.ClientNodeStatus
+	Message    string
+}
+
 // Client is a gRPC client to join the network
 type Client struct {
 	serverv2types.NetworkServiceClient
@@ -50,12 +50,14 @@ type Client struct {
 	verifier  VerifierCaller
 	signer    SignerCaller
 
-	blsPublicKey string
-	jwToken      string
-	stakeAddress string
-	pullInterval time.Duration
+	blsPublicKey       string
+	jwToken            string
+	stakeAddress       string
+	pullInterval       time.Duration
+	isUploadNodeStatus bool
 
-	chErr chan error
+	chErr        chan error
+	chNodeStatus chan StatusMessage
 }
 
 // NewClient creates a new client.
@@ -70,7 +72,8 @@ func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 		return nil, fmt.Errorf("failed to get the BLS public key: %v", err)
 	}
 
-	adapter, chainID, err := newRpcAdapter(rpcCfg, cfg, cfg.BLSKeyAccountID)
+	chNodeStatus := make(chan StatusMessage, 10)
+	adapter, chainID, err := newRpcAdapter(rpcCfg, cfg, cfg.BLSKeyAccountID, chNodeStatus)
 	if err != nil {
 		return nil, fmt.Errorf("failed to create the rpc adapter: %v", err)
 	}
@@ -97,6 +100,10 @@ func NewClient(cfg *Config, rpcCfg *rpcclient.Config) (*Client, error) {
 		blsPublicKey:         blsPublicKey,
 		stakeAddress:         cfg.OperatorAddress,
 		pullInterval:         time.Duration(cfg.PullInterval),
+		isUploadNodeStatus:   cfg.IsUploadNodeStatus,
+
+		chErr:        make(chan error, 10),
+		chNodeStatus: chNodeStatus,
 	}, nil
 }
 
@@ -105,8 +112,29 @@ func (c *Client) GetStakeAddress() string {
 	return c.stakeAddress
 }
 
+func (c *Client) uploadStatus() {
+	for msg := range c.chNodeStatus {
+		if !c.isUploadNodeStatus {
+			continue
+		}
+		req := &serverv2types.UploadStatusRequest{
+			Status:       msg.NodeStatus,
+			Message:      msg.Message,
+			StakeAddress: c.stakeAddress,
+			PublicKey:    c.blsPublicKey,
+			Token:        c.jwToken,
+		}
+		_, err := c.UploadStatus(core.GetContext(), req)
+		if err != nil {
+			c.chErr <- fmt.Errorf("failed to upload the status: %v", err)
+		}
+	}
+}
+
 // Start starts the connection loop.
 func (c *Client) Start() error {
+	go c.uploadStatus()
+
 	if err := c.TryJoinNetwork(); err != nil {
 		return err
 	}
@@ -208,6 +236,7 @@ func (c *Client) joinNetwork() error {
 	}
 	sig, err := c.signer.Sign("BLS", reqMsg)
 	if err != nil {
+		c.chNodeStatus <- StatusMessage{NodeStatus: serverv2types.ClientNodeStatus_BLS_KEY_ISSUE, Message: "failed to sign the join network request"}
 		return fmt.Errorf("failed to sign the request: %v", err)
 	}
 	req.Signature = core.Bytes2Hex(sig)
@@ -261,6 +290,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 	blsSignature := batch.BlsSignature()
 	blsSig, err := c.signer.Sign("BLS", blsSignature.Hash())
 	if err != nil {
+		c.chNodeStatus <- StatusMessage{NodeStatus: serverv2types.ClientNodeStatus_BLS_KEY_ISSUE, Message: "failed to sign the BLS signature"}
 		return fmt.Errorf("failed to sign the BLS signature: %v", err)
 	}
 	blsSignature.BlsSignature = core.Bytes2Hex(blsSig)
@@ -269,7 +299,8 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 	msg := blsSignature.CommitHash()
 	sig, err := c.signer.Sign("ECDSA", msg)
 	if err != nil {
-		return fmt.Errorf("failed to ecdsa sign the block: %v", err)
+		c.chNodeStatus <- StatusMessage{NodeStatus: serverv2types.ClientNodeStatus_SIGNER_KEY_ISSUE, Message: "failed to ecdsa sign the batch"}
+		return fmt.Errorf("failed to ecdsa sign the batch: %v", err)
 	}
 	blsSignature.EcdsaSignature = core.Bytes2Hex(sig)
 
@@ -293,6 +324,7 @@ func (c *Client) TryCommitBatch(batch *sequencerv2types.Batch) error {
 
 	res, err := stream.Recv()
 	if err != nil {
+		c.chNodeStatus <- StatusMessage{NodeStatus: serverv2types.ClientNodeStatus_SERVER_ISSUE, Message: "failed to get the response from the stream"}
 		return fmt.Errorf("failed to get the response from the stream: %v", err)
 	}
 	if !res.Result {

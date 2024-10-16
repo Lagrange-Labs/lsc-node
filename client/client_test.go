@@ -100,6 +100,7 @@ func TestRPCStorage(t *testing.T) {
 			chBatch:            chBatch,
 			chBeginBlockNumber: chBeginBlockNumber,
 		},
+		chNodeStatus: make(chan<- StatusMessage, 100),
 	}
 
 	// push some batches
