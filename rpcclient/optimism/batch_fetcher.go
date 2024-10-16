@@ -466,7 +466,7 @@ func (f *Fetcher) fetchBlock(blockNumber uint64) ([]*FramesRef, error) {
 					Data:    nil,
 					TxType:  tx.Type(),
 					TxHash:  tx.Hash(),
-					TxIndex: i*maxTxBlobCount + bi + 1,
+					TxIndex: i*maxTxBlobCount + bi,
 				})
 			}
 		}
