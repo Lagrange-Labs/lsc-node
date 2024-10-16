@@ -187,6 +187,9 @@ func (f *Fetcher) GetL2BatchHeader(l1BlockNumber, l2BlockNumber uint64, txHash s
 		return checkTxHash(core.GetContextWithTimeout(getL2BatchHeaderTimeout))
 	}
 
+	if l2BlockNumber > 0 {
+		f.lastSyncedL2BlockNumber = l2BlockNumber - 1
+	}
 	frames, err := f.fetchBlock(l1BlockNumber)
 	if err != nil {
 		return nil, err
