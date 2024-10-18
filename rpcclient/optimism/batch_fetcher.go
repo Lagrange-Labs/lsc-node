@@ -31,7 +31,7 @@ const (
 	searchLimit             = 1024
 	maxTxBlobCount          = 10000
 	fetchInterval           = 5 * time.Second
-	getL2BatchHeaderTimeout = 10 * time.Second
+	getL2BatchHeaderTimeout = 60 * time.Second
 )
 
 // TxDataRef is a the list of transaction data with tx metadata.
