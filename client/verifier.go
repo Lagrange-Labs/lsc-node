@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"fmt"
 	"math/big"
+	"sync"
 	"time"
 
 	"github.com/ethereum/go-ethereum/accounts/abi/bind"
@@ -21,6 +22,7 @@ import (
 
 const (
 	committeeCacheSize = 10
+	numWorkers         = 4
 )
 
 // AdapterCaller is the interface to get the batch header from the rpc client.
@@ -161,25 +163,52 @@ func (v *Verifier) verifyL2Blocks(batch *sequencerv2types.Batch, lightBatchHeade
 	if !bytes.Equal(core.Hex2Bytes(lightBatchHeader.L2Blocks[0].BlockHash), core.Hex2Bytes(batch.BatchHeader.L2Blocks[0].BlockHash)) {
 		return fmt.Errorf("the light batch from block hash %s is not equal to the batch from block hash %s", lightBatchHeader.L2Blocks[0].BlockHash, batch.BatchHeader.L2Blocks[0].BlockHash)
 	}
-	// compare the parent hash of the next block
-	for i := 0; i <= int(lightBatchHeader.ToBlockNumber()-lightBatchHeader.FromBlockNumber()); i++ {
-		curHash, parentHash, err := v.adapter.GetBlockHash(core.Hex2Bytes(batch.BatchHeader.L2Blocks[i].BlockRlp))
-		if err != nil {
-			return fmt.Errorf("failed to decode the block header: %v", err)
-		}
-		if !bytes.Equal(curHash[:], core.Hex2Bytes(batch.BatchHeader.L2Blocks[i].BlockHash)) {
-			return fmt.Errorf("the block hash %s is not equal to the block header hash %s", batch.BatchHeader.L2Blocks[i].BlockHash, core.Bytes2Hex(curHash[:]))
-		}
-		if i > 0 {
-			if !bytes.Equal(parentHash[:], core.Hex2Bytes(batch.BatchHeader.L2Blocks[i-1].BlockHash)) {
-				return fmt.Errorf("the parent hash %s is not equal to the previous block hash %s", core.Bytes2Hex(parentHash[:]), batch.BatchHeader.L2Blocks[i-1].BlockHash)
-			}
-			lightBatchHeader.L2Blocks = append(lightBatchHeader.L2Blocks, &sequencerv2types.BlockHeader{
-				BlockNumber: lightBatchHeader.FromBlockNumber() + uint64(i),
-			})
-		}
 
-		lightBatchHeader.L2Blocks[i].BlockHash = core.Bytes2Hex(curHash[:])
+	var wg sync.WaitGroup
+	errCh := make(chan error, numWorkers)
+
+	// verify the subsequent blocks recursively
+	verifyBlocks := func(start, end int) {
+		defer wg.Done()
+		for i := start; i <= end; i++ {
+			curHash, parentHash, err := v.adapter.GetBlockHash(core.Hex2Bytes(batch.BatchHeader.L2Blocks[i].BlockRlp))
+			if err != nil {
+				errCh <- fmt.Errorf("failed to decode the block header: %v", err)
+			}
+			if i > start {
+				if !bytes.Equal(parentHash[:], core.Hex2Bytes(batch.BatchHeader.L2Blocks[i-1].BlockHash)) {
+					errCh <- fmt.Errorf("the parent hash %s is not equal to the previous block hash %s", core.Bytes2Hex(parentHash[:]), batch.BatchHeader.L2Blocks[i-1].BlockHash)
+				}
+				lightBatchHeader.L2Blocks = append(lightBatchHeader.L2Blocks, &sequencerv2types.BlockHeader{
+					BlockNumber: lightBatchHeader.FromBlockNumber() + uint64(i),
+				})
+			}
+			if i < end {
+				lightBatchHeader.L2Blocks[i].BlockHash = core.Bytes2Hex(curHash[:])
+			}
+		}
+		errCh <- nil
+	}
+
+	blockRange := int(lightBatchHeader.ToBlockNumber() - lightBatchHeader.FromBlockNumber())
+	batchSize := (blockRange + numWorkers - 1) / numWorkers // ceil
+
+	for i := 0; i < numWorkers; i++ {
+		start := i * batchSize
+		end := min(start+batchSize, blockRange)
+		wg.Add(1)
+		go verifyBlocks(start, end)
+	}
+
+	// wait for all the workers to finish
+	wg.Wait()
+	close(errCh)
+
+	// check if there is any error
+	for err := range errCh {
+		if err != nil {
+			return err
+		}
 	}
 
 	return nil
