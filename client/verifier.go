@@ -161,7 +161,7 @@ func (v *Verifier) verifyL2Blocks(batch *sequencerv2types.Batch, lightBatchHeade
 	}
 	// compare the last L2 block hash
 	if !bytes.Equal(core.Hex2Bytes(lightBatchHeader.L2Blocks[0].BlockHash), core.Hex2Bytes(batch.BatchHeader.L2Blocks[len(batch.BatchHeader.L2Blocks)-1].BlockHash)) {
-		return fmt.Errorf("the light batch from block hash %s is not equal to the batch last block hash %s", lightBatchHeader.L2Blocks[0].BlockHash, batch.BatchHeader.L2Blocks[0].BlockHash)
+		return fmt.Errorf("the light batch last block hash %s is not equal to the batch last block hash %s", lightBatchHeader.L2Blocks[0].BlockHash, batch.BatchHeader.L2Blocks[0].BlockHash)
 	}
 
 	var wg sync.WaitGroup
