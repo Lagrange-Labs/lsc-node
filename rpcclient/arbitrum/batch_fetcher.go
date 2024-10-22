@@ -443,14 +443,14 @@ func (f *Fetcher) nextBatchHeader() (*sequencerv2types.BatchHeader, error) {
 		L2ToBlockNumber:   batchesRef.ToL2BlockNumber,
 	}
 	if f.isLight {
-		firstHash, err := f.l2Client.GetBlockHashByNumber(batchesRef.FromL2BlockNumber)
+		lastHash, err := f.l2Client.GetBlockHashByNumber(batchesRef.ToL2BlockNumber)
 		if err != nil {
 			return nil, err
 		}
 		header.L2Blocks = []*sequencerv2types.BlockHeader{
 			{
-				BlockNumber: batchesRef.FromL2BlockNumber,
-				BlockHash:   firstHash.Hex(),
+				BlockNumber: batchesRef.ToL2BlockNumber,
+				BlockHash:   lastHash.Hex(),
 			},
 		}
 		return &header, nil
