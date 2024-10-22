@@ -4,15 +4,15 @@ import (
 	"os"
 	"path/filepath"
 
-	"github.com/Lagrange-Labs/lagrange-node/config"
-	"github.com/Lagrange-Labs/lagrange-node/consensus"
-	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
-	"github.com/Lagrange-Labs/lagrange-node/sequencer"
-	"github.com/Lagrange-Labs/lagrange-node/server"
-	"github.com/Lagrange-Labs/lagrange-node/store"
-	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
-	"github.com/Lagrange-Labs/lagrange-node/testutil"
+	"github.com/Lagrange-Labs/lsc-node/config"
+	"github.com/Lagrange-Labs/lsc-node/consensus"
+	"github.com/Lagrange-Labs/lsc-node/core/crypto"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient"
+	"github.com/Lagrange-Labs/lsc-node/sequencer"
+	"github.com/Lagrange-Labs/lsc-node/server"
+	"github.com/Lagrange-Labs/lsc-node/store"
+	storetypes "github.com/Lagrange-Labs/lsc-node/store/types"
+	"github.com/Lagrange-Labs/lsc-node/testutil"
 )
 
 // Manager is a struct for test operations.

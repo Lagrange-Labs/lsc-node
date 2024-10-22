@@ -4,11 +4,11 @@ import (
 	"fmt"
 	"time"
 
-	"github.com/Lagrange-Labs/lagrange-node/core/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
-	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	serverv2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
+	"github.com/Lagrange-Labs/lsc-node/core/telemetry"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient"
+	rpctypes "github.com/Lagrange-Labs/lsc-node/rpcclient/types"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
+	serverv2types "github.com/Lagrange-Labs/lsc-node/server/types/v2"
 	"github.com/ethereum/go-ethereum/common"
 )
 

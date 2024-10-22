@@ -6,10 +6,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/optimism"
-	"github.com/Lagrange-Labs/lagrange-node/store"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/optimism"
+	"github.com/Lagrange-Labs/lsc-node/store"
 )
 
 func TestFetchCommittee(t *testing.T) {

@@ -8,11 +8,11 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
-	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
-	"github.com/Lagrange-Labs/lagrange-node/testutil"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	"github.com/Lagrange-Labs/lsc-node/core/crypto"
+	sequencertypes "github.com/Lagrange-Labs/lsc-node/sequencer/types"
+	"github.com/Lagrange-Labs/lsc-node/store/memdb"
+	"github.com/Lagrange-Labs/lsc-node/testutil"
 )
 
 func createTestState(t *testing.T) (*State, chan *sequencertypes.BlsSignature) {

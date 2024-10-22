@@ -1,6 +1,6 @@
 package client
 
-import "github.com/Lagrange-Labs/lagrange-node/core"
+import "github.com/Lagrange-Labs/lsc-node/core"
 
 // Config is the configuration for the client node.
 type Config struct {

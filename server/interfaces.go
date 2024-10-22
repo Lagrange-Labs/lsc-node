@@ -4,11 +4,11 @@ import (
 	"context"
 	"time"
 
-	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	"github.com/Lagrange-Labs/lagrange-node/server/types"
-	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
+	"github.com/Lagrange-Labs/lsc-node/core/crypto"
+	sequencertypes "github.com/Lagrange-Labs/lsc-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lsc-node/server/types"
+	storetypes "github.com/Lagrange-Labs/lsc-node/store/types"
 )
 
 var _ storageInterface = (storetypes.Storage)(nil)

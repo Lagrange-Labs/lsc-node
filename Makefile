@@ -11,10 +11,10 @@ GOBINARY := lagrange-node
 GOCMD := $(GOBASE)/cmd/baseapp/
 SCRIPTS_FOLDER=$(GOBASE)/scripts
 
-LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.Version=$(VERSION)'
-LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.GitRev=$(GITREV)'
-LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.GitBranch=$(GITBRANCH)'
-LDFLAGS += -X 'github.com/Lagrange-Labs/lagrange-node.BuildDate=$(DATE)'
+LDFLAGS += -X 'github.com/Lagrange-Labs/lsc-node.Version=$(VERSION)'
+LDFLAGS += -X 'github.com/Lagrange-Labs/lsc-node.GitRev=$(GITREV)'
+LDFLAGS += -X 'github.com/Lagrange-Labs/lsc-node.GitBranch=$(GITBRANCH)'
+LDFLAGS += -X 'github.com/Lagrange-Labs/lsc-node.BuildDate=$(DATE)'
 
 STOP := docker compose down --remove-orphans
 

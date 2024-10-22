@@ -4,7 +4,7 @@ import (
 	"log"
 	"os"
 
-	"github.com/Lagrange-Labs/lagrange-node/store/mongodb/migrations"
+	"github.com/Lagrange-Labs/lsc-node/store/mongodb/migrations"
 	"github.com/urfave/cli/v2"
 )
 

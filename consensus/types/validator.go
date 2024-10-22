@@ -1,7 +1,7 @@
 package types
 
 import (
-	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
+	servertypes "github.com/Lagrange-Labs/lsc-node/server/types"
 )
 
 // Validator defines a validator state.

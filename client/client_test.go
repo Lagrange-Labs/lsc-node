@@ -9,12 +9,12 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/stretchr/testify/require"
 
-	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	corecrypto "github.com/Lagrange-Labs/lagrange-node/core/crypto"
-	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	contypes "github.com/Lagrange-Labs/lsc-node/consensus/types"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	corecrypto "github.com/Lagrange-Labs/lsc-node/core/crypto"
+	rpctypes "github.com/Lagrange-Labs/lsc-node/rpcclient/types"
+	sequencertypes "github.com/Lagrange-Labs/lsc-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
 )
 
 func TestECDSASignVerify(t *testing.T) {

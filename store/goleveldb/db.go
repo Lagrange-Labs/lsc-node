@@ -3,7 +3,7 @@ package goleveldb
 import (
 	"bytes"
 
-	"github.com/Lagrange-Labs/lagrange-node/store/types"
+	"github.com/Lagrange-Labs/lsc-node/store/types"
 	"github.com/syndtr/goleveldb/leveldb"
 	"github.com/syndtr/goleveldb/leveldb/opt"
 )

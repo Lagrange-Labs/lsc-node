@@ -74,6 +74,6 @@ BLSCurve = "BN254"
 [Telemetry]
 MetricsEnabled = true
 MetricsServerPort = "8080"
-ServiceName = "lagrange-node"
+ServiceName = "lagrange-state-committee-node"
 PrometheusRetentionTime = "60s"
 `

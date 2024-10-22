@@ -1,4 +1,4 @@
-module github.com/Lagrange-Labs/lagrange-node/core
+module github.com/Lagrange-Labs/lsc-node/core
 
 go 1.21
 

@@ -4,9 +4,9 @@ import (
 	"context"
 	"fmt"
 
-	"github.com/Lagrange-Labs/lagrange-node/core/logger"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	convert "github.com/Lagrange-Labs/lagrange-node/store/mongodb"
+	"github.com/Lagrange-Labs/lsc-node/core/logger"
+	sequencertypes "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
+	convert "github.com/Lagrange-Labs/lsc-node/store/mongodb"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/mongo"
 )

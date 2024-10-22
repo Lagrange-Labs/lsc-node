@@ -3,8 +3,8 @@ package sequencer
 import (
 	context "context"
 
-	v2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
+	v2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
+	storetypes "github.com/Lagrange-Labs/lsc-node/store/types"
 )
 
 var _ storageInterface = (storetypes.Storage)(nil)

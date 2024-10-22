@@ -8,7 +8,7 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 
-	corecrypto "github.com/Lagrange-Labs/lagrange-node/core/crypto"
+	corecrypto "github.com/Lagrange-Labs/lsc-node/core/crypto"
 )
 
 type BlsSignatureVector struct {

@@ -4,7 +4,7 @@ package network.v1;
 
 import "sequencer/v1/block.proto";
 
-option go_package = "github.com/Lagrange-Labs/lagrange-node/server/types";
+option go_package = "github.com/Lagrange-Labs/lsc-node/server/types";
 
 // NetworkService is the service for the attestation network
 service NetworkService {

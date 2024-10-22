@@ -7,7 +7,7 @@ import (
 	"github.com/hashicorp/go-metrics"
 	metricsprom "github.com/hashicorp/go-metrics/prometheus"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lsc-node/core"
 )
 
 // globalLabels defines the set of global labels that will be applied to all

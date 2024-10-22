@@ -4,7 +4,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lsc-node/core"
 	"github.com/stretchr/testify/require"
 )
 

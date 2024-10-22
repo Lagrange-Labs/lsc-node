@@ -4,13 +4,13 @@ import (
 	"context"
 	"time"
 
-	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	"github.com/Lagrange-Labs/lagrange-node/core/logger"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
-	"github.com/Lagrange-Labs/lagrange-node/store/types"
+	contypes "github.com/Lagrange-Labs/lsc-node/consensus/types"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	"github.com/Lagrange-Labs/lsc-node/core/logger"
+	sequencertypes "github.com/Lagrange-Labs/lsc-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
+	servertypes "github.com/Lagrange-Labs/lsc-node/server/types"
+	"github.com/Lagrange-Labs/lsc-node/store/types"
 )
 
 const KeyLen = 32

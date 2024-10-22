@@ -4,7 +4,7 @@ package network.v2;
 
 import "sequencer/v2/batch.proto";
 
-option go_package = "github.com/Lagrange-Labs/lagrange-node/network/types/v2";
+option go_package = "github.com/Lagrange-Labs/lsc-node/network/types/v2";
 
 // Define the enum for the client node status
 enum ClientNodeStatus {

@@ -12,9 +12,9 @@ import (
 	coretypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	"github.com/Lagrange-Labs/lagrange-node/scinterface/arbinbox"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/types"
+	"github.com/Lagrange-Labs/lsc-node/scinterface/arbinbox"
 )
 
 var sequencerBridgeABI *abi.ABI

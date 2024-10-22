@@ -7,9 +7,9 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
-	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	"github.com/Lagrange-Labs/lsc-node/core/crypto"
+	servertypes "github.com/Lagrange-Labs/lsc-node/server/types"
 )
 
 // CommitteeRoot is the root of the committee.

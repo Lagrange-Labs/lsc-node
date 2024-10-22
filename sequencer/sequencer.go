@@ -14,17 +14,17 @@ import (
 	"github.com/ethereum/go-ethereum/crypto"
 	"github.com/ethereum/go-ethereum/ethclient"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	"github.com/Lagrange-Labs/lagrange-node/core/logger"
-	"github.com/Lagrange-Labs/lagrange-node/core/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
-	rpctypes "github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	"github.com/Lagrange-Labs/lagrange-node/scinterface/committee"
-	"github.com/Lagrange-Labs/lagrange-node/scinterface/eigendm"
-	"github.com/Lagrange-Labs/lagrange-node/scinterface/voteweigher"
-	v2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
-	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	"github.com/Lagrange-Labs/lsc-node/core/logger"
+	"github.com/Lagrange-Labs/lsc-node/core/telemetry"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient"
+	rpctypes "github.com/Lagrange-Labs/lsc-node/rpcclient/types"
+	"github.com/Lagrange-Labs/lsc-node/scinterface/committee"
+	"github.com/Lagrange-Labs/lsc-node/scinterface/eigendm"
+	"github.com/Lagrange-Labs/lsc-node/scinterface/voteweigher"
+	v2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
+	servertypes "github.com/Lagrange-Labs/lsc-node/server/types"
+	storetypes "github.com/Lagrange-Labs/lsc-node/store/types"
 )
 
 const (
