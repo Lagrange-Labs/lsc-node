@@ -106,12 +106,12 @@ func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
 
 	l2Blocks := make([]*sequencerv2types.BlockHeader, 0, batchBlockCount)
 	if c.isLight {
-		blockHeader, err := c.GetBlockHeaderByNumber(l2BlockNumber-batchBlockCount+1, common.Hash{})
+		blockHeader, err := c.GetBlockHeaderByNumber(l2BlockNumber, common.Hash{})
 		if err != nil {
 			return nil, fmt.Errorf("failed to get the block header for block number: %d  error: %w", l2BlockNumber-batchBlockCount, err)
 		}
 		l2Blocks = append(l2Blocks, &sequencerv2types.BlockHeader{
-			BlockNumber: l2BlockNumber - batchBlockCount + 1,
+			BlockNumber: l2BlockNumber,
 			BlockHash:   blockHeader.Hash().Hex(),
 		})
 	} else {
@@ -143,7 +143,7 @@ func (c *Client) NextBatch() (*sequencerv2types.BatchHeader, error) {
 		L1BlockNumber:     l1BlockNumber,
 		L2FromBlockNumber: l2BlockNumber - batchBlockCount + 1,
 		L2ToBlockNumber:   l2BlockNumber,
-		L1TxHash:          l2Blocks[0].BlockHash,
+		L1TxHash:          l2Blocks[len(l2Blocks)-1].BlockHash,
 	}, nil
 }
 
