@@ -5,10 +5,10 @@ import (
 
 	"github.com/stretchr/testify/require"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	"github.com/Lagrange-Labs/lsc-node/core/crypto"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
+	servertypes "github.com/Lagrange-Labs/lsc-node/server/types"
 )
 
 func createTestRoundState(blsCurve crypto.BLSCurve) (*RoundState, [][]byte, []servertypes.ClientNode) {

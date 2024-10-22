@@ -8,12 +8,12 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	"github.com/Lagrange-Labs/lagrange-node/client"
-	"github.com/Lagrange-Labs/lagrange-node/config"
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
-	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
-	"github.com/Lagrange-Labs/lagrange-node/testutil/operations"
+	"github.com/Lagrange-Labs/lsc-node/client"
+	"github.com/Lagrange-Labs/lsc-node/config"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	"github.com/Lagrange-Labs/lsc-node/core/crypto"
+	servertypes "github.com/Lagrange-Labs/lsc-node/server/types"
+	"github.com/Lagrange-Labs/lsc-node/testutil/operations"
 )
 
 type ClientTestSuite struct {

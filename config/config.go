@@ -10,13 +10,13 @@ import (
 	"github.com/spf13/viper"
 	"github.com/urfave/cli/v2"
 
-	"github.com/Lagrange-Labs/lagrange-node/client"
-	"github.com/Lagrange-Labs/lagrange-node/consensus"
-	"github.com/Lagrange-Labs/lagrange-node/core/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
-	"github.com/Lagrange-Labs/lagrange-node/sequencer"
-	"github.com/Lagrange-Labs/lagrange-node/server"
-	"github.com/Lagrange-Labs/lagrange-node/store"
+	"github.com/Lagrange-Labs/lsc-node/client"
+	"github.com/Lagrange-Labs/lsc-node/consensus"
+	"github.com/Lagrange-Labs/lsc-node/core/telemetry"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient"
+	"github.com/Lagrange-Labs/lsc-node/sequencer"
+	"github.com/Lagrange-Labs/lsc-node/server"
+	"github.com/Lagrange-Labs/lsc-node/store"
 )
 
 const (

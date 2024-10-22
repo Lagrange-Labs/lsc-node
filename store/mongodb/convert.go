@@ -5,8 +5,8 @@ import (
 	"reflect"
 	"strings"
 
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	sequencertypes "github.com/Lagrange-Labs/lsc-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
 	"go.mongodb.org/mongo-driver/bson"
 	"go.mongodb.org/mongo-driver/bson/primitive"
 )

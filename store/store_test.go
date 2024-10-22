@@ -7,11 +7,11 @@ import (
 
 	"github.com/stretchr/testify/suite"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
-	"github.com/Lagrange-Labs/lagrange-node/store/mongodb"
-	"github.com/Lagrange-Labs/lagrange-node/store/types"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lsc-node/store/memdb"
+	"github.com/Lagrange-Labs/lsc-node/store/mongodb"
+	"github.com/Lagrange-Labs/lsc-node/store/types"
 )
 
 type StorageTestSuite struct {

@@ -8,13 +8,13 @@ import (
 
 	"google.golang.org/protobuf/proto"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	"github.com/Lagrange-Labs/lagrange-node/core/logger"
-	"github.com/Lagrange-Labs/lagrange-node/core/telemetry"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	"github.com/Lagrange-Labs/lagrange-node/server"
-	serverv2types "github.com/Lagrange-Labs/lagrange-node/server/types/v2"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	"github.com/Lagrange-Labs/lsc-node/core/logger"
+	"github.com/Lagrange-Labs/lsc-node/core/telemetry"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lsc-node/server"
+	serverv2types "github.com/Lagrange-Labs/lsc-node/server/types/v2"
 )
 
 var (

@@ -3,11 +3,11 @@ package consensus
 import (
 	"context"
 
-	"github.com/Lagrange-Labs/lagrange-node/consensus/types"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
-	storetypes "github.com/Lagrange-Labs/lagrange-node/store/types"
+	"github.com/Lagrange-Labs/lsc-node/consensus/types"
+	sequencertypes "github.com/Lagrange-Labs/lsc-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
+	servertypes "github.com/Lagrange-Labs/lsc-node/server/types"
+	storetypes "github.com/Lagrange-Labs/lsc-node/store/types"
 )
 
 var _ storageInterface = (storetypes.Storage)(nil)

@@ -12,10 +12,10 @@ import (
 	ethtypes "github.com/ethereum/go-ethereum/core/types"
 	"github.com/ethereum/go-ethereum/rlp"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/evmclient"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/types"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
 )
 
 const batchBlockCount = 5

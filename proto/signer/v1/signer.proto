@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package signer.v1;
 
-option go_package = "github.com/Lagrange-Labs/lagrange-node/signer/types";
+option go_package = "github.com/Lagrange-Labs/lsc-node/signer/types";
 
 // SignerService is the service that provides the Sign method.
 service SignerService {

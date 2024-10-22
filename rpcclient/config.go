@@ -1,10 +1,10 @@
 package rpcclient
 
 import (
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/arbitrum"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/mantle"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/mock"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/optimism"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/arbitrum"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/mantle"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/mock"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/optimism"
 )
 
 // Config is a config for rpc client.

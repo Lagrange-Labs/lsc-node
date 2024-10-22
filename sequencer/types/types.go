@@ -6,7 +6,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	corecrypto "github.com/Lagrange-Labs/lagrange-node/core/crypto"
+	corecrypto "github.com/Lagrange-Labs/lsc-node/core/crypto"
 )
 
 // BlockHash returns the block hash of the chain header.

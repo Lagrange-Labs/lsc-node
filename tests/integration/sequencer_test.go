@@ -6,9 +6,9 @@ import (
 	"testing"
 	"time"
 
-	"github.com/Lagrange-Labs/lagrange-node/config"
-	"github.com/Lagrange-Labs/lagrange-node/store/types"
-	"github.com/Lagrange-Labs/lagrange-node/testutil/operations"
+	"github.com/Lagrange-Labs/lsc-node/config"
+	"github.com/Lagrange-Labs/lsc-node/store/types"
+	"github.com/Lagrange-Labs/lsc-node/testutil/operations"
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 )

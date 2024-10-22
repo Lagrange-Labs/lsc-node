@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package sequencer.v2;
 
-option go_package = "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2";
+option go_package = "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2";
 
 // BlockHeader is the block header structure
 message BlockHeader {

@@ -2,7 +2,7 @@ syntax = "proto3";
 
 package sequencer.v1;
 
-option go_package = "github.com/Lagrange-Labs/lagrange-node/sequencer/types";
+option go_package = "github.com/Lagrange-Labs/lsc-node/sequencer/types";
 
 // ChainHeader is the block header for the given block of the specific chain
 message ChainHeader {

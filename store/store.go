@@ -1,9 +1,9 @@
 package store
 
 import (
-	"github.com/Lagrange-Labs/lagrange-node/store/memdb"
-	"github.com/Lagrange-Labs/lagrange-node/store/mongodb"
-	"github.com/Lagrange-Labs/lagrange-node/store/types"
+	"github.com/Lagrange-Labs/lsc-node/store/memdb"
+	"github.com/Lagrange-Labs/lsc-node/store/mongodb"
+	"github.com/Lagrange-Labs/lsc-node/store/types"
 )
 
 // NewStorage returns a new database based on the given configuration.

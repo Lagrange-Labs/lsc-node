@@ -1,6 +1,6 @@
 package sequencer
 
-import "github.com/Lagrange-Labs/lagrange-node/core"
+import "github.com/Lagrange-Labs/lsc-node/core"
 
 type Config struct {
 	// L2 Chain name

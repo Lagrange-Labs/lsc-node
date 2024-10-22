@@ -1,10 +1,10 @@
 package optimism
 
 import (
-	"github.com/Lagrange-Labs/lagrange-node/core/logger"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/evmclient"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lsc-node/core/logger"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/evmclient"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/types"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
 )
 
 var _ types.RpcClient = (*Client)(nil)

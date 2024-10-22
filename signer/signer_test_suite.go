@@ -4,7 +4,7 @@ import (
 	"github.com/stretchr/testify/require"
 	"github.com/stretchr/testify/suite"
 
-	corecrypto "github.com/Lagrange-Labs/lagrange-node/core/crypto"
+	corecrypto "github.com/Lagrange-Labs/lsc-node/core/crypto"
 )
 
 // SignerTestSuite is a test suite for the Signer interface.

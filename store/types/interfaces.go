@@ -3,10 +3,10 @@ package types
 import (
 	"context"
 
-	contypes "github.com/Lagrange-Labs/lagrange-node/consensus/types"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
-	servertypes "github.com/Lagrange-Labs/lagrange-node/server/types"
+	contypes "github.com/Lagrange-Labs/lsc-node/consensus/types"
+	sequencertypes "github.com/Lagrange-Labs/lsc-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
+	servertypes "github.com/Lagrange-Labs/lsc-node/server/types"
 )
 
 // Storage is the interface for the database storage.

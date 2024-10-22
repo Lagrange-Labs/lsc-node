@@ -1,6 +1,6 @@
 package consensus
 
-import "github.com/Lagrange-Labs/lagrange-node/core"
+import "github.com/Lagrange-Labs/lsc-node/core"
 
 // Config is the configuration for the consensus module.
 type Config struct {

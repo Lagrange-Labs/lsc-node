@@ -3,7 +3,7 @@ package types
 import (
 	"testing"
 
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
+	sequencertypes "github.com/Lagrange-Labs/lsc-node/sequencer/types"
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/stretchr/testify/require"
 )

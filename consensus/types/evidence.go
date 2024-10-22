@@ -7,11 +7,11 @@ import (
 	"github.com/ethereum/go-ethereum/common"
 	"github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
-	corecrypto "github.com/Lagrange-Labs/lagrange-node/core/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/core/logger"
-	sequencertypes "github.com/Lagrange-Labs/lagrange-node/sequencer/types"
-	sequencerv2types "github.com/Lagrange-Labs/lagrange-node/sequencer/types/v2"
+	"github.com/Lagrange-Labs/lsc-node/core"
+	corecrypto "github.com/Lagrange-Labs/lsc-node/core/crypto"
+	"github.com/Lagrange-Labs/lsc-node/core/logger"
+	sequencertypes "github.com/Lagrange-Labs/lsc-node/sequencer/types"
+	sequencerv2types "github.com/Lagrange-Labs/lsc-node/sequencer/types/v2"
 )
 
 // TODO: refactor the evidence to use the new sequencer types

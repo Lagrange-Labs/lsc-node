@@ -6,8 +6,8 @@ import (
 
 	ecrypto "github.com/ethereum/go-ethereum/crypto"
 
-	"github.com/Lagrange-Labs/lagrange-node/core/crypto"
-	"github.com/Lagrange-Labs/lagrange-node/signer"
+	"github.com/Lagrange-Labs/lsc-node/core/crypto"
+	"github.com/Lagrange-Labs/lsc-node/signer"
 )
 
 var _ signer.Signer = (*provider)(nil)

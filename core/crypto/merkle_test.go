@@ -7,7 +7,7 @@ import (
 
 	"github.com/ethereum/go-ethereum/common"
 
-	"github.com/Lagrange-Labs/lagrange-node/core"
+	"github.com/Lagrange-Labs/lsc-node/core"
 )
 
 func TestNextPowerOfTwo(t *testing.T) {

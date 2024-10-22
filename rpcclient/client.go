@@ -4,12 +4,12 @@ import (
 	"fmt"
 	"strings"
 
-	"github.com/Lagrange-Labs/lagrange-node/core/logger"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/arbitrum"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/mantle"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/mock"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/optimism"
-	"github.com/Lagrange-Labs/lagrange-node/rpcclient/types"
+	"github.com/Lagrange-Labs/lsc-node/core/logger"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/arbitrum"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/mantle"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/mock"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/optimism"
+	"github.com/Lagrange-Labs/lsc-node/rpcclient/types"
 )
 
 // NewClient creates a new rpc client.
