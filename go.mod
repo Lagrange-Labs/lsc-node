@@ -4,7 +4,7 @@ go 1.21
 
 require (
 	github.com/Lagrange-Labs/lsc-node/core v0.1.2
-	github.com/Lagrange-Labs/lsc-node/signer v0.1.1
+	github.com/Lagrange-Labs/lsc-node/signer v0.1.2
 	github.com/andybalholm/brotli v1.1.1
 	github.com/ethereum-optimism/optimism v1.9.1
 	github.com/ethereum/go-ethereum v1.14.8
@@ -145,5 +145,3 @@ require (
 )
 
 replace github.com/ethereum/go-ethereum v1.14.8 => github.com/ethereum-optimism/op-geth v1.101408.0-rc.4.0.20240827042333-110c433a2469
-
-replace github.com/Lagrange-Labs/lsc-node/signer v0.1.1 => ./signer

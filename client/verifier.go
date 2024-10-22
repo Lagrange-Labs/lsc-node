@@ -130,12 +130,6 @@ func (v *Verifier) verifyBatchHeader(batch *sequencerv2types.Batch) error {
 	if l1BlockNumber != batchHeader.L1BlockNumber {
 		return fmt.Errorf("the batch L1 block number %d is not equal to the rpc L1 block number %d", batch.L1BlockNumber(), batchHeader.L1BlockNumber)
 	}
-	// verify if the batch hash is correct
-	batchHash := batch.BatchHeader.Hash()
-	bhHash := batchHeader.Hash()
-	if !bytes.Equal(batchHash, bhHash) {
-		return fmt.Errorf("the batch hash %s is not equal to the batch header hash %s", core.Bytes2Hex(batchHash), core.Bytes2Hex(bhHash))
-	}
 
 	// verify the sequencer signature
 	if len(batch.ProposerPubKey) == 0 {
@@ -152,6 +146,13 @@ func (v *Verifier) verifyBatchHeader(batch *sequencerv2types.Batch) error {
 
 // verifyL2Blocks verifies the L2 blocks through the recursive way.
 func (v *Verifier) verifyL2Blocks(batch *sequencerv2types.Batch, lightBatchHeader *sequencerv2types.BatchHeader) error {
+	// verify the L1 tx hash and L1 block number
+	if !bytes.Equal(core.Hex2Bytes(batch.BatchHeader.L1TxHash), core.Hex2Bytes(lightBatchHeader.L1TxHash)) {
+		return fmt.Errorf("the light batch L1 tx hash %s is not equal to the batch L1 tx hash %s", lightBatchHeader.L1TxHash, batch.BatchHeader.L1TxHash)
+	}
+	if batch.BatchHeader.L1BlockNumber != lightBatchHeader.L1BlockNumber {
+		return fmt.Errorf("the light batch L1 block number %d is not equal to the batch L1 block number %d", lightBatchHeader.L1BlockNumber, batch.BatchHeader.L1BlockNumber)
+	}
 	// verify the from and to block number
 	if lightBatchHeader.FromBlockNumber() != batch.BatchHeader.FromBlockNumber() {
 		return fmt.Errorf("the light batch from block number %d is not equal to the batch from block number %d", lightBatchHeader.FromBlockNumber(), batch.BatchHeader.FromBlockNumber())
@@ -175,16 +176,13 @@ func (v *Verifier) verifyL2Blocks(batch *sequencerv2types.Batch, lightBatchHeade
 			if err != nil {
 				errCh <- fmt.Errorf("failed to decode the block header: %v", err)
 			}
+			if !bytes.Equal(curHash[:], core.Hex2Bytes(batch.BatchHeader.L2Blocks[i].BlockHash)) {
+				errCh <- fmt.Errorf("the current hash %s is not equal to the block hash %s", core.Bytes2Hex(curHash[:]), batch.BatchHeader.L2Blocks[i].BlockHash)
+			}
 			if i > start {
 				if !bytes.Equal(parentHash[:], core.Hex2Bytes(batch.BatchHeader.L2Blocks[i-1].BlockHash)) {
 					errCh <- fmt.Errorf("the parent hash %s is not equal to the previous block hash %s", core.Bytes2Hex(parentHash[:]), batch.BatchHeader.L2Blocks[i-1].BlockHash)
 				}
-				lightBatchHeader.L2Blocks = append(lightBatchHeader.L2Blocks, &sequencerv2types.BlockHeader{
-					BlockNumber: lightBatchHeader.FromBlockNumber() + uint64(i),
-				})
-			}
-			if i < end {
-				lightBatchHeader.L2Blocks[i].BlockHash = core.Bytes2Hex(curHash[:])
 			}
 		}
 		errCh <- nil

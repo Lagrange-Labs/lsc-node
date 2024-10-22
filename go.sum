@@ -5,6 +5,8 @@ github.com/DataDog/zstd v1.5.6-0.20230824185856-869dae002e5e h1:ZIWapoIRN1VqT8GR
 github.com/DataDog/zstd v1.5.6-0.20230824185856-869dae002e5e/go.mod h1:g4AWEaM3yOg3HYfnJ3YIawPnVdXJh9QME85blwSAmyw=
 github.com/Lagrange-Labs/lsc-node/core v0.1.2 h1:qsx477twQ1Z+OJ+9FFFHUep+1N0aOhiAk0pPQXPki88=
 github.com/Lagrange-Labs/lsc-node/core v0.1.2/go.mod h1:F6JJ3SExii2by1Ow3dDc5vNSZNMICgyN/WDt+phVyrQ=
+github.com/Lagrange-Labs/lsc-node/signer v0.1.2 h1:oD+f0OZy/A8UrDW9AMYWnhetZ2O1603kyhzzPC6ordI=
+github.com/Lagrange-Labs/lsc-node/signer v0.1.2/go.mod h1:7myXE6ClOkzMCWplvz8B01XUke2S0xoeI/KImCK9/Q0=
 github.com/Microsoft/go-winio v0.6.2 h1:F2VQgta7ecxGYO8k3ZZz3RS8fVIXVxONVUPlNERoyfY=
 github.com/Microsoft/go-winio v0.6.2/go.mod h1:yd8OoFMLzJbo9gZq8j5qaps8bJ9aShtEA8Ipt1oGCvU=
 github.com/VictoriaMetrics/fastcache v1.12.2 h1:N0y9ASrJ0F6h0QaC3o6uJb3NIZ9VKLjCM7NQbSmF7WI=
