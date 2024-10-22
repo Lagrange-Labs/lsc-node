@@ -3,7 +3,7 @@ module github.com/Lagrange-Labs/lsc-node/signer
 go 1.21
 
 require (
-	github.com/Lagrange-Labs/lsc-node/core v0.1.1
+	github.com/Lagrange-Labs/lsc-node/core v0.1.2
 	github.com/aws/aws-sdk-go-v2 v1.30.3
 	github.com/aws/aws-sdk-go-v2/config v1.18.45
 	github.com/aws/aws-sdk-go-v2/credentials v1.13.43
@@ -126,5 +126,3 @@ require (
 	gopkg.in/yaml.v3 v3.0.1 // indirect
 	rsc.io/tmplfunc v0.0.3 // indirect
 )
-
-replace github.com/Lagrange-Labs/lsc-node/core v0.1.1 => ../core
