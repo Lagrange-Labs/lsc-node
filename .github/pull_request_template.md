@@ -8,5 +8,4 @@ Closes: #XXXX
 
 ## Reviewers
 
-- @XXX
-- @YYY
+- @Lagrange-Labs/lsc-core-dev
