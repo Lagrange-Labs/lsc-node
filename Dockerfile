@@ -1,7 +1,7 @@
 # CONTAINER FOR BUILDING BINARY
 FROM golang:1.21-alpine AS build
 
-RUN apk add --no-cache --update gcc g++ make
+RUN apk add --no-cache --update gcc g++ make git
 
 ENV CGO_CFLAGS="-O -D__BLST_PORTABLE__"
 ENV CGO_CFLAGS_ALLOW="-O -D__BLST_PORTABLE__"
