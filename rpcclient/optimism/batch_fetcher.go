@@ -31,7 +31,8 @@ const (
 	searchLimit             = 1024
 	maxTxBlobCount          = 10000
 	fetchInterval           = 5 * time.Second
-	getL2BatchHeaderTimeout = 60 * time.Second
+	getL2BatchHeaderTimeout = 30 * time.Second
+	iterateWarningLevel     = 10
 )
 
 // TxDataRef is a the list of transaction data with tx metadata.
@@ -76,7 +77,7 @@ type Fetcher struct {
 	isLight                 bool
 	lastSyncedL1BlockNumber atomic.Uint64
 	lastPulledL1BlockNumber atomic.Uint64
-	lastSyncedL2BlockNumber uint64
+	lastSyncedL2BlockNumber atomic.Uint64
 
 	// decoder
 	chFramesRef chan *FramesRef
@@ -159,54 +160,96 @@ func (f *Fetcher) InitFetch() {
 // GetL2BatchHeader returns the next L2 batch header for the given L1 block number
 // and the Tx Hash
 func (f *Fetcher) GetL2BatchHeader(l1BlockNumber, l2BlockNumber uint64, txHash string) (*sequencerv2types.BatchHeader, error) {
+	chBatchHeader := make(chan *sequencerv2types.BatchHeader, 1) // buffered to avoid blocking
+
+	go func() {
+		defer close(chBatchHeader)
+		for {
+			batchHeader, err := f.nextBatchHeader()
+			if err != nil {
+				f.chErr <- err
+				return
+			}
+			if batchHeader.L1BlockNumber == l1BlockNumber {
+				if len(txHash) > 0 && batchHeader.L1TxHash == txHash {
+					chBatchHeader <- batchHeader
+					return
+				}
+				if l2BlockNumber > 0 && batchHeader.L2FromBlockNumber == l2BlockNumber {
+					chBatchHeader <- batchHeader
+					return
+				}
+			}
+		}
+	}()
+
 	checkTxHash := func(ctx context.Context) (*sequencerv2types.BatchHeader, error) {
 		for {
 			select {
 			case <-ctx.Done():
-				return nil, errors.New("batch header is not found")
+				return nil, nil
 			case err := <-f.chErr:
 				return nil, fmt.Errorf("batch decoder err: %v", err)
-			default:
-				batchHeader, err := f.nextBatchHeader()
-				if err != nil {
-					return nil, err
-				}
-				if batchHeader.L1BlockNumber == l1BlockNumber {
-					if len(txHash) > 0 && batchHeader.L1TxHash == txHash {
-						return batchHeader, nil
-					}
-					if l2BlockNumber > 0 && batchHeader.L2FromBlockNumber == l2BlockNumber {
-						return batchHeader, nil
-					}
-				}
+			case batchHeader := <-chBatchHeader:
+				return batchHeader, nil
 			}
 		}
 	}
 
-	if f.lastSyncedL1BlockNumber.Load() == l1BlockNumber {
-		return checkTxHash(core.GetContextWithTimeout(getL2BatchHeaderTimeout))
-	}
+	iterL1 := l1BlockNumber
+	for {
+		if l2BlockNumber > 0 {
+			f.lastSyncedL2BlockNumber.Store(l2BlockNumber - 1)
+		}
 
-	if l2BlockNumber > 0 {
-		f.lastSyncedL2BlockNumber = l2BlockNumber - 1
-	}
-	frames, err := f.fetchBlock(l1BlockNumber)
-	if err != nil {
-		return nil, err
-	}
-	for _, framesRef := range frames {
-		f.chFramesRef <- framesRef
-	}
+		if f.lastSyncedL1BlockNumber.Load() == l1BlockNumber {
+			bh, err := checkTxHash(core.GetContextWithTimeout(getL2BatchHeaderTimeout))
+			if err != nil {
+				return nil, err
+			}
+			if bh != nil {
+				return bh, nil
+			}
+			iterL1 += 1
+			continue
+		}
 
-	f.lastSyncedL1BlockNumber.Store(l1BlockNumber)
+		frames, err := f.fetchBlock(iterL1)
+		if err != nil {
+			return nil, err
+		}
+		for _, framesRef := range frames {
+			f.chFramesRef <- framesRef
+		}
 
-	return checkTxHash(core.GetContextWithTimeout(getL2BatchHeaderTimeout))
+		if len(frames) == 0 {
+			iterL1 += 1
+			continue
+		}
+
+		bh, err := checkTxHash(core.GetContextWithTimeout(getL2BatchHeaderTimeout))
+		if err != nil {
+			return nil, err
+		}
+		if bh != nil {
+			f.lastSyncedL1BlockNumber.Store(iterL1)
+			return bh, nil
+		}
+
+		iterL1 += 1
+		if (iterL1-l1BlockNumber)%iterateWarningLevel == iterateWarningLevel-1 {
+			logger.Warnf("no batch header found for L1 block number: %d Iteration: %d", l1BlockNumber, iterL1)
+		}
+		if iterL1-l1BlockNumber > searchLimit {
+			return nil, errors.New("batch header not found after searching the limit")
+		}
+	}
 }
 
 // Fetch fetches the block data from the Ethereum and analyzes the
 // transactions which are sent to the BatchInbox EOA.
 func (f *Fetcher) Fetch(l1BeginBlockNumber, l2BeginBlockNumber uint64) error {
-	f.lastSyncedL2BlockNumber = l2BeginBlockNumber
+	f.lastSyncedL2BlockNumber.Store(l2BeginBlockNumber)
 
 	defer func() {
 		f.fetcherDone <- struct{}{}
