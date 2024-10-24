@@ -99,7 +99,7 @@ func (r *RpcAdapter) GetBatchHeader(l1BlockNumber uint64, txHash string, l1TxInd
 	if err != nil {
 		r.chNodeStatus <- StatusMessage{
 			NodeStatus: serverv2types.ClientNodeStatus_L2_RPC_ISSUE,
-			Message:    fmt.Sprintf("failed to get the batch header for L1BlockNumber: %d L1TxIndex: %d err: %v", l1BlockNumber, l1TxIndex, err),
+			Message:    fmt.Sprintf("failed to get the batch header for L1BlockNumber: %d TxHash: %v err: %v", l1BlockNumber, txHash, err),
 		}
 		return nil, err
 	}
